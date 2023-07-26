@@ -1,5 +1,17 @@
 # harmonized-wf-dev
-Repo for testing and developing a common postmortem-derived brain sequencing (PMDBS) workflow harmonized across ASAP
+Repo for testing and developing a common postmortem-derived brain sequencing (PMDBS) workflow harmonized across ASAP.
+
+## Workflows
+
+Worfklows are defined in [the `workflows` directory](workflows).
+
+### Harmony RNA workflow
+
+This workflow is set up to implement the [Harmony RNA snakemake workflow](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/main) in WDL. A fork of this repository containing scripts that can be called using command-line arguments may be found [here](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/parameterize-paths); the goal of this fork is to maintain backwards compatibilty with snakemake-based calls to any of the scripts.
+
+**Entrypoint**: [workflows/main.wdl](workflows/main.wdl)
+
+**Input template**: [workflows/inputs.json](workflows/inputs.json)
 
 ## Docker images
 

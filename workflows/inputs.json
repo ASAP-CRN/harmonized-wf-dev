@@ -1,0 +1,8 @@
+{
+  "harmonized_pmdbs_analysis.dataset": "String",
+  "harmonized_pmdbs_analysis.batch_file": "File",
+  "harmonized_pmdbs_analysis.raw_counts": "File",
+  "harmonized_pmdbs_analysis.filtered_counts": "File",
+  "harmonized_pmdbs_analysis.soup_rate": "Float",
+  "harmonized_pmdbs_analysis.container_registry": "String"
+}
