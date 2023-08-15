@@ -8,30 +8,32 @@ parser$add_argument('--batch-file', dest='batch_file', type='character')
 parser$add_argument('--raw-counts', dest='raw_counts', type='character', help='Unfiltered feature-barcode matrices HDF5 output by cellranger')
 parser$add_argument('--filtered-counts', dest='filtered_counts', type='character', help='Filtered feature-barcode matrices HDF5 output by cellranger')
 parser$add_argument('--soup-rate', dest='soup_rate', type='character', help='Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data')
-parser$add_argument('--seurat-object', dest='seurat_object', type='character', help='Output file to save Seurat object to')
+parser$add_argument('--output-seurat-object', dest='output_seurat_object', type='character', help='Output file to save Seurat object to')
 args <- parser$parse_args()
 
+# Set working directory and load packages
 setwd(args$working_dir)
-
 source(paste0(args$script_dir, '/main/load_packages.r'))
-
 reticulate::source_python(paste0(args$script_dir, '/utility/scrublet_py.py'))
 
+# Set variables from args or snakemake parameters
 dataset <- if (is.null(args$dataset)) snakemake@params[['dataset']] else args$dataset
 batch_file <- if (is.null(args$batch_file)) snakemake@input[['datasets']] else args$batch_file
 
 batch <- fread(batch_file)[sample %chin% dataset, batch]
-
 raw_counts_file <- if (is.null(args$raw_counts)) paste0(data_path, batch, '/Multiome/', dataset, '/outs/raw_feature_bc_matrix.h5') else args$raw_counts
 filtered_counts_file <- if (is.null(args$filtered_counts)) paste0(data_path, batch, '/Multiome/', dataset, '/outs/filtered_feature_bc_matrix.h5') else args$filtered_counts
 
+soup_rate <- if (is.null(args$soup_rate)) snakemake@params[['soup_rate']] else args$soup_rate
+output_seurat_object <- if (is.null(args$output_seurat_object)) snakemake@output[['seurat_object']] else args$output_seurat_object
+
+
+# Main
 raw.counts <- Read10X_h5(raw_counts_file)
 filtered.counts <- Read10X_h5(filtered_counts_file)
 
-soup_rate <- if (is.null(args$soup_rate)) snakemake@params[['soup_rate']] else args$soup_rate
 adj.matrix <- suppressWarnings(SoupCorrect(raw.counts, filtered.counts, contamination_rate=soup_rate))
 object <- CreateSeuratObject(adj.matrix, min.cells=0, min.features=0, project=dataset)
-
 
 object[['percent.mt']] <- PercentageFeatureSet(object, pattern='^MT-')
 object[['percent.rb']] <- PercentageFeatureSet(object, pattern='^RP[SL]')
@@ -51,16 +53,13 @@ sample <- m[, sample]
 
 names(sample) <- names(batch) <- m[, cells]
 
-
 doublet_rate <- (ncol(object) / 1000) * 0.008
 
-object <- object %>% 
-    
-    AddMetaData(metadata=factor(batch), col.name='batch') %>% 
-    AddMetaData(metadata=factor(sample), col.name='sample') %>% 
-    
-    scrublet(n_prin_comps=30, expected_doublet_rate=doublet_rate) 
+object <- object %>%
 
+    AddMetaData(metadata=factor(batch), col.name='batch') %>%
+    AddMetaData(metadata=factor(sample), col.name='sample') %>%
 
-seurat_object <- if (is.null(args$seurat_object)) snakemake@output[['seurat_object']] else args$seurat_object
-saveRDS(object, seurat_object)
+    scrublet(n_prin_comps=30, expected_doublet_rate=doublet_rate)
+
+saveRDS(object, output_seurat_object)
