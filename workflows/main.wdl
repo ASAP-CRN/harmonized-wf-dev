@@ -33,9 +33,18 @@ workflow harmonized_pmdbs_analysis {
 			container_registry = container_registry
 	}
 
+	call plot_qc {
+		input:
+			project_name = project_name,
+			unfiltered_metadata = doublets.unfiltered_metadata,
+			container_registry = container_registry
+	}
+
 	output {
 		Array[File] seurat_objects = preprocess.seurat_object
 		File unfiltered_metadata = doublets.unfiltered_metadata
+		File qc_plot1 = plot_qc.plot1
+		File qc_plot2 = plot_qc.plot2
 	}
 
 	meta {
@@ -113,6 +122,41 @@ task doublets {
 
 	output {
 		File unfiltered_metadata = "~{project_name}.unfiltered_metadata.csv"
+	}
+
+	runtime {
+		docker: "~{container_registry}/multiome:4a7fd84"
+		cpu: threads
+	}
+}
+
+task plot_qc {
+	input {
+		String project_name
+		File unfiltered_metadata
+
+		String container_registry
+	}
+
+	Int threads = 2
+
+	command <<<
+		set -euo pipefail
+
+		Rscript /opt/scripts/main/plot_qc_metrics.R \
+			--working-dir "$(pwd)" \
+			--script-dir /opt/scripts \
+			--threads ~{threads} \
+			--metadata ~{unfiltered_metadata} \
+			--project-name ~{project_name} \
+			--plot1-output-file ~{project_name}.qc_plot1.pdf \
+			--plot2-output-file ~{project_name}.qc_plot2.pdf
+	>>>
+
+	# TODO come up with better output names for these plots, both here and in the Rscript
+	output {
+		File plot1 = "~{project_name}.qc_plot1.pdf"
+		File plot2 = "~{project_name}.qc_plot2.pdf"
 	}
 
 	runtime {
