@@ -47,6 +47,12 @@ workflow harmonized_pmdbs_analysis {
 				unfiltered_metadata = doublets.unfiltered_metadata,
 				container_registry = container_registry
 		}
+
+		call process {
+			input:
+				seurat_object = filter.filtered_seurat_object,
+				container_registry = container_registry
+		}
 	}
 
 	output {
@@ -55,6 +61,7 @@ workflow harmonized_pmdbs_analysis {
 		File qc_plot1 = plot_qc.plot1
 		File qc_plot2 = plot_qc.plot2
 		Array[File] filtered_seurat_objects = filter.filtered_seurat_object
+		Array[File] normalized_seurat_objects = process.normalized_seurat_object
 	}
 
 	meta {
@@ -205,3 +212,33 @@ task filter {
 	}
 }
 
+task process {
+	input {
+		File seurat_object
+
+		String container_registry
+	}
+
+	Int threads = 2
+	String seurat_object_basename = basename(seurat_object, "_02.rds")
+
+	command <<<
+		set -euo pipefail
+
+		Rscript /opt/scripts/main/filter.R \
+			--working-dir "$(pwd)" \
+			--script-dir /opt/scripts \
+			--threads ~{threads} \
+			--seurat-object ~{seurat_object} \
+			--output-seurat-object ~{seurat_object_basename}_filtered_normalized_03.rds
+	>>>
+
+	output {
+		File normalized_seurat_object = "~{seurat_object_basename}_filtered_normalized_03.rds"
+	}
+
+	runtime {
+		docker: "~{container_registry}/multiome:4a7fd84"
+		cpu: threads
+	}
+}
