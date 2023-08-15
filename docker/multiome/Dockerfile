@@ -12,7 +12,7 @@ RUN cd /opt/Multiome-SeuratV4 \
 	&& git checkout "${CONDA_ENVIRONMENT_REPO_HASH}"
 
 ARG SCRIPTS_REPO_HASH
-RUN git clone https://github.com/DNAstack/Harmony-RNA-Workflow.git
+RUN git clone https://github.com/shahrozeabbas/Harmony-RNA-Workflow.git
 RUN cd /opt/Harmony-RNA-Workflow \
 	&& git checkout "${SCRIPTS_REPO_HASH}"
 
@@ -32,10 +32,13 @@ COPY --from=builder /opt/Multiome-SeuratV4/envs/${CONDA_ENVIRONMENT}.yml /opt/en
 RUN conda env create --file "/opt/envs/${CONDA_ENVIRONMENT}.yml" --name "${CONDA_ENVIRONMENT}"
 ENV PATH /opt/conda/envs/${CONDA_ENVIRONMENT}/bin:${PATH}
 
+# Install argparse
+RUN Rscript -e 'install.packages("argparse", repos="http://cran.us.r-project.org")'
+
 # Add scripts
 COPY --from=builder /opt/Harmony-RNA-Workflow/scripts /opt/scripts
 
-# Install argparse
-RUN Rscript -e 'install.packages("argparse", repos="http://cran.us.r-project.org")'
+# Add override scripts
+COPY scripts/main/ /opt/scripts/main/
 
 RUN echo "source activate ${CONDA_ENVIRONMENT}" >> ~/.bashrc
