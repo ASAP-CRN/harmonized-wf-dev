@@ -40,11 +40,21 @@ workflow harmonized_pmdbs_analysis {
 			container_registry = container_registry
 	}
 
+	scatter (seurat_object in preprocess.seurat_object) {
+		call filter {
+			input:
+				seurat_object = seurat_object,
+				unfiltered_metadata = doublets.unfiltered_metadata,
+				container_registry = container_registry
+		}
+	}
+
 	output {
 		Array[File] seurat_objects = preprocess.seurat_object
 		File unfiltered_metadata = doublets.unfiltered_metadata
 		File qc_plot1 = plot_qc.plot1
 		File qc_plot2 = plot_qc.plot2
+		Array[File] filtered_seurat_objects = filter.filtered_seurat_object
 	}
 
 	meta {
@@ -86,7 +96,7 @@ task preprocess {
 			--raw-counts ~{raw_counts} \
 			--filtered-counts ~{filtered_counts} \
 			--soup-rate ~{soup_rate} \
-			--seurat-object seurat_object_~{dataset}_preprocessed_01.rds
+			--output-seurat-object seurat_object_~{dataset}_preprocessed_01.rds
 	>>>
 
 	output {
@@ -164,3 +174,34 @@ task plot_qc {
 		cpu: threads
 	}
 }
+
+task filter {
+	input {
+		File seurat_object
+		File unfiltered_metadata
+
+		String container_registry
+	}
+
+	String seurat_object_basename = basename(seurat_object, "_01.rds")
+
+	command <<<
+		set -euo pipefail
+
+		Rscript /opt/scripts/main/filter.R \
+			--working-dir "$(pwd)" \
+			--script-dir /opt/scripts \
+			--seurat-object ~{seurat_object} \
+			--metadata ~{unfiltered_metadata} \
+			--output-seurat-object ~{seurat_object_basename}_filtered_02.rds
+	>>>
+
+	output {
+		File filtered_seurat_object = "~{seurat_object_basename}_filtered_02.rds"
+	}
+
+	runtime {
+		docker: "~{container_registry}/multiome:4a7fd84"
+	}
+}
+
