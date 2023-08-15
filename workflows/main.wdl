@@ -2,29 +2,31 @@ version 1.0
 
 workflow harmonized_pmdbs_analysis {
 	input {
-		String dataset
+		Array[String] datasets
 		File batch_file
 
 		File raw_counts
 		File filtered_counts
 
-		Float soup_rate
+		Float soup_rate = 0.20
 
 		String container_registry
 	}
 
-	call preprocess {
-		input:
-			dataset = dataset,
-			batch_file = batch_file,
-			raw_counts = raw_counts,
-			filtered_counts = filtered_counts,
-			soup_rate = soup_rate,
-			container_registry = container_registry
+	scatter (dataset in datasets) {
+		call preprocess {
+			input:
+				dataset = dataset,
+				batch_file = batch_file,
+				raw_counts = raw_counts,
+				filtered_counts = filtered_counts,
+				soup_rate = soup_rate,
+				container_registry = container_registry
+		}
 	}
 
 	output {
-		File seurat_object = preprocess.seurat_object
+		Array[File] seurat_objects = preprocess.seurat_object
 	}
 
 	meta {
@@ -32,11 +34,11 @@ workflow harmonized_pmdbs_analysis {
 	}
 
 	parameter_meta {
-		dataset: {help: ""}
-		batch_file: {help: ""}
-		raw_counts: {help: ""}
-		filtered_counts: {help: ""}
-		soup_rate: {help: ""}
+		dataset: {help: "Array of dataset names to process"}
+		batch_file: {help: "Samples CSV file"}
+		raw_counts: {help: "Unfiltered feature-barcode matrices HDF5 output by cellranger"}
+		filtered_counts: {help: "Filtered feature-barcode matrices HDF5 output by cellranger"}
+		soup_rate: {help: "Dataset contamination rate fraction; used to remove mRNA contamination the RNAseq data. [0.2]"}
 		container_registry: {help: "Container registry where Docker images are hosted"}
 	}
 }
@@ -73,6 +75,6 @@ task preprocess {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:eaaeb73"
+		docker: "~{container_registry}/multiome:4a7fd84"
 	}
 }
