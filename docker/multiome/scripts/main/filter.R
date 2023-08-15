@@ -16,7 +16,6 @@ source(paste0(args$script_dir, '/main/load_packages.r'))
 seurat_object <- if (is.null(args$seurat_object)) snakemake@input[['seurat_object']] else args$seurat_object
 metadata <- if (is.null(args$metadata)) snakemake@input[['metadata']] else args$metadata
 output_seurat_object <- if (is.null(args$output_seurat_object)) snakemake@output[['seurat_object']] else args$output_seurat_object
-metadata <- if (is.null(args$metadata)) snakemake@input[['metadata']] else args$metadata
 
 # Main
 object <- readRDS(seurat_object)
