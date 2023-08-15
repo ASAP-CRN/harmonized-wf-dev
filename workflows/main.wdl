@@ -2,6 +2,7 @@ version 1.0
 
 workflow harmonized_pmdbs_analysis {
 	input {
+		String project_name
 		Array[String] datasets
 		File batch_file
 
@@ -25,8 +26,16 @@ workflow harmonized_pmdbs_analysis {
 		}
 	}
 
+	call doublets {
+		input:
+			project_name = project_name,
+			seurat_objects = preprocess.seurat_object,
+			container_registry = container_registry
+	}
+
 	output {
 		Array[File] seurat_objects = preprocess.seurat_object
+		File unfiltered_metadata = doublets.unfiltered_metadata
 	}
 
 	meta {
@@ -34,11 +43,12 @@ workflow harmonized_pmdbs_analysis {
 	}
 
 	parameter_meta {
-		dataset: {help: "Array of dataset names to process"}
+		project_name: {help: "Name of project"}
+		datasets: {help: "Array of dataset names to process"}
 		batch_file: {help: "Samples CSV file"}
 		raw_counts: {help: "Unfiltered feature-barcode matrices HDF5 output by cellranger"}
 		filtered_counts: {help: "Filtered feature-barcode matrices HDF5 output by cellranger"}
-		soup_rate: {help: "Dataset contamination rate fraction; used to remove mRNA contamination the RNAseq data. [0.2]"}
+		soup_rate: {help: "Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data [0.2]"}
 		container_registry: {help: "Container registry where Docker images are hosted"}
 	}
 }
@@ -76,5 +86,37 @@ task preprocess {
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
+	}
+}
+
+task doublets {
+	input {
+		String project_name
+		Array[File] seurat_objects
+
+		String container_registry
+	}
+
+	Int threads = 2
+
+	command <<<
+		set -euo pipefail
+
+		Rscript /opt/scripts/main/gmm_doublet_calling.R \
+			--working-dir "$(pwd)" \
+			--script-dir /opt/scripts \
+			--threads ~{threads} \
+			--seurat-objects ~{sep=' ' seurat_objects} \
+			--project-name ~{project_name} \
+			--output-metadata-file ~{project_name}.unfiltered_metadata.csv
+	>>>
+
+	output {
+		File unfiltered_metadata = "~{project_name}.unfiltered_metadata.csv"
+	}
+
+	runtime {
+		docker: "~{container_registry}/multiome:4a7fd84"
+		cpu: threads
 	}
 }

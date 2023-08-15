@@ -1,4 +1,5 @@
 {
+  "harmonized_pmdbs_analysis.project_name": "String",
   "harmonized_pmdbs_analysis.datasets": "Array[String]",
   "harmonized_pmdbs_analysis.batch_file": "File",
   "harmonized_pmdbs_analysis.raw_counts": "File",
