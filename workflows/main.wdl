@@ -62,6 +62,12 @@ workflow harmonized_pmdbs_analysis {
 			container_registry = container_registry
 	}
 
+	call neighbors {
+		input:
+			harmony_seurat_object = harmony.harmony_seurat_object,
+			container_registry = container_registry
+	}
+
 	output {
 		Array[File] preprocessed_seurat_objects = preprocess.preprocessed_seurat_object
 		File unfiltered_metadata = doublets.unfiltered_metadata
@@ -70,6 +76,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[File] filtered_seurat_objects = filter.filtered_seurat_object
 		Array[File] normalized_seurat_objects = process.normalized_seurat_object
 		File harmony_seurat_object = harmony.harmony_seurat_object
+		File neighbors_seurat_object = neighbors.neighbors_seurat_object
 	}
 
 	meta {
@@ -279,5 +286,33 @@ task harmony {
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
 		cpu: threads
+	}
+}
+
+task neighbors {
+	input {
+		File harmony_seurat_object
+
+		String container_registry
+	}
+
+	String harmony_seurat_object_basename = basename(harmony_seurat_object, "_04.rds")
+
+	command <<<
+		set -euo pipefail
+
+		Rscript /opt/scripts/main/find_neighbors.R \
+			--working-dir "$(pwd)" \
+			--script-dir /opt/scripts \
+			--seurat-object ~{harmony_seurat_object} \
+			--output-seurat-object ~{harmony_seurat_object_basename}_neighbors_05.rds
+	>>>
+
+	output {
+		File neighbors_seurat_object = "~{harmony_seurat_object_basename}_neighbors_05.rds"
+	}
+
+	runtime {
+		docker: "~{container_registry}/multiome:4a7fd84"
 	}
 }
