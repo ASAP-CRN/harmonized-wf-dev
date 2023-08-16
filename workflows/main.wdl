@@ -55,6 +55,13 @@ workflow harmonized_pmdbs_analysis {
 		}
 	}
 
+	call harmony {
+		input:
+			project_name = project_name,
+			normalized_seurat_objects = process.normalized_seurat_object,
+			container_registry = container_registry
+	}
+
 	output {
 		Array[File] preprocessed_seurat_objects = preprocess.preprocessed_seurat_object
 		File unfiltered_metadata = doublets.unfiltered_metadata
@@ -62,6 +69,7 @@ workflow harmonized_pmdbs_analysis {
 		File qc_plot2 = plot_qc.plot2
 		Array[File] filtered_seurat_objects = filter.filtered_seurat_object
 		Array[File] normalized_seurat_objects = process.normalized_seurat_object
+		File harmony_seurat_object = harmony.harmony_seurat_object
 	}
 
 	meta {
@@ -235,6 +243,37 @@ task process {
 
 	output {
 		File normalized_seurat_object = "~{seurat_object_basename}_filtered_normalized_03.rds"
+	}
+
+	runtime {
+		docker: "~{container_registry}/multiome:4a7fd84"
+		cpu: threads
+	}
+}
+
+task harmony {
+	input {
+		String project_name
+		Array[File] normalized_seurat_objects
+
+		String container_registry
+	}
+
+	Int threads = 8
+
+	command <<<
+		set -euo pipefail
+
+		Rscript /opt/scripts/main/filter.R \
+			--working-dir "$(pwd)" \
+			--script-dir /opt/scripts \
+			--threads ~{threads} \
+			--seurat-objects ~{sep=' ' normalized_seurat_objects} \
+			--output-seurat-object ~{project_name}_seurat_object_harmony_integrated_04.rds
+	>>>
+
+	output {
+		File harmony_seurat_object = "~{project_name}_seurat_object_harmony_integrated_04.rds"
 	}
 
 	runtime {
