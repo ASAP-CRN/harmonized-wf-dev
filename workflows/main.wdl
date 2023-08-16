@@ -68,6 +68,12 @@ workflow harmonized_pmdbs_analysis {
 			container_registry = container_registry
 	}
 
+	call umap {
+		input:
+			neighbors_seurat_object = neighbors.neighbors_seurat_object,
+			container_registry = container_registry
+	}
+
 	output {
 		Array[File] preprocessed_seurat_objects = preprocess.preprocessed_seurat_object
 		File unfiltered_metadata = doublets.unfiltered_metadata
@@ -77,6 +83,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[File] normalized_seurat_objects = process.normalized_seurat_object
 		File harmony_seurat_object = harmony.harmony_seurat_object
 		File neighbors_seurat_object = neighbors.neighbors_seurat_object
+		File umap_seurat_object = umap.umap_seurat_object
 	}
 
 	meta {
@@ -310,6 +317,34 @@ task neighbors {
 
 	output {
 		File neighbors_seurat_object = "~{harmony_seurat_object_basename}_neighbors_05.rds"
+	}
+
+	runtime {
+		docker: "~{container_registry}/multiome:4a7fd84"
+	}
+}
+
+task umap {
+	input {
+		File neighbors_seurat_object
+
+		String container_registry
+	}
+
+	String neighbors_seurat_object_basename = basename(neighbors_seurat_object, "_05.rds")
+
+	command <<<
+		set -euo pipefail
+
+		Rscript /opt/scripts/main/find_neighbors.R \
+			--working-dir "$(pwd)" \
+			--script-dir /opt/scripts \
+			--seurat-object ~{neighbors_seurat_object} \
+			--output-seurat-object ~{neighbors_seurat_object_basename}_umap_06.rds
+	>>>
+
+	output {
+		File umap_seurat_object = "~{neighbors_seurat_object_basename}_umap_06.rds"
 	}
 
 	runtime {
