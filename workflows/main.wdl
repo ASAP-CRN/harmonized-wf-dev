@@ -29,7 +29,7 @@ workflow harmonized_pmdbs_analysis {
 	call doublets {
 		input:
 			project_name = project_name,
-			seurat_objects = preprocess.seurat_object,
+			preprocessed_seurat_objects = preprocess.preprocessed_seurat_object,
 			container_registry = container_registry
 	}
 
@@ -40,23 +40,23 @@ workflow harmonized_pmdbs_analysis {
 			container_registry = container_registry
 	}
 
-	scatter (seurat_object in preprocess.seurat_object) {
+	scatter (preprocessed_seurat_object in preprocess.preprocessed_seurat_object) {
 		call filter {
 			input:
-				seurat_object = seurat_object,
+				preprocessed_seurat_object = preprocessed_seurat_object,
 				unfiltered_metadata = doublets.unfiltered_metadata,
 				container_registry = container_registry
 		}
 
 		call process {
 			input:
-				seurat_object = filter.filtered_seurat_object,
+				filtered_seurat_object = filter.filtered_seurat_object,
 				container_registry = container_registry
 		}
 	}
 
 	output {
-		Array[File] seurat_objects = preprocess.seurat_object
+		Array[File] preprocessed_seurat_objects = preprocess.preprocessed_seurat_object
 		File unfiltered_metadata = doublets.unfiltered_metadata
 		File qc_plot1 = plot_qc.plot1
 		File qc_plot2 = plot_qc.plot2
@@ -107,7 +107,7 @@ task preprocess {
 	>>>
 
 	output {
-		File seurat_object = "seurat_object_~{dataset}_preprocessed_01.rds"
+		File preprocessed_seurat_object = "seurat_object_~{dataset}_preprocessed_01.rds"
 	}
 
 	runtime {
@@ -118,7 +118,7 @@ task preprocess {
 task doublets {
 	input {
 		String project_name
-		Array[File] seurat_objects
+		Array[File] preprocessed_seurat_objects
 
 		String container_registry
 	}
@@ -132,7 +132,7 @@ task doublets {
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--threads ~{threads} \
-			--seurat-objects ~{sep=' ' seurat_objects} \
+			--seurat-objects ~{sep=' ' preprocessed_seurat_objects} \
 			--project-name ~{project_name} \
 			--output-metadata-file ~{project_name}.unfiltered_metadata.csv
 	>>>
@@ -184,13 +184,13 @@ task plot_qc {
 
 task filter {
 	input {
-		File seurat_object
+		File preprocessed_seurat_object
 		File unfiltered_metadata
 
 		String container_registry
 	}
 
-	String seurat_object_basename = basename(seurat_object, "_01.rds")
+	String seurat_object_basename = basename(preprocessed_seurat_object, "_01.rds")
 
 	command <<<
 		set -euo pipefail
@@ -198,7 +198,7 @@ task filter {
 		Rscript /opt/scripts/main/filter.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
-			--seurat-object ~{seurat_object} \
+			--seurat-object ~{preprocessed_seurat_object} \
 			--metadata ~{unfiltered_metadata} \
 			--output-seurat-object ~{seurat_object_basename}_filtered_02.rds
 	>>>
@@ -214,13 +214,13 @@ task filter {
 
 task process {
 	input {
-		File seurat_object
+		File filtered_seurat_object
 
 		String container_registry
 	}
 
 	Int threads = 2
-	String seurat_object_basename = basename(seurat_object, "_02.rds")
+	String seurat_object_basename = basename(filtered_seurat_object, "_02.rds")
 
 	command <<<
 		set -euo pipefail
@@ -229,7 +229,7 @@ task process {
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--threads ~{threads} \
-			--seurat-object ~{seurat_object} \
+			--seurat-object ~{filtered_seurat_object} \
 			--output-seurat-object ~{seurat_object_basename}_filtered_normalized_03.rds
 	>>>
 
