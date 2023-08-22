@@ -15,6 +15,8 @@ workflow harmonized_pmdbs_analysis {
 		Float clustering_resolution = 0.3
 		File cell_type_markers_list
 
+		Array[String] groups = ["sample", "batch", "seurat_clusters"]
+
 		String container_registry
 	}
 
@@ -96,6 +98,17 @@ workflow harmonized_pmdbs_analysis {
 			container_registry = container_registry
 	}
 
+	# TODO probably more overhead than needed to scatter this rather than parallelizing within-task
+	scatter (group in groups) {
+		call plot_groups {
+			input:
+				project_name = project_name,
+				metadata = sctype.metadata,
+				group = group,
+				container_registry = container_registry
+		}
+	}
+
 	output {
 		Array[File] preprocessed_seurat_objects = preprocess.preprocessed_seurat_object
 		File unfiltered_metadata = doublets.unfiltered_metadata
@@ -109,6 +122,7 @@ workflow harmonized_pmdbs_analysis {
 		File major_cell_type_plot = cluster.major_cell_type_plot
 		File cluster_seurat_object = cluster.cluster_seurat_object
 		File metadata = sctype.metadata
+		Array[File] group_umap_plots = plot_groups.group_umap_plot
 	}
 
 	meta {
@@ -125,6 +139,7 @@ workflow harmonized_pmdbs_analysis {
 		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}
 		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
 		cell_type_markers_list: {help: "Seurat object RDS file containing a list of major cell type markers; used to annotate clusters."}
+		groups: {help: "Groups to produce umap plots for. ['sample', 'batch', 'seurat_clusters']"}
 		container_registry: {help: "Container registry where Docker images are hosted"}
 	}
 }
@@ -452,5 +467,34 @@ task sctype {
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
 		cpu: threads
+	}
+}
+
+task plot_groups {
+	input {
+		String project_name
+		File metadata
+
+		String group
+
+		String container_registry
+	}
+
+	command <<<
+		set -euo pipefail
+
+		Rscript /opt/scripts/main/plot_groups.R \
+			--working-dir "$(pwd)" \
+			--metadata ~{metadata} \
+			--group ~{group} \
+			--output-group-umap-plot ~{project_name}.~{group}_group_umap.pdf
+	>>>
+
+	output {
+		File group_umap_plot = "~{project_name}.~{group}_group_umap.pdf"
+	}
+
+	runtime {
+		docker: "~{container_registry}/multiome:4a7fd84"
 	}
 }
