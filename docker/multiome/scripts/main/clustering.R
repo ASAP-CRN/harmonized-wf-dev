@@ -25,10 +25,9 @@ cell_type_markers_list <- if (is.null(args$cell_type_markers_list)) snakemake@in
 output_cell_type_plot <- if (is.null(args$output_cell_type_plot)) snakemake@output[['plot']] else args$output_cell_type_plot
 output_seurat_object <- if (is.null(args$output_seurat_object)) snakemake@output[['seurat_object']] else args$output_seurat_object
 
-
+# Main
 future::plan('multicore', workers=threads)
 options(future.globals.maxSize=ngbs * 1000 * 1024^2)
-
 
 object <- readRDS(seurat_object) %>%
             FindClusters(resolution=clustering_resolution,
