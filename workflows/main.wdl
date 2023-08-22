@@ -16,6 +16,7 @@ workflow harmonized_pmdbs_analysis {
 		File cell_type_markers_list
 
 		Array[String] groups = ["sample", "batch", "seurat_clusters"]
+		Array[String] features = ["doublet_scores", "nCount_RNA", "nFeature_RNA", "percent.mt", "percent.rb"]
 
 		String container_registry
 	}
@@ -109,6 +110,17 @@ workflow harmonized_pmdbs_analysis {
 		}
 	}
 
+	# TODO same overhead as plot_groups
+	scatter (feature in features) {
+		call plot_features {
+			input:
+				project_name = project_name,
+				metadata = sctype.metadata,
+				feature = feature,
+				container_registry = container_registry
+		}
+	}
+
 	output {
 		Array[File] preprocessed_seurat_objects = preprocess.preprocessed_seurat_object
 		File unfiltered_metadata = doublets.unfiltered_metadata
@@ -123,6 +135,7 @@ workflow harmonized_pmdbs_analysis {
 		File cluster_seurat_object = cluster.cluster_seurat_object
 		File metadata = sctype.metadata
 		Array[File] group_umap_plots = plot_groups.group_umap_plot
+		Array[File] feature_umap_plots = plot_features.feature_umap_plot
 	}
 
 	meta {
@@ -140,6 +153,7 @@ workflow harmonized_pmdbs_analysis {
 		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
 		cell_type_markers_list: {help: "Seurat object RDS file containing a list of major cell type markers; used to annotate clusters."}
 		groups: {help: "Groups to produce umap plots for. ['sample', 'batch', 'seurat_clusters']"}
+		features: {help: "Features to produce umap plots for. ['doublet_scores', 'nCount_RNA', 'nFeature_RNA', 'percent.mt', 'percent.rb']"}
 		container_registry: {help: "Container registry where Docker images are hosted"}
 	}
 }
@@ -492,6 +506,35 @@ task plot_groups {
 
 	output {
 		File group_umap_plot = "~{project_name}.~{group}_group_umap.pdf"
+	}
+
+	runtime {
+		docker: "~{container_registry}/multiome:4a7fd84"
+	}
+}
+
+task plot_features {
+	input {
+		String project_name
+		File metadata
+
+		String feature
+
+		String container_registry
+	}
+
+	command <<<
+		set -euo pipefail
+
+		Rscript /opt/scripts/main/plot_features.R \
+			--working-dir "$(pwd)" \
+			--metadata ~{metadata} \
+			--feature ~{feature} \
+			--output-feature-umap-plot ~{project_name}.~{feature}_feature_umap.pdf
+	>>>
+
+	output {
+		File feature_umap_plot = "~{project_name}.~{feature}_feature_umap.pdf"
 	}
 
 	runtime {
