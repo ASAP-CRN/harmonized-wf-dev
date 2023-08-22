@@ -1,6 +1,6 @@
 # Parse command-line arguments
 library('argparse')
-parser <- ArgumentParser(description='Run harmony analysis')
+parser <- ArgumentParser(description='Run clustering')
 parser$add_argument('--working-dir', dest='working_dir', type='character', help='Working directory', default='/data/CARD_singlecell/harmony-rna/')
 parser$add_argument('--script-dir', dest='script_dir', type='character', help='Directory containing workflow scripts', default='scripts')
 parser$add_argument('--threads', dest='threads', type='integer', help='Number of threads to use for processing')
