@@ -11,6 +11,10 @@ workflow harmonized_pmdbs_analysis {
 
 		Float soup_rate = 0.20
 
+		Int clustering_algorithm = 3
+		Float clustering_resolution = 0.3
+		File cell_type_markers_list
+
 		String container_registry
 	}
 
@@ -74,6 +78,16 @@ workflow harmonized_pmdbs_analysis {
 			container_registry = container_registry
 	}
 
+	call cluster {
+		input:
+			project_name = project_name,
+			umap_seurat_object = umap.umap_seurat_object,
+			clustering_algorithm = clustering_algorithm,
+			clustering_resolution = clustering_resolution,
+			cell_type_markers_list = cell_type_markers_list,
+			container_registry = container_registry
+	}
+
 	output {
 		Array[File] preprocessed_seurat_objects = preprocess.preprocessed_seurat_object
 		File unfiltered_metadata = doublets.unfiltered_metadata
@@ -84,6 +98,8 @@ workflow harmonized_pmdbs_analysis {
 		File harmony_seurat_object = harmony.harmony_seurat_object
 		File neighbors_seurat_object = neighbors.neighbors_seurat_object
 		File umap_seurat_object = umap.umap_seurat_object
+		File major_cell_type_plot = cluster.major_cell_type_plot
+		File cluster_seurat_object = cluster.cluster_seurat_object
 	}
 
 	meta {
@@ -97,6 +113,9 @@ workflow harmonized_pmdbs_analysis {
 		raw_counts: {help: "Unfiltered feature-barcode matrices HDF5 output by cellranger"}
 		filtered_counts: {help: "Filtered feature-barcode matrices HDF5 output by cellranger"}
 		soup_rate: {help: "Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data [0.2]"}
+		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}
+		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
+		cell_type_markers_list: {help: "Seurat object RDS file containing a list of major cell type markers; used to annotate clusters."}
 		container_registry: {help: "Container registry where Docker images are hosted"}
 	}
 }
@@ -349,5 +368,46 @@ task umap {
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
+	}
+}
+
+task cluster {
+	input {
+		String project_name
+		File umap_seurat_object
+
+		Int clustering_algorithm
+		Float clustering_resolution
+		File cell_type_markers_list
+
+		String container_registry
+	}
+
+	Int threads = 8
+	String umap_seurat_object_basename = basename(umap_seurat_object, "_05.rds")
+
+	command <<<
+		set -euo pipefail
+
+		Rscript /opt/scripts/main/clustering.R \
+			--working-dir "$(pwd)" \
+			--script-dir /opt/scripts \
+			--threads ~{threads} \
+			--seurat-object ~{umap_seurat_object} \
+			--clustering-algorithm ~{clustering_algorithm} \
+			--clustering-resolution ~{clustering_resolution} \
+			--cell-type-markers-list ~{cell_type_markers_list} \
+			--output-cell-type-plot ~{project_name}.major_type_module_umap.pdf \
+			--output-seurat-object ~{umap_seurat_object_basename}_cluster_07.rds
+	>>>
+
+	output {
+		File major_cell_type_plot = "~{project_name}.major_type_module_umap.pdf"
+		File cluster_seurat_object = "~{umap_seurat_object_basename}_cluster_07.rds"
+	}
+
+	runtime {
+		docker: "~{container_registry}/multiome:4a7fd84"
+		cpu: threads
 	}
 }
