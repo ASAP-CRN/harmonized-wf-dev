@@ -122,20 +122,19 @@ workflow harmonized_pmdbs_analysis {
 	}
 
 	output {
-		Array[File] preprocessed_seurat_objects = preprocess.preprocessed_seurat_object
-		File unfiltered_metadata = doublets.unfiltered_metadata
+		# QC plots
 		File qc_plot1 = plot_qc.plot1
 		File qc_plot2 = plot_qc.plot2
-		Array[File] filtered_seurat_objects = filter.filtered_seurat_object
-		Array[File] normalized_seurat_objects = process.normalized_seurat_object
-		File harmony_seurat_object = harmony.harmony_seurat_object
-		File neighbors_seurat_object = neighbors.neighbors_seurat_object
-		File umap_seurat_object = umap.umap_seurat_object
-		File major_cell_type_plot = cluster.major_cell_type_plot
-		File cluster_seurat_object = cluster.cluster_seurat_object
+
+		# Final metadata
 		File metadata = sctype.metadata
+
+		# Group and feature plots
 		Array[File] group_umap_plots = plot_groups.group_umap_plot
 		Array[File] feature_umap_plots = plot_features.feature_umap_plot
+
+		# Clustered seurat object
+		File cluster_seurat_object = cluster.cluster_seurat_object
 	}
 
 	meta {
