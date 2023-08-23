@@ -8,10 +8,11 @@ parser$add_argument('--seurat-object', dest='seurat_object', type='character', h
 parser$add_argument('--cell-type-markers-list', dest='cell_type_markers_list', type='character', help='Seurat object containing a list of major cell type markers')
 parser$add_argument('--output-metadata-file', dest='output_metadata_file', type='character', help='Output file to write metadata to')
 args <- parser$parse_args()
+script_dir <- args$script_dir
 
 # Set working directory and load packages
 setwd(args$working_dir)
-source(paste0(args$script_dir, '/main/load_packages.r'))
+source(paste0(script_dir, '/main/load_packages.r'))
 source('https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/R/sctype_score_.R')
 
 # Set variables from args or snakemake parameters

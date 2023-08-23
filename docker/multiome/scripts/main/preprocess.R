@@ -10,10 +10,11 @@ parser$add_argument('--filtered-counts', dest='filtered_counts', type='character
 parser$add_argument('--soup-rate', dest='soup_rate', type='character', help='Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data')
 parser$add_argument('--output-seurat-object', dest='output_seurat_object', type='character', help='Output file to save Seurat object to')
 args <- parser$parse_args()
+script_dir <- args$script_dir
 
 # Set working directory and load packages
 setwd(args$working_dir)
-source(paste0(args$script_dir, '/main/load_packages.r'))
+source(paste0(script_dir, '/main/load_packages.r'))
 reticulate::source_python(paste0(args$script_dir, '/utility/scrublet_py.py'))
 
 # Set variables from args or snakemake parameters
@@ -26,7 +27,6 @@ filtered_counts_file <- if (is.null(args$filtered_counts)) paste0(data_path, bat
 
 soup_rate <- if (is.null(args$soup_rate)) snakemake@params[['soup_rate']] else args$soup_rate
 output_seurat_object <- if (is.null(args$output_seurat_object)) snakemake@output[['seurat_object']] else args$output_seurat_object
-
 
 # Main
 raw.counts <- Read10X_h5(raw_counts_file)

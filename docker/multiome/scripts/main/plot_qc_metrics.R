@@ -9,10 +9,11 @@ parser$add_argument('--project-name', dest='project_name', type='character', hel
 parser$add_argument('--plot1-output-file', dest='plot1_output_file', type='character', help='Output file to write plot 1 to')
 parser$add_argument('--plot2-output-file', dest='plot2_output_file', type='character', help='Output file to write plot 2 to')
 args <- parser$parse_args()
+script_dir <- args$script_dir
 
 # Set working directory and load packages
 setwd(args$working_dir)
-source(paste0(args$script_dir, '/main/load_packages.r'))
+source(paste0(script_dir, '/main/load_packages.r'))
 
 # Set variables from args or snakemake parameters
 threads <- if (is.null(args$threads)) snakemake@threads else args$threads

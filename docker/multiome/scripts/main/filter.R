@@ -7,10 +7,11 @@ parser$add_argument('--seurat-object', dest='seurat_object', type='character', h
 parser$add_argument('--metadata', dest='metadata', type='character', help='Metadata file output by gmm_doublet_calling')
 parser$add_argument('--output-seurat-object', dest='output_seurat_object', type='character', help='Output file to save Seurat object to')
 args <- parser$parse_args()
+script_dir <- args$script_dir
 
 # Set working directory and load packages
 setwd(args$working_dir)
-source(paste0(args$script_dir, '/main/load_packages.r'))
+source(paste0(script_dir, '/main/load_packages.r'))
 
 # Set variables from args or snakemake parameters
 seurat_object <- if (is.null(args$seurat_object)) snakemake@input[['seurat_object']] else args$seurat_object

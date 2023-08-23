@@ -9,6 +9,7 @@ parser$add_argument('--output-seurat-object', dest='output_seurat_object', type=
 # Accept positional arguments for compatibility with snakemake workflow
 parser$add_argument('positional_arguments', nargs='*', type='character', help='Optionally proivde arguments positionally. Format: `harmony.R seurat_objects output_seurat_object threads`. seurat_objects is a space-separated set of input seurat objects.')
 args <- parser$parse_args()
+script_dir <- args$script_dir
 
 ## If positional arguments are used, ensure there are at least 3 (seurat_objects, output_seurat_object, threads)
 if (length(args$positional_arguments) > 0 && length(args$positional_arguments) < 3) {
@@ -20,7 +21,7 @@ if (length(args$positional_arguments) > 0 && length(args$positional_arguments) <
 
 # Set working directory and load packages
 setwd(args$working_dir)
-source(paste0(args$script_dir, '/main/load_packages.r'))
+source(paste0(script_dir, '/main/load_packages.r'))
 
 # Set variables from args
 threads <- if (length(args$positional_arguments) > 0) as.numeric(tail(args$positional_arguments, n=1)) else args$threads

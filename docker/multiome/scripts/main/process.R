@@ -7,10 +7,11 @@ parser$add_argument('--threads', dest='threads', type='integer', help='Number of
 parser$add_argument('--seurat-object', dest='seurat_object', type='character', help='Seurat object for a dataset')
 parser$add_argument('--output-seurat-object', dest='output_seurat_object', type='character', help='Output file to save Seurat object to')
 args <- parser$parse_args()
+script_dir <- args$script_dir
 
 # Set working directory and load packages
 setwd(args$working_dir)
-source(paste0(args$script_dir, '/main/load_packages.r'))
+source(paste0(script_dir, '/main/load_packages.r'))
 
 # Set variables from args or snakemake parameters
 threads <- if (is.null(args$threads)) snakemake@threads else args$threads
