@@ -3,11 +3,11 @@ library('argparse')
 parser <- ArgumentParser(description='Preprocess')
 parser$add_argument('--working-dir', dest='working_dir', type='character', help='Working directory', default='/data/CARD_singlecell/harmony-rna/')
 parser$add_argument('--script-dir', dest='script_dir', type='character', help='Directory containing workflow scripts', default='scripts')
-parser$add_argument('--dataset', dest='dataset', type='character', help='Name of dataset to process')
-parser$add_argument('--batch-file', dest='batch_file', type='character')
+parser$add_argument('--sample-id', dest='sample_id', type='character', help='Sample/dataset ID')
+parser$add_argument('--batch', dest='batch', type='character', help="Batch from which the sample/dataset originated")
 parser$add_argument('--raw-counts', dest='raw_counts', type='character', help='Unfiltered feature-barcode matrices HDF5 output by cellranger')
 parser$add_argument('--filtered-counts', dest='filtered_counts', type='character', help='Filtered feature-barcode matrices HDF5 output by cellranger')
-parser$add_argument('--soup-rate', dest='soup_rate', type='character', help='Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data')
+parser$add_argument('--soup-rate', dest='soup_rate', type='numeric', help='Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data')
 parser$add_argument('--output-seurat-object', dest='output_seurat_object', type='character', help='Output file to save Seurat object to')
 args <- parser$parse_args()
 script_dir <- args$script_dir
@@ -15,13 +15,10 @@ script_dir <- args$script_dir
 # Set working directory and load packages
 setwd(args$working_dir)
 source(paste0(script_dir, '/main/load_packages.r'))
-reticulate::source_python(paste0(script_dir, '/utility/scrublet_py.py'))
 
 # Set variables from args or snakemake parameters
-dataset <- if (is.null(args$dataset)) snakemake@params[['dataset']] else args$dataset
-batch_file <- if (is.null(args$batch_file)) snakemake@input[['datasets']] else args$batch_file
-
-batch <- fread(batch_file)[sample %chin% dataset, batch]
+dataset <- if (is.null(args$sample_id)) snakemake@params[['dataset']] else args$sample_id
+batch <- if (is.null(args$batch)) fread(snakemake@input[['datasets']])[sample %chin% dataset, batch] else args$batch
 raw_counts_file <- if (is.null(args$raw_counts)) paste0(data_path, batch, '/Multiome/', dataset, '/outs/raw_feature_bc_matrix.h5') else args$raw_counts
 filtered_counts_file <- if (is.null(args$filtered_counts)) paste0(data_path, batch, '/Multiome/', dataset, '/outs/filtered_feature_bc_matrix.h5') else args$filtered_counts
 

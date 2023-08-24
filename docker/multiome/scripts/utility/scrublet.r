@@ -1,12 +1,13 @@
+script_dir <- if (exists("script_dir")) paste0(script_dir, '/utility') else "/data/ShernData/scripts_NF1"
 
 scrublet <- function(object, min_counts=2, min_cells=3, expected_doublet_rate=0.06, min_gene_variability_pctl=85, n_prin_comps=50, sim_doublet_ratio=2, n_neighbors=NULL) {
 
-    if (class(object) != 'Seurat') stop('object is not of type "Seurat"') 
+    if (class(object) != 'Seurat') stop('object is not of type "Seurat"')
 
-    reticulate::source_python('/data/ShernData/scripts_NF1/scrublet_py.py')
+    reticulate::source_python(paste0(script_dir, '/scrublet_py.py'))
 
     X <- as(t(as.matrix(GetAssayData(object=object, slot='counts'))), 'TsparseMatrix')
-    
+
     val <- X@x
     i <- as.integer(X@i)
     j <- as.integer(X@j)
@@ -17,8 +18,8 @@ scrublet <- function(object, min_counts=2, min_cells=3, expected_doublet_rate=0.
     scrublet_py_args <- c(
         list(
                 i=i, j=j, val=val, dim=dim,
-                expected_doublet_rate=expected_doublet_rate, min_counts=min_counts, 
-                min_cells=min_cells, min_gene_variability_pctl=min_gene_variability_pctl, 
+                expected_doublet_rate=expected_doublet_rate, min_counts=min_counts,
+                min_cells=min_cells, min_gene_variability_pctl=min_gene_variability_pctl,
                 n_prin_comps=n_prin_comps, sim_doublet_ratio=sim_doublet_ratio, n_neighbors=n_neighbors
             )
         )
@@ -31,10 +32,7 @@ scrublet <- function(object, min_counts=2, min_cells=3, expected_doublet_rate=0.
     doublet_scores <- d[, doublet_scores]
     names(doublet_scores) <- d[, cells]
 
-
     object <- object %>% AddMetaData(metadata=doublet_scores, col.name='doublet_scores')
-                    
-    return(object)
-  
-}
 
+    return(object)
+}
