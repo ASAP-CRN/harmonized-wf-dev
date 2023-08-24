@@ -15,7 +15,7 @@ script_dir <- args$script_dir
 # Set working directory and load packages
 setwd(args$working_dir)
 source(paste0(script_dir, '/main/load_packages.r'))
-reticulate::source_python(paste0(args$script_dir, '/utility/scrublet_py.py'))
+reticulate::source_python(paste0(script_dir, '/utility/scrublet_py.py'))
 
 # Set variables from args or snakemake parameters
 dataset <- if (is.null(args$dataset)) snakemake@params[['dataset']] else args$dataset
