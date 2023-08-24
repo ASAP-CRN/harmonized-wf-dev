@@ -39,6 +39,7 @@ RUN Rscript -e 'install.packages("argparse", repos="http://cran.us.r-project.org
 COPY --from=builder /opt/Harmony-RNA-Workflow/scripts /opt/scripts
 
 # Add override scripts
-COPY scripts/main/ /opt/scripts/main/
+COPY scripts/main /opt/scripts/main
+COPY scripts/utility /opt/scripts/utility
 
 RUN echo "source activate ${CONDA_ENVIRONMENT}" >> ~/.bashrc
