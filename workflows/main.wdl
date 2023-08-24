@@ -1,13 +1,17 @@
 version 1.0
 
+struct Sample {
+	String sample_id
+	String batch
+
+	File fastq_R1
+	File fastq_R2
+}
+
 workflow harmonized_pmdbs_analysis {
 	input {
 		String project_name
-		Array[String] datasets
-		File batch_file
-
-		File raw_counts
-		File filtered_counts
+		Array[Sample] samples
 
 		Float soup_rate = 0.20
 
@@ -21,13 +25,21 @@ workflow harmonized_pmdbs_analysis {
 		String container_registry
 	}
 
-	scatter (dataset in datasets) {
+	scatter (sample in samples) {
+		call cellranger {
+			input:
+				sample_id = sample.sample_id,
+				fastq_R1 = sample.fastq_R1,
+				fastq_R2 = sample.fastq_R2,
+				container_registry = container_registry
+		}
+
 		call preprocess {
 			input:
-				dataset = dataset,
-				batch_file = batch_file,
-				raw_counts = raw_counts,
-				filtered_counts = filtered_counts,
+				sample_id = sample.sample_id,
+				batch = sample.batch,
+				raw_counts = cellranger.raw_counts,
+				filtered_counts = cellranger.filtered_counts,
 				soup_rate = soup_rate,
 				container_registry = container_registry
 		}
@@ -143,10 +155,7 @@ workflow harmonized_pmdbs_analysis {
 
 	parameter_meta {
 		project_name: {help: "Name of project"}
-		datasets: {help: "Array of dataset names to process"}
-		batch_file: {help: "Samples CSV file"}
-		raw_counts: {help: "Unfiltered feature-barcode matrices HDF5 output by cellranger"}
-		filtered_counts: {help: "Filtered feature-barcode matrices HDF5 output by cellranger"}
+		samples: {help: "The set of samples and their associated reads and metadata"}
 		soup_rate: {help: "Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data [0.2]"}
 		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}
 		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
@@ -157,11 +166,42 @@ workflow harmonized_pmdbs_analysis {
 	}
 }
 
+task cellranger {
+	input {
+		String sample_id
+
+		File fastq_R1
+		File fastq_R2
+
+		String container_registry
+	}
+
+	command <<<
+		set -euo pipefail
+
+		echo "cellranger ~{fastq_R1} ~{fastq_R2}"
+
+		touch ~{sample_id}_count_raw_feature_bc_matrix.h5
+		touch ~{sample_id}_count_filtered_feature_bc_matrix.h5
+		touch ~{sample_id}_count_molecule_info.h5
+	>>>
+
+	output {
+		File raw_counts = "~{sample_id}_count_raw_feature_bc_matrix.h5"
+		File filtered_counts = "~{sample_id}_count_filtered_feature_bc_matrix.h5"
+		File molecule_info = "~{sample_id}_count_molecule_info.h5"
+	}
+
+	runtime {
+		docker: "~{container_registry}/cellranger" # TODO
+	}
+}
+
 task preprocess {
 	input {
-		String dataset
+		String sample_id
+		String batch
 
-		File batch_file
 		File raw_counts
 		File filtered_counts
 
@@ -176,16 +216,16 @@ task preprocess {
 		Rscript /opt/scripts/main/preprocess.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
-			--dataset ~{dataset} \
-			--batch-file ~{batch_file} \
+			--sample-id ~{sample_id} \
+			--batch ~{batch} \
 			--raw-counts ~{raw_counts} \
 			--filtered-counts ~{filtered_counts} \
 			--soup-rate ~{soup_rate} \
-			--output-seurat-object seurat_object_~{dataset}_preprocessed_01.rds
+			--output-seurat-object seurat_object_~{sample_id}_preprocessed_01.rds
 	>>>
 
 	output {
-		File preprocessed_seurat_object = "seurat_object_~{dataset}_preprocessed_01.rds"
+		File preprocessed_seurat_object = "seurat_object_~{sample_id}_preprocessed_01.rds"
 	}
 
 	runtime {
