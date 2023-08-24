@@ -210,6 +210,8 @@ task preprocess {
 		String container_registry
 	}
 
+	Int disk_size = ceil(size([raw_counts, filtered_counts], "GB") * 2 + 20)
+
 	command <<<
 		set -euo pipefail
 
@@ -230,6 +232,10 @@ task preprocess {
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
+		cpu: 8
+		memory: "12 GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 	}
 }
 
