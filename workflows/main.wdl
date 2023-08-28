@@ -13,6 +13,8 @@ workflow harmonized_pmdbs_analysis {
 		String project_name
 		Array[Sample] samples
 
+		File cellranger_reference_data
+
 		Float soup_rate = 0.20
 
 		Int clustering_algorithm = 3
@@ -31,6 +33,7 @@ workflow harmonized_pmdbs_analysis {
 				sample_id = sample.sample_id,
 				fastq_R1 = sample.fastq_R1,
 				fastq_R2 = sample.fastq_R2,
+				cellranger_reference_data = cellranger_reference_data,
 				container_registry = container_registry
 		}
 
@@ -156,6 +159,7 @@ workflow harmonized_pmdbs_analysis {
 	parameter_meta {
 		project_name: {help: "Name of project"}
 		samples: {help: "The set of samples and their associated reads and metadata"}
+		cellranger_reference_data: {help: "Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest."}
 		soup_rate: {help: "Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data [0.2]"}
 		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}
 		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
@@ -173,17 +177,34 @@ task cellranger {
 		File fastq_R1
 		File fastq_R2
 
+		File cellranger_reference_data
+
 		String container_registry
 	}
+
+	Int threads = 8
+	Int mem_gb = threads * 4
+	Int disk_size = ceil(size([fastq_R1, fastq_R2], "GB") * 2 + 30)
 
 	command <<<
 		set -euo pipefail
 
-		echo "cellranger ~{fastq_R1} ~{fastq_R2}"
+		# Unpack refdata
+		tar \
+			-zxvf ~{cellranger_reference_data} \
+			-C cellranger-refdata \
+			--strip-components 1
 
-		touch ~{sample_id}_count_raw_feature_bc_matrix.h5
-		touch ~{sample_id}_count_filtered_feature_bc_matrix.h5
-		touch ~{sample_id}_count_molecule_info.h5
+		# Ensure fastqs are in the same directory
+		mkdir fastqs
+		ln -s ~{fastq_R1} ~{fastq_R2} fastqs/
+
+		cellranger count \
+			--id=~{sample_id} \
+			--transcriptome="$(pwd)/cellranger-refdata" \
+			--fastqs="$(pwd)/fastqs" \
+			--localcores ~{threads} \
+			--localmem ~{mem_gb - 2}
 	>>>
 
 	output {
@@ -193,7 +214,11 @@ task cellranger {
 	}
 
 	runtime {
-		docker: "~{container_registry}/cellranger" # TODO
+		docker: "~{container_registry}/cellranger:7.1.0"
+		cpu: threads
+		memory: "~{mem_gb} GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 	}
 }
 

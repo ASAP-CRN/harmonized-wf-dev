@@ -1,6 +1,7 @@
 {
   "harmonized_pmdbs_analysis.project_name": "String",
   "harmonized_pmdbs_analysis.samples": "Array[WomCompositeType {\n sample_id -> String\nbatch -> String\nfastq_R1 -> File\nfastq_R2 -> File \n}]",
+  "harmonized_pmdbs_analysis.cellranger_reference_data": "String",
   "harmonized_pmdbs_analysis.soup_rate": "Float (optional, default = 0.2)",
   "harmonized_pmdbs_analysis.clustering_algorithm": "Int (optional, default = 3)",
   "harmonized_pmdbs_analysis.clustering_resolution": "Float (optional, default = 0.3)",
