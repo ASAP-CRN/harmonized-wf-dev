@@ -138,8 +138,8 @@ workflow harmonized_pmdbs_analysis {
 
 	output {
 		# QC plots
-		File qc_plot1 = plot_qc.plot1
-		File qc_plot2 = plot_qc.plot2
+		File qc_violin_plots = plot_qc.qc_violin_plots
+		File qc_umis_genes_plot = plot_qc.qc_umis_genes_plot
 
 		# Final metadata
 		File metadata = sctype.metadata
@@ -319,14 +319,13 @@ task plot_qc {
 			--threads ~{threads} \
 			--metadata ~{unfiltered_metadata} \
 			--project-name ~{project_name} \
-			--plot1-output-file ~{project_name}.qc_plot1.pdf \
-			--plot2-output-file ~{project_name}.qc_plot2.pdf
+			--output-violin-plots ~{project_name}.qc.violin_plots.pdf \
+			--output-umis-genes-plot ~{project_name}.qc.umis_genes_plot.pdf
 	>>>
 
-	# TODO come up with better output names for these plots, both here and in the Rscript
 	output {
-		File plot1 = "~{project_name}.qc_plot1.pdf"
-		File plot2 = "~{project_name}.qc_plot2.pdf"
+		File qc_violin_plots = "~{project_name}.qc.violin_plots.pdf"
+		File qc_umis_genes_plot = "~{project_name}.qc.umis_genes_plot.pdf"
 	}
 
 	runtime {
