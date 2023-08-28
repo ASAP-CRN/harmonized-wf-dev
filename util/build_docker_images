@@ -30,6 +30,8 @@ cat << EOF
 
     $(tput bold)-r$(tput sgr0)  Remove local images following push
 
+    $(tput bold)-b$(tput sgr0)  Comma-separated global build arguments (VAR=value,VAR2=value2). Will be passed to every image build.
+
 EOF
 }
 
@@ -43,6 +45,7 @@ err() {
 
 build_docker_image() {
   local build_env_file="$1"
+  local global_build_args="$2"
   local docker_context_dir=$(dirname "${build_env_file}")
   local -a build_args
 
@@ -91,6 +94,11 @@ build_docker_image() {
     while read -r varname || [[ -n "${varname}" ]]; do
       build_args+=(--build-arg "${varname}=${!varname}")
     done < <(grep -v -e '^#' -e '^$' "${build_env_file}" | cut -d '=' -f 1)
+
+    # Add global build args provided on the command line
+    while read -r global_build_arg || [[ -n "${global_build_arg}" ]]; do
+      build_args+=(--build-arg "${global_build_arg}")
+    done < <(echo -n "${global_build_args}" | tr ',' '\n')
 
     tagged_image="${CONTAINER_REGISTRY:+"${CONTAINER_REGISTRY}/"}${IMAGE_NAME}:${IMAGE_TAG}"
     log "Building ${tagged_image}"
@@ -172,7 +180,7 @@ pull_docker_image() {
   )
 }
 
-while getopts "hd:c:ps:r" OPTION; do
+while getopts "hd:c:ps:rb:" OPTION; do
   case $OPTION in
     h) usage; exit ;;
     d) DOCKER_CONTEXT_DIR=$OPTARG ;;
@@ -180,6 +188,7 @@ while getopts "hd:c:ps:r" OPTION; do
     p) PUSH_IMAGES='true' ;;
     s) SOURCE_REGISTRY=$OPTARG ;;
     r) REMOVE_LOCAL_IMAGES='true' ;;
+    b) GLOBAL_BUILD_ARGS=$OPTARG ;;
     \?) usage; exit ;;
   esac
 done
@@ -188,8 +197,9 @@ DOCKER_CONTEXT_DIR=${DOCKER_CONTEXT_DIR:-"${DEFAULT_DOCKER_CONTEXT_DIR}"}
 PUSH_IMAGES=${PUSH_IMAGES:-'false'}
 SOURCE_REGISTRY=${SOURCE_REGISTRY:-}
 REMOVE_LOCAL_IMAGES=${REMOVE_LOCAL_IMAGES:-'false'}
+GLOBAL_BUILD_ARGS=${GLOBAL_BUILD_ARGS:-}
 
-readonly DOCKER_CONTEXT_DIR CONTAINER_REGISTRY PUSH_IMAGES SOURCE_REGISTRY REMOVE_LOCAL_IMAGES
+readonly DOCKER_CONTEXT_DIR CONTAINER_REGISTRY PUSH_IMAGES SOURCE_REGISTRY REMOVE_LOCAL_IMAGES GLOBAL_BUILD_ARGS
 
 IMAGES_TO_BUILD=$(find "${DOCKER_CONTEXT_DIR}" -type f -name build.env)
 if [[ "${#IMAGES_TO_BUILD}" -eq 0 ]]; then
@@ -203,6 +213,6 @@ while read -r build_env_file; do
   if [[ -n "${SOURCE_REGISTRY}" ]]; then
     pull_docker_image "${build_env_file}"
   else
-    build_docker_image "${build_env_file}"
+    build_docker_image "${build_env_file}" "${GLOBAL_BUILD_ARGS}"
   fi
 done <<< "${IMAGES_TO_BUILD}"
