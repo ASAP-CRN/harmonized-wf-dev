@@ -309,6 +309,7 @@ task plot_qc {
 	}
 
 	Int threads = 2
+	Int disk_size = ceil(size(unfiltered_metadata, "GB") * 2 + 20)
 
 	command <<<
 		set -euo pipefail
@@ -331,6 +332,9 @@ task plot_qc {
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
 		cpu: threads
+		memory: "4 GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 	}
 }
 
