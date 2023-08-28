@@ -4,7 +4,7 @@ parser <- ArgumentParser(description='Run harmony analysis')
 parser$add_argument('--working-dir', dest='working_dir', type='character', help='Working directory', default='/data/CARD_singlecell/harmony-rna/')
 parser$add_argument('--script-dir', dest='script_dir', type='character', help='Directory containing workflow scripts', default='scripts')
 parser$add_argument('--threads', dest='threads', type='integer', help='Number of threads to use for processing')
-parser$add_argument('--seurat-objects', dest='seurat_objects', type='character', nargs='+', help='Set of input seurat objects for datasets')
+parser$add_argument('--seurat-objects-fofn', dest='seurat_objects_fofn', type='character', help='Newline-delimited paths to the set of input seurat objects (file-of-filenames)')
 parser$add_argument('--output-seurat-object', dest='output_seurat_object', type='character', help='Output file to save Seurat object to')
 # Accept positional arguments for compatibility with snakemake workflow
 parser$add_argument('positional_arguments', nargs='*', type='character', help='Optionally proivde arguments positionally. Format: `harmony.R seurat_objects output_seurat_object threads`. seurat_objects is a space-separated set of input seurat objects.')
@@ -25,7 +25,7 @@ source(paste0(script_dir, '/main/load_packages.r'))
 
 # Set variables from args
 threads <- if (length(args$positional_arguments) > 0) as.numeric(tail(args$positional_arguments, n=1)) else args$threads
-seurat_objects <- if (length(args$positional_arguments) > 0) head(args$positional_arguments, -2) else args$seurat_objects
+seurat_objects <- if (length(args$positional_arguments) > 0) head(args$positional_arguments, -2) else scan(args$seurat_objects_fofn, what='character', sep='\n')
 output_seurat_object <- if (length(args$positional_arguments) > 0) tail(args$positional_arguments, n=2) else args$output_seurat_object
 
 # Main

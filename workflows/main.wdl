@@ -273,6 +273,7 @@ task doublets {
 	}
 
 	Int threads = 2
+	Int disk_size = ceil(size(preprocessed_seurat_objects[0], "GB") * length(preprocessed_seurat_objects) * 2 + 30)
 
 	command <<<
 		set -euo pipefail
@@ -281,7 +282,7 @@ task doublets {
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--threads ~{threads} \
-			--seurat-objects ~{sep=' ' preprocessed_seurat_objects} \
+			--seurat-objects-fofn ~{write_lines(preprocessed_seurat_objects)} \
 			--project-name ~{project_name} \
 			--output-metadata-file ~{project_name}.unfiltered_metadata.csv
 	>>>
@@ -293,6 +294,9 @@ task doublets {
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
 		cpu: threads
+		memory: "4 GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 	}
 }
 
@@ -409,7 +413,7 @@ task harmony {
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--threads ~{threads} \
-			--seurat-objects ~{sep=' ' normalized_seurat_objects} \
+			--seurat-objects-fofn ~{write_lines(normalized_seurat_objects)} \
 			--output-seurat-object ~{project_name}_seurat_object_harmony_integrated_04.rds
 	>>>
 

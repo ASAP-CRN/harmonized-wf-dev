@@ -4,7 +4,7 @@ parser <- ArgumentParser(description='Call doublets')
 parser$add_argument('--working-dir', dest='working_dir', type='character', help='Working directory', default='/data/CARD_singlecell/harmony-rna/')
 parser$add_argument('--script-dir', dest='script_dir', type='character', help='Directory containing workflow scripts', default='scripts')
 parser$add_argument('--threads', dest='threads', type='integer', help='Number of threads to use for processing')
-parser$add_argument('--seurat-objects', dest='seurat_objects', type='character', nargs='+', help='Set of input seurat objects for datasets')
+parser$add_argument('--seurat-objects-fofn', dest='seurat_objects_fofn', type='character', help='Newline-delimited paths to the set of input seurat objects (file-of-filenames)')
 parser$add_argument('--project-name', dest='project_name', type='character', help='Project name')
 parser$add_argument('--output-metadata-file', dest='output_metadata_file', type='character', help='Output file to write metadata to')
 args <- parser$parse_args()
@@ -16,7 +16,7 @@ source(paste0(script_dir, '/main/load_packages.r'))
 
 # Set variables from args or snakemake parameters
 threads <- if (is.null(args$threads)) snakemake@threads else args$threads
-seurat_objects <- if (is.null(args$seurat_objects)) snakemake@input[['seurat_object']] else args$seurat_objects
+seurat_objects <- if (is.null(args$seurat_objects_fofn)) snakemake@input[['seurat_object']] else scan(args$seurat_objects_fofn, what='character', sep='\n')
 project_name <- if (is.null(args$project_name)) snakemake@params[['project_name']] else args$project_name
 output_metadata_file <- if (is.null(args$output_metadata_file)) snakemake@output[['metadata']] else args$output_metadata_file
 
