@@ -137,6 +137,12 @@ workflow harmonized_pmdbs_analysis {
 	}
 
 	output {
+		# Cellranger
+		Array[File] raw_counts = cellranger.raw_counts
+		Array[File] filtered_counts = cellranger.filtered_counts
+		Array[File] molecule_info = cellranger.molecule_info
+		Array[File] cellranger_metrics_csv = cellranger.metrics_csv
+
 		# QC plots
 		File qc_violin_plots = plot_qc.qc_violin_plots
 		File qc_umis_genes_plot = plot_qc.qc_umis_genes_plot
@@ -205,12 +211,19 @@ task cellranger {
 			--fastqs="$(pwd)/fastqs" \
 			--localcores ~{threads} \
 			--localmem ~{mem_gb - 2}
+
+		# Rename outputs to include sample ID
+		mv ~{sample_id}/outs/raw_feature_bc_matrix.h5 ~{sample_id}.raw_feature_bc_matrix.h5
+		mv ~{sample_id}/outs/filtered_feature_bc_matrix.h5 ~{sample_id}.filtered_feature_bc_matrix.h5
+		mv ~{sample_id}/outs/molecule_info.h5 ~{sample_id}.molecule_info.h5
+		mv ~{sample_id}/outs/metrics_summary.csv ~{sample_id}.metrics_summary.csv
 	>>>
 
 	output {
 		File raw_counts = "~{sample_id}_count_raw_feature_bc_matrix.h5"
 		File filtered_counts = "~{sample_id}_count_filtered_feature_bc_matrix.h5"
 		File molecule_info = "~{sample_id}_count_molecule_info.h5"
+		File metrics_csv = "~{sample_id}.metrics_summary.csv"
 	}
 
 	runtime {
