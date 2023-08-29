@@ -220,9 +220,9 @@ task cellranger {
 	>>>
 
 	output {
-		File raw_counts = "~{sample_id}_count_raw_feature_bc_matrix.h5"
-		File filtered_counts = "~{sample_id}_count_filtered_feature_bc_matrix.h5"
-		File molecule_info = "~{sample_id}_count_molecule_info.h5"
+		File raw_counts = "~{sample_id}.raw_feature_bc_matrix.h5"
+		File filtered_counts = "~{sample_id}.filtered_feature_bc_matrix.h5"
+		File molecule_info = "~{sample_id}.molecule_info.h5"
 		File metrics_csv = "~{sample_id}.metrics_summary.csv"
 	}
 
