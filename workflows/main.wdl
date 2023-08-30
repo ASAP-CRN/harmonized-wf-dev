@@ -185,32 +185,35 @@ task cellranger {
 
 		File cellranger_reference_data
 
-		String container_registry
+		String container_registry = "us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images"
 	}
 
-	Int threads = 8
-	Int mem_gb = threads * 4
+	Int threads = 16
+	Int mem_gb = threads * 8
 	Int disk_size = ceil(size([fastq_R1, fastq_R2], "GB") * 2 + 30)
 
 	command <<<
 		set -euo pipefail
 
 		# Unpack refdata
+		mkdir cellranger_refdata
 		tar \
 			-zxvf ~{cellranger_reference_data} \
-			-C cellranger-refdata \
+			-C cellranger_refdata \
 			--strip-components 1
 
 		# Ensure fastqs are in the same directory
 		mkdir fastqs
 		ln -s ~{fastq_R1} ~{fastq_R2} fastqs/
 
+		cellranger --version
+
 		cellranger count \
 			--id=~{sample_id} \
-			--transcriptome="$(pwd)/cellranger-refdata" \
+			--transcriptome="$(pwd)/cellranger_refdata" \
 			--fastqs="$(pwd)/fastqs" \
 			--localcores ~{threads} \
-			--localmem ~{mem_gb - 2}
+			--localmem ~{mem_gb - 4}
 
 		# Rename outputs to include sample ID
 		mv ~{sample_id}/outs/raw_feature_bc_matrix.h5 ~{sample_id}.raw_feature_bc_matrix.h5
