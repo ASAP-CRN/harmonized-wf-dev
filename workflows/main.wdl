@@ -138,10 +138,10 @@ workflow harmonized_pmdbs_analysis {
 
 	output {
 		# Cellranger
-		Array[File] raw_counts = cellranger.raw_counts
-		Array[File] filtered_counts = cellranger.filtered_counts
-		Array[File] molecule_info = cellranger.molecule_info
-		Array[File] cellranger_metrics_csv = cellranger.metrics_csv
+		Array[File?] raw_counts = cellranger.raw_counts
+		Array[File?] filtered_counts = cellranger.filtered_counts
+		Array[File?] molecule_info = cellranger.molecule_info
+		Array[File?] cellranger_metrics_csv = cellranger.metrics_csv
 
 		# QC plots
 		File qc_violin_plots = plot_qc.qc_violin_plots
@@ -264,11 +264,11 @@ task preprocess {
 			--raw-counts ~{raw_counts} \
 			--filtered-counts ~{filtered_counts} \
 			--soup-rate ~{soup_rate} \
-			--output-seurat-object seurat_object_~{sample_id}_preprocessed_01.rds
+			--output-seurat-object ~{sample_id}.seurat_object.preprocessed_01.rds
 	>>>
 
 	output {
-		File preprocessed_seurat_object = "seurat_object_~{sample_id}_preprocessed_01.rds"
+		File preprocessed_seurat_object = "~{sample_id}.seurat_object.preprocessed_01.rds"
 	}
 
 	runtime {
@@ -363,6 +363,7 @@ task filter {
 	}
 
 	String seurat_object_basename = basename(preprocessed_seurat_object, "_01.rds")
+	Int disk_size = ceil(size(preprocessed_seurat_object, "GB") * 2 + 20)
 
 	command <<<
 		set -euo pipefail
@@ -381,6 +382,10 @@ task filter {
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
+		cpu: 1
+		memory: "4 GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 	}
 }
 
@@ -393,25 +398,29 @@ task process {
 
 	Int threads = 2
 	String seurat_object_basename = basename(filtered_seurat_object, "_02.rds")
+	Int disk_size = ceil(size(filtered_seurat_object, "GB") * 2 + 20)
 
 	command <<<
 		set -euo pipefail
 
-		Rscript /opt/scripts/main/filter.R \
+		Rscript /opt/scripts/main/process.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--threads ~{threads} \
 			--seurat-object ~{filtered_seurat_object} \
-			--output-seurat-object ~{seurat_object_basename}_filtered_normalized_03.rds
+			--output-seurat-object ~{seurat_object_basename}_normalized_03.rds
 	>>>
 
 	output {
-		File normalized_seurat_object = "~{seurat_object_basename}_filtered_normalized_03.rds"
+		File normalized_seurat_object = "~{seurat_object_basename}_normalized_03.rds"
 	}
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
 		cpu: threads
+		memory: "4 GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 	}
 }
 
@@ -424,25 +433,30 @@ task harmony {
 	}
 
 	Int threads = 8
+	Int mem_gb = threads * 2
+	Int disk_size = ceil(size(normalized_seurat_objects[0], "GB") * length(normalized_seurat_objects) * 2 + 30)
 
 	command <<<
 		set -euo pipefail
 
-		Rscript /opt/scripts/main/filter.R \
+		Rscript /opt/scripts/main/harmony.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--threads ~{threads} \
 			--seurat-objects-fofn ~{write_lines(normalized_seurat_objects)} \
-			--output-seurat-object ~{project_name}_seurat_object_harmony_integrated_04.rds
+			--output-seurat-object ~{project_name}.seurat_object.harmony_integrated_04.rds
 	>>>
 
 	output {
-		File harmony_seurat_object = "~{project_name}_seurat_object_harmony_integrated_04.rds"
+		File harmony_seurat_object = "~{project_name}.seurat_object.harmony_integrated_04.rds"
 	}
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
 		cpu: threads
+		memory: "~{mem_gb} GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 	}
 }
 
