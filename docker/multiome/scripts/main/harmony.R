@@ -49,4 +49,4 @@ object <- object %>%
 
     harmony::RunHarmony(reduction='pca', group.by.vars=batch, max.iter.harmony=50, reduction.save='harmony')
 
-saveRDS(object, output_seurat_object)[1])
+saveRDS(object, output_seurat_object)
