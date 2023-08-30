@@ -24,7 +24,7 @@ pal <- wesanderson::wes_palette('Zissou1', type='discrete')[c(1, 3, 5)]
 
 g <- metadata %>% ggplot(aes(x=UMAP_1, y=UMAP_2)) +
 
-        geom_point(color=metadata[, get(feature)], size=0.5, alpha=0.8) +
+        geom_point(color=ifelse(metadata[, get(feature)] > 0, metadata[, get(feature)], 'gray0'), size=0.5, alpha=0.8) +
         scale_color_gradient2(low=pal[1], mid=pal[2], high=pal[3], midpoint=middle) +
         labs(color=metadata[, get(feature)]) + theme_classic() + ggtitle('')
 

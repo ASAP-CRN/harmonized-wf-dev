@@ -23,7 +23,7 @@ colors <- sample(colors(), nrow(metadata[, .N, get(group)]))
 
 g <- metadata %>% ggplot(aes(x=UMAP_1, y=UMAP_2)) + theme_classic() +
 
-        geom_point(aes(color=metadata[, get(group)]), alpha=0.8, size=0.1) +
+        geom_point(aes(color=as.factor(metadata[, get(group)])), alpha=0.8, size=0.1) +
         scale_color_manual(values=colors) + labs(color=metadata[, get(group)]) +
         guides(color=guide_legend(override.aes=list(size=5)))
 
