@@ -114,26 +114,21 @@ workflow harmonized_pmdbs_analysis {
 			container_registry = container_registry
 	}
 
-	# TODO probably more overhead than needed to scatter this rather than parallelizing within-task
-	scatter (group in groups) {
-		call plot_groups {
-			input:
-				project_name = project_name,
-				metadata = sctype.metadata,
-				group = group,
-				container_registry = container_registry
-		}
+
+	call plot_groups {
+		input:
+			project_name = project_name,
+			metadata = sctype.metadata,
+			groups = groups,
+			container_registry = container_registry
 	}
 
-	# TODO same overhead as plot_groups
-	scatter (feature in features) {
-		call plot_features {
-			input:
-				project_name = project_name,
-				metadata = sctype.metadata,
-				feature = feature,
-				container_registry = container_registry
-		}
+	call plot_features {
+		input:
+			project_name = project_name,
+			metadata = sctype.metadata,
+			features = features,
+			container_registry = container_registry
 	}
 
 	output {
@@ -151,8 +146,8 @@ workflow harmonized_pmdbs_analysis {
 		File metadata = sctype.metadata
 
 		# Group and feature plots
-		Array[File] group_umap_plots = plot_groups.group_umap_plot
-		Array[File] feature_umap_plots = plot_features.feature_umap_plot
+		Array[File] group_umap_plots = plot_groups.group_umap_plots
+		Array[File] feature_umap_plots = plot_features.feature_umap_plots
 
 		# Clustered seurat object
 		File cluster_seurat_object = cluster.cluster_seurat_object
@@ -385,7 +380,7 @@ task filter {
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
-		cpu: 1
+		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
@@ -437,8 +432,8 @@ task harmony {
 		String container_registry
 	}
 
+	# TODO Seems to only use ~4 threads; following snakemake for now
 	Int threads = 8
-	Int mem_gb = threads * 2
 	Int disk_size = ceil(size(normalized_seurat_objects[0], "GB") * length(normalized_seurat_objects) * 2 + 30)
 
 	command <<<
@@ -459,7 +454,7 @@ task harmony {
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
 		cpu: threads
-		memory: "~{mem_gb} GB"
+		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
@@ -474,6 +469,7 @@ task neighbors {
 	}
 
 	String harmony_seurat_object_basename = basename(harmony_seurat_object, "_04.rds")
+	Int disk_size = ceil(size(harmony_seurat_object, "GB") * 2 + 20)
 
 	command <<<
 		set -euo pipefail
@@ -491,6 +487,10 @@ task neighbors {
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
+		cpu: 2
+		memory: "4 GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 		bootDiskSizeGb: 20
 	}
 }
@@ -503,11 +503,12 @@ task umap {
 	}
 
 	String neighbors_seurat_object_basename = basename(neighbors_seurat_object, "_05.rds")
+	Int disk_size = ceil(size(neighbors_seurat_object, "GB") * 2 + 20)
 
 	command <<<
 		set -euo pipefail
 
-		Rscript /opt/scripts/main/find_neighbors.R \
+		Rscript /opt/scripts/main/umap.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--seurat-object ~{neighbors_seurat_object} \
@@ -520,6 +521,10 @@ task umap {
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
+		cpu: 2
+		memory: "4 GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 		bootDiskSizeGb: 20
 	}
 }
@@ -536,8 +541,10 @@ task cluster {
 		String container_registry
 	}
 
+	# TODO only used 1 core
 	Int threads = 8
 	String umap_seurat_object_basename = basename(umap_seurat_object, "_06.rds")
+	Int disk_size = ceil((size(umap_seurat_object, "GB") + size(cell_type_markers_list, "GB")) * 2 + 20)
 
 	command <<<
 		set -euo pipefail
@@ -562,6 +569,9 @@ task cluster {
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
 		cpu: threads
+		memory: "4 GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 		bootDiskSizeGb: 20
 	}
 }
@@ -576,7 +586,10 @@ task sctype {
 		String container_registry
 	}
 
+	# TODO uses 2 cores
 	Int threads = 8
+	Int mem_gb = threads
+	Int disk_size = ceil(size(cell_type_markers_list, "GB") * 2 + 20)
 
 	command <<<
 		set -euo pipefail
@@ -597,6 +610,9 @@ task sctype {
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
 		cpu: threads
+		memory: "~{mem_gb} GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 		bootDiskSizeGb: 20
 	}
 }
@@ -606,27 +622,35 @@ task plot_groups {
 		String project_name
 		File metadata
 
-		String group
+		Array[String] groups
 
 		String container_registry
 	}
 
+	Int disk_size = ceil(size(metadata, "GB") * 2 + 20)
+
 	command <<<
 		set -euo pipefail
 
-		Rscript /opt/scripts/main/plot_groups.R \
-			--working-dir "$(pwd)" \
-			--metadata ~{metadata} \
-			--group ~{group} \
-			--output-group-umap-plot ~{project_name}.~{group}_group_umap.pdf
+		while read -r group || [[ -n "${group}" ]]; do
+			Rscript /opt/scripts/main/plot_groups.R \
+				--working-dir "$(pwd)" \
+				--metadata ~{metadata} \
+				--group "${group}" \
+				--output-group-umap-plot "~{project_name}.${group}_group_umap.pdf"
+			done < ~{write_lines(groups)}
 	>>>
 
 	output {
-		File group_umap_plot = "~{project_name}.~{group}_group_umap.pdf"
+		Array[File] group_umap_plots = glob("~{project_name}.*_group_umap.pdf")
 	}
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
+		cpu: 2
+		memory: "4 GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 		bootDiskSizeGb: 20
 	}
 }
@@ -636,27 +660,35 @@ task plot_features {
 		String project_name
 		File metadata
 
-		String feature
+		Array[String] features
 
 		String container_registry
 	}
 
+	Int disk_size = ceil(size(metadata, "GB") * 2 + 20)
+
 	command <<<
 		set -euo pipefail
 
-		Rscript /opt/scripts/main/plot_features.R \
-			--working-dir "$(pwd)" \
-			--metadata ~{metadata} \
-			--feature ~{feature} \
-			--output-feature-umap-plot ~{project_name}.~{feature}_feature_umap.pdf
+		while read -r feature || [[ -n "${feature}" ]]; do
+			Rscript /opt/scripts/main/plot_features.R \
+				--working-dir "$(pwd)" \
+				--metadata ~{metadata} \
+				--feature "${feature}" \
+				--output-feature-umap-plot "~{project_name}.${feature}_feature_umap.pdf"
+		done < ~{write_lines(features)}
 	>>>
 
 	output {
-		File feature_umap_plot = "~{project_name}.~{feature}_feature_umap.pdf"
+		Array[File] feature_umap_plots = glob("~{project_name}.*_feature_umap.pdf")
 	}
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
+		cpu: 2
+		memory: "4 GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
 		bootDiskSizeGb: 20
 	}
 }
