@@ -17,7 +17,7 @@ seurat_object <- if (is.null(args$seurat_object)) snakemake@input[['seurat_objec
 output_seurat_object <- if (is.null(args$output_seurat_object)) snakemake@output[['seurat_object']] else args$output_seurat_object
 
 # Main
-object <- readRDS(snakemake@input[['seurat_object']]) %>%
+object <- readRDS(seurat_object) %>%
             RunUMAP(dims=1:50, reduction='harmony')
 
-saveRDS(object, snakemake@output[['seurat_object']])
+saveRDS(object, output_seurat_object)
