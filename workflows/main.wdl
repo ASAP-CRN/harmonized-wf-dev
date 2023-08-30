@@ -277,6 +277,7 @@ task preprocess {
 		memory: "12 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
+		bootDiskSizeGb: 20
 	}
 }
 
@@ -313,6 +314,7 @@ task doublets {
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
+		bootDiskSizeGb: 20
 	}
 }
 
@@ -351,6 +353,7 @@ task plot_qc {
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
+		bootDiskSizeGb: 20
 	}
 }
 
@@ -386,6 +389,7 @@ task filter {
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
+		bootDiskSizeGb: 20
 	}
 }
 
@@ -421,6 +425,7 @@ task process {
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
+		bootDiskSizeGb: 20
 	}
 }
 
@@ -457,6 +462,7 @@ task harmony {
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
+		bootDiskSizeGb: 20
 	}
 }
 
@@ -485,6 +491,7 @@ task neighbors {
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
+		bootDiskSizeGb: 20
 	}
 }
 
@@ -513,6 +520,7 @@ task umap {
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
+		bootDiskSizeGb: 20
 	}
 }
 
@@ -554,6 +562,7 @@ task cluster {
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
 		cpu: threads
+		bootDiskSizeGb: 20
 	}
 }
 
@@ -588,6 +597,7 @@ task sctype {
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
 		cpu: threads
+		bootDiskSizeGb: 20
 	}
 }
 
@@ -617,6 +627,7 @@ task plot_groups {
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
+		bootDiskSizeGb: 20
 	}
 }
 
@@ -646,5 +657,6 @@ task plot_features {
 
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
+		bootDiskSizeGb: 20
 	}
 }
