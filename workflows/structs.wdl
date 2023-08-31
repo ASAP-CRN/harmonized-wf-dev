@@ -15,5 +15,5 @@ struct Project {
 	Boolean run_project_cohort_analysis
 
 	String raw_data_bucket
-	String curated_data_bucket
+	String curated_data_output_bucket
 }
