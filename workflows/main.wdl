@@ -1,16 +1,15 @@
 version 1.0
 
+# Harmonized workflow entrypoint
+
 import "structs.wdl"
 import "preprocess/preprocess.wdl" as Preprocess
-import "quality_control/quality_control.wdl" as QualityControl
-import "filter/filter.wdl" as Filter
-import "cluster/cluster.wdl" as Cluster
-import "plot/plot.wdl" as Plot
+import "cohort_analysis/cohort_analysis.wdl" as CohortAnalysis
 
 workflow harmonized_pmdbs_analysis {
 	input {
-		String project_name
-		Array[Sample] samples
+		String cohort_id
+		Array[Project] projects
 
 		File cellranger_reference_data
 
@@ -28,47 +27,26 @@ workflow harmonized_pmdbs_analysis {
 		String container_registry
 	}
 
-	scatter (sample in samples) {
-		call Preprocess.preprocess {
-			input:
-				sample = sample,
-				cellranger_reference_data = cellranger_reference_data,
-				soup_rate = soup_rate,
-				container_registry = container_registry
+	scatter (project in projects) {
+		scatter (sample in project.samples) {
+			call Preprocess.preprocess {
+				input:
+					sample = sample,
+					cellranger_reference_data = cellranger_reference_data,
+					soup_rate = soup_rate,
+					container_registry = container_registry
+			}
 		}
 	}
 
 	if (run_cohort_analysis) {
-		call QualityControl.quality_control {
+		call CohortAnalysis.cohort_analysis {
 			input:
-				project_name = project_name,
-				preprocessed_seurat_objects = preprocess.preprocessed_seurat_object,
-				container_registry = container_registry
-		}
-
-		scatter (preprocessed_seurat_object in preprocess.preprocessed_seurat_object) {
-			call Filter.filter {
-				input:
-					preprocessed_seurat_object = preprocessed_seurat_object,
-					unfiltered_metadata = quality_control.unfiltered_metadata,
-					container_registry = container_registry
-			}
-		}
-
-		call Cluster.cluster {
-			input:
-				project_name = project_name,
-				normalized_seurat_objects = filter.normalized_seurat_object,
+				cohort_id = cohort_id,
+				preprocessed_seurat_objects = flatten(preprocess.preprocessed_seurat_object),
 				clustering_algorithm = clustering_algorithm,
 				clustering_resolution = clustering_resolution,
 				cell_type_markers_list = cell_type_markers_list,
-				container_registry = container_registry
-		}
-
-		call Plot.plot {
-			input:
-				project_name = project_name,
-				metadata = cluster.metadata,
 				groups = groups,
 				features = features,
 				container_registry = container_registry
@@ -76,23 +54,25 @@ workflow harmonized_pmdbs_analysis {
 	}
 
 	output {
-		# Cellranger
-		Array[File] raw_counts = preprocess.raw_counts
-		Array[File] filtered_counts = preprocess.filtered_counts
-		Array[File] molecule_info = preprocess.molecule_info
-		Array[File] cellranger_metrics_csv = preprocess.cellranger_metrics_csv
+		# Sample-level outputs
+		## Cellranger
+		Array[Array[File]] raw_counts = preprocess.raw_counts
+		Array[Array[File]] filtered_counts = preprocess.filtered_counts
+		Array[Array[File]] molecule_info = preprocess.molecule_info
+		Array[Array[File]] cellranger_metrics_csv = preprocess.cellranger_metrics_csv
 
-		# QC plots
-		File? qc_violin_plots = quality_control.qc_violin_plots
-		File? qc_umis_genes_plot = quality_control.qc_umis_genes_plot
+		# Cohort-level outputs
+		## QC plots
+		File? qc_violin_plots = cohort_analysis.qc_violin_plots
+		File? qc_umis_genes_plot = cohort_analysis.qc_umis_genes_plot
 
-		# Clustering and sctyping output
-		File? cluster_seurat_object = cluster.cluster_seurat_object
-		File? metadata = cluster.metadata
+		## Clustering and sctyping output
+		File? cluster_seurat_object = cohort_analysis.cluster_seurat_object
+		File? metadata = cohort_analysis.metadata
 
-		# Group and feature plots for final metadata
-		Array[File]? group_umap_plots = plot.group_umap_plots
-		Array[File]? feature_umap_plots = plot.feature_umap_plots
+		## Group and feature plots for final metadata
+		Array[File]? group_umap_plots = cohort_analysis.group_umap_plots
+		Array[File]? feature_umap_plots = cohort_analysis.feature_umap_plots
 	}
 
 	meta {
@@ -100,8 +80,8 @@ workflow harmonized_pmdbs_analysis {
 	}
 
 	parameter_meta {
-		project_name: {help: "Name of project"}
-		samples: {help: "The set of samples and their associated reads and metadata"}
+		cohort_id: {help: "Name of the cohort; used to name output files"}
+		projects: {help: "The project ID, set of samples and their associated reads and metadata, as well as output bucket locations"}
 		cellranger_reference_data: {help: "Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest."}
 		soup_rate: {help: "Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data [0.2]"}
 		run_cohort_analysis: {help: "Whether to run downstream harmonization steps. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}

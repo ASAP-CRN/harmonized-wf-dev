@@ -4,7 +4,7 @@ version 1.0
 
 workflow cluster {
 	input {
-		String project_name
+		String cohort_id
 		Array[File] normalized_seurat_objects
 
 		Int clustering_algorithm
@@ -16,7 +16,7 @@ workflow cluster {
 
 	call harmony {
 		input:
-			project_name = project_name,
+			cohort_id = cohort_id,
 			normalized_seurat_objects = normalized_seurat_objects,
 			container_registry = container_registry
 	}
@@ -35,7 +35,7 @@ workflow cluster {
 
 	call clustering {
 		input:
-			project_name = project_name,
+			cohort_id = cohort_id,
 			umap_seurat_object = umap.umap_seurat_object,
 			clustering_algorithm = clustering_algorithm,
 			clustering_resolution = clustering_resolution,
@@ -45,7 +45,7 @@ workflow cluster {
 
 	call sctype {
 		input:
-			project_name = project_name,
+			cohort_id = cohort_id,
 			cluster_seurat_object = clustering.cluster_seurat_object,
 			cell_type_markers_list = cell_type_markers_list,
 			container_registry = container_registry
@@ -59,7 +59,7 @@ workflow cluster {
 
 task harmony {
 	input {
-		String project_name
+		String cohort_id
 		Array[File] normalized_seurat_objects
 
 		String container_registry
@@ -77,11 +77,11 @@ task harmony {
 			--script-dir /opt/scripts \
 			--threads ~{threads} \
 			--seurat-objects-fofn ~{write_lines(normalized_seurat_objects)} \
-			--output-seurat-object ~{project_name}.seurat_object.harmony_integrated_04.rds
+			--output-seurat-object ~{cohort_id}.seurat_object.harmony_integrated_04.rds
 	>>>
 
 	output {
-		File harmony_seurat_object = "~{project_name}.seurat_object.harmony_integrated_04.rds"
+		File harmony_seurat_object = "~{cohort_id}.seurat_object.harmony_integrated_04.rds"
 	}
 
 	runtime {
@@ -164,7 +164,7 @@ task umap {
 
 task clustering {
 	input {
-		String project_name
+		String cohort_id
 		File umap_seurat_object
 
 		Int clustering_algorithm
@@ -190,12 +190,12 @@ task clustering {
 			--clustering-algorithm ~{clustering_algorithm} \
 			--clustering-resolution ~{clustering_resolution} \
 			--cell-type-markers-list ~{cell_type_markers_list} \
-			--output-cell-type-plot ~{project_name}.major_type_module_umap.pdf \
+			--output-cell-type-plot ~{cohort_id}.major_type_module_umap.pdf \
 			--output-seurat-object ~{umap_seurat_object_basename}_cluster_07.rds
 	>>>
 
 	output {
-		File major_cell_type_plot = "~{project_name}.major_type_module_umap.pdf"
+		File major_cell_type_plot = "~{cohort_id}.major_type_module_umap.pdf"
 		File cluster_seurat_object = "~{umap_seurat_object_basename}_cluster_07.rds"
 	}
 
@@ -211,7 +211,7 @@ task clustering {
 
 task sctype {
 	input {
-		String project_name
+		String cohort_id
 		File cluster_seurat_object
 
 		File cell_type_markers_list
@@ -233,11 +233,11 @@ task sctype {
 			--threads ~{threads} \
 			--seurat-object ~{cluster_seurat_object} \
 			--cell-type-markers-list ~{cell_type_markers_list} \
-			--output-metadata-file ~{project_name}.final_metadata.csv
+			--output-metadata-file ~{cohort_id}.final_metadata.csv
 	>>>
 
 	output {
-		File metadata = "~{project_name}.final_metadata.csv"
+		File metadata = "~{cohort_id}.final_metadata.csv"
 	}
 
 	runtime {

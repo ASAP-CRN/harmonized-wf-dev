@@ -4,7 +4,7 @@ version 1.0
 
 workflow plot {
 	input {
-		String project_name
+		String cohort_id
 
 		File metadata
 
@@ -16,7 +16,7 @@ workflow plot {
 
 	call plot_groups {
 		input:
-			project_name = project_name,
+			cohort_id = cohort_id,
 			metadata = metadata,
 			groups = groups,
 			container_registry = container_registry
@@ -24,7 +24,7 @@ workflow plot {
 
 	call plot_features {
 		input:
-			project_name = project_name,
+			cohort_id = cohort_id,
 			metadata = metadata,
 			features = features,
 			container_registry = container_registry
@@ -39,7 +39,7 @@ workflow plot {
 
 task plot_groups {
 	input {
-		String project_name
+		String cohort_id
 		File metadata
 
 		Array[String] groups
@@ -57,12 +57,12 @@ task plot_groups {
 				--working-dir "$(pwd)" \
 				--metadata ~{metadata} \
 				--group "${group}" \
-				--output-group-umap-plot "~{project_name}.${group}_group_umap.pdf"
+				--output-group-umap-plot "~{cohort_id}.${group}_group_umap.pdf"
 			done < ~{write_lines(groups)}
 	>>>
 
 	output {
-		Array[File] group_umap_plots = glob("~{project_name}.*_group_umap.pdf")
+		Array[File] group_umap_plots = glob("~{cohort_id}.*_group_umap.pdf")
 	}
 
 	runtime {
@@ -77,7 +77,7 @@ task plot_groups {
 
 task plot_features {
 	input {
-		String project_name
+		String cohort_id
 		File metadata
 
 		Array[String] features
@@ -95,12 +95,12 @@ task plot_features {
 				--working-dir "$(pwd)" \
 				--metadata ~{metadata} \
 				--feature "${feature}" \
-				--output-feature-umap-plot "~{project_name}.${feature}_feature_umap.pdf"
+				--output-feature-umap-plot "~{cohort_id}.${feature}_feature_umap.pdf"
 		done < ~{write_lines(features)}
 	>>>
 
 	output {
-		Array[File] feature_umap_plots = glob("~{project_name}.*_feature_umap.pdf")
+		Array[File] feature_umap_plots = glob("~{cohort_id}.*_feature_umap.pdf")
 	}
 
 	runtime {
