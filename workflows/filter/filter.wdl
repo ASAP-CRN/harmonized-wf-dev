@@ -4,29 +4,27 @@ version 1.0
 
 workflow filter {
 	input {
-		Array[File] preprocessed_seurat_objects
+		File preprocessed_seurat_object
 		File unfiltered_metadata
 
 		String container_registry
 	}
 
-	scatter (preprocessed_seurat_object in preprocessed_seurat_objects) {
-		call filtering {
-			input:
-				preprocessed_seurat_object = preprocessed_seurat_object,
-				unfiltered_metadata = unfiltered_metadata,
-				container_registry = container_registry
-		}
+	call filtering {
+		input:
+			preprocessed_seurat_object = preprocessed_seurat_object,
+			unfiltered_metadata = unfiltered_metadata,
+			container_registry = container_registry
+	}
 
-		call process {
-			input:
-				filtered_seurat_object = filtering.filtered_seurat_object,
-				container_registry = container_registry
-		}
+	call process {
+		input:
+			filtered_seurat_object = filtering.filtered_seurat_object,
+			container_registry = container_registry
 	}
 
 	output {
-		Array[File] normalized_seurat_objects = process.normalized_seurat_object
+		File normalized_seurat_object = process.normalized_seurat_object
 	}
 }
 

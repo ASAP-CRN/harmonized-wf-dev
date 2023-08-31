@@ -43,17 +43,19 @@ workflow harmonized_pmdbs_analysis {
 			container_registry = container_registry
 	}
 
-	call Filter.filter {
-		input:
-			preprocessed_seurat_objects = preprocess.preprocessed_seurat_object,
-			unfiltered_metadata = quality_control.unfiltered_metadata,
-			container_registry = container_registry
+	scatter (preprocessed_seurat_object in preprocess.preprocessed_seurat_object) {
+		call Filter.filter {
+			input:
+				preprocessed_seurat_object = preprocessed_seurat_object,
+				unfiltered_metadata = quality_control.unfiltered_metadata,
+				container_registry = container_registry
+		}
 	}
 
 	call Cluster.cluster {
 		input:
 			project_name = project_name,
-			normalized_seurat_objects = filter.normalized_seurat_objects,
+			normalized_seurat_objects = filter.normalized_seurat_object,
 			clustering_algorithm = clustering_algorithm,
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
