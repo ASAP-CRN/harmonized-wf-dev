@@ -4,7 +4,7 @@ version 1.0
 
 import "../structs.wdl"
 
-workflow preprocessing {
+workflow preprocess {
 	input {
 		Sample sample
 
@@ -24,7 +24,7 @@ workflow preprocessing {
 			container_registry = container_registry
 	}
 
-	call preprocess {
+	call counts_to_seurat {
 		input:
 			sample_id = sample.sample_id,
 			batch = sample.batch,
@@ -41,7 +41,7 @@ workflow preprocessing {
 		File molecule_info = cellranger.molecule_info
 		File cellranger_metrics_csv = cellranger.metrics_csv
 
-		File preprocessed_seurat_object = preprocess.preprocessed_seurat_object
+		File preprocessed_seurat_object = counts_to_seurat.preprocessed_seurat_object
 	}
 }
 
@@ -108,7 +108,7 @@ task cellranger {
 	}
 }
 
-task preprocess {
+task counts_to_seurat {
 	input {
 		String sample_id
 		String batch
