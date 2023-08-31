@@ -46,3 +46,11 @@ COPY scripts/main /opt/scripts/main
 COPY scripts/utility /opt/scripts/utility
 
 RUN echo "source activate ${CONDA_ENVIRONMENT}" >> ~/.bashrc
+
+# gcloud sdk; needed to upload output files
+ARG GCLOUD_CLI_VERSION
+RUN wget "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-${GCLOUD_CLI_VERSION}-linux-x86_64.tar.gz" \
+	&& tar -zxvf "google-cloud-cli-${GCLOUD_CLI_VERSION}-linux-x86_64.tar.gz" --directory /opt \
+	&& rm "google-cloud-cli-${GCLOUD_CLI_VERSION}-linux-x86_64.tar.gz"
+
+ENV PATH "${PATH}:/opt/google-cloud-sdk/bin"
