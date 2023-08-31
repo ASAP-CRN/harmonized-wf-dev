@@ -37,10 +37,24 @@ workflow harmonized_pmdbs_analysis {
 					container_registry = container_registry
 			}
 		}
+
+		if (project.run_cohort_analysis) {
+			call CohortAnalysis.cohort_analysis as project_cohort_analysis {
+				input:
+					cohort_id = project.project_id,
+					preprocessed_seurat_objects = preprocess.preprocessed_seurat_object,
+					clustering_algorithm = clustering_algorithm,
+					clustering_resolution = clustering_resolution,
+					cell_type_markers_list = cell_type_markers_list,
+					groups = groups,
+					features = features,
+					container_registry = container_registry
+			}
+		}
 	}
 
 	if (run_cohort_analysis) {
-		call CohortAnalysis.cohort_analysis {
+		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
 			input:
 				cohort_id = cohort_id,
 				preprocessed_seurat_objects = flatten(preprocess.preprocessed_seurat_object),
@@ -61,18 +75,33 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]] molecule_info = preprocess.molecule_info
 		Array[Array[File]] cellranger_metrics_csv = preprocess.cellranger_metrics_csv
 
-		# Cohort-level outputs
+
+		# Project cohort analysis outputs
 		## QC plots
-		File? qc_violin_plots = cohort_analysis.qc_violin_plots
-		File? qc_umis_genes_plot = cohort_analysis.qc_umis_genes_plot
+		Array[File?] project_qc_violin_plots = project_cohort_analysis.qc_violin_plots
+		Array[File?] project_qc_umis_genes_plot = project_cohort_analysis.qc_umis_genes_plot
 
 		## Clustering and sctyping output
-		File? cluster_seurat_object = cohort_analysis.cluster_seurat_object
-		File? metadata = cohort_analysis.metadata
+		Array[File?] project_cluster_seurat_object = project_cohort_analysis.cluster_seurat_object
+		Array[File?] project_metadata = project_cohort_analysis.metadata
 
 		## Group and feature plots for final metadata
-		Array[File]? group_umap_plots = cohort_analysis.group_umap_plots
-		Array[File]? feature_umap_plots = cohort_analysis.feature_umap_plots
+		Array[Array[File]?] project_group_umap_plots = project_cohort_analysis.group_umap_plots
+		Array[Array[File]?] project_feature_umap_plots = project_cohort_analysis.feature_umap_plots
+
+
+		# Cross-team cohort analysis outputs
+		## QC plots
+		File? cohort_qc_violin_plots = cross_team_cohort_analysis.qc_violin_plots
+		File? cohort_qc_umis_genes_plot = cross_team_cohort_analysis.qc_umis_genes_plot
+
+		## Clustering and sctyping output
+		File? cohort_cluster_seurat_object = cross_team_cohort_analysis.cluster_seurat_object
+		File? cohort_metadata = cross_team_cohort_analysis.metadata
+
+		## Group and feature plots for final metadata
+		Array[File]? cohort_group_umap_plots = cross_team_cohort_analysis.group_umap_plots
+		Array[File]? cohort_feature_umap_plots = cross_team_cohort_analysis.feature_umap_plots
 	}
 
 	meta {
