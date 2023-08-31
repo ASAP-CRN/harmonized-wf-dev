@@ -28,11 +28,18 @@ workflow harmonized_pmdbs_analysis {
 		String container_registry
 	}
 
+	String intermediate_file_path = "intermediate_workflow_execution"
+
 	scatter (project in projects) {
+		String raw_data_path_prefix = "~{project.raw_data_bucket}/~{intermediate_file_path}"
+		String curated_data_path_prefix = "~{project.curated_data_output_bucket}"
+
 		scatter (sample in project.samples) {
 			call Preprocess.preprocess {
 				input:
 					sample = sample,
+					raw_data_path_prefix = raw_data_path_prefix,
+					curated_data_path_prefix = curated_data_path_prefix,
 					cellranger_reference_data = cellranger_reference_data,
 					soup_rate = soup_rate,
 					container_registry = container_registry
@@ -43,7 +50,7 @@ workflow harmonized_pmdbs_analysis {
 			call CohortAnalysis.cohort_analysis as project_cohort_analysis {
 				input:
 					cohort_id = project.project_id,
-					preprocessed_seurat_objects = preprocess.preprocessed_seurat_object,
+					preprocessed_seurat_objects = preprocess.seurat_object, # !FileCoercion
 					clustering_algorithm = clustering_algorithm,
 					clustering_resolution = clustering_resolution,
 					cell_type_markers_list = cell_type_markers_list,
@@ -58,7 +65,7 @@ workflow harmonized_pmdbs_analysis {
 		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
 			input:
 				cohort_id = cohort_id,
-				preprocessed_seurat_objects = flatten(preprocess.preprocessed_seurat_object),
+				preprocessed_seurat_objects = flatten(preprocess.seurat_object), # !FileCoercion
 				clustering_algorithm = clustering_algorithm,
 				clustering_resolution = clustering_resolution,
 				cell_type_markers_list = cell_type_markers_list,
@@ -71,10 +78,10 @@ workflow harmonized_pmdbs_analysis {
 	output {
 		# Sample-level outputs
 		## Cellranger
-		Array[Array[File]] raw_counts = preprocess.raw_counts
-		Array[Array[File]] filtered_counts = preprocess.filtered_counts
-		Array[Array[File]] molecule_info = preprocess.molecule_info
-		Array[Array[File]] cellranger_metrics_csv = preprocess.cellranger_metrics_csv
+		Array[Array[String]] raw_counts = preprocess.raw_counts
+		Array[Array[String]] filtered_counts = preprocess.filtered_counts
+		Array[Array[String]] molecule_info = preprocess.molecule_info
+		Array[Array[String]] cellranger_metrics_csvs = preprocess.metrics_csv
 
 
 		# Project cohort analysis outputs

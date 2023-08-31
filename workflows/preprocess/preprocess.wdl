@@ -12,36 +12,102 @@ workflow preprocess {
 
 		Float soup_rate
 
+		String raw_data_path_prefix
+		String curated_data_path_prefix
 		String container_registry
 	}
 
-	call cellranger {
+	# TODO dummy version
+	String workflow_name = "preprocess"
+	String workflow_version = "0.0.1"
+
+	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}"
+	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/~{workflow_version}"
+
+	String cellranger_raw_counts = "~{raw_data_path}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
+	String cellranger_filtered_counts = "~{raw_data_path}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
+	String cellranger_molecule_info = "~{raw_data_path}/~{sample.sample_id}.molecule_info.h5"
+	String cellranger_metrics_csv = "~{curated_data_path}/~{sample.sample_id}.metrics_summary.csv"
+	String preprocessed_seurat_object = "~{raw_data_path}/~{sample.sample_id}.seurat_object.preprocessed_01.rds"
+
+	call check_output_files_exist {
 		input:
-			sample_id = sample.sample_id,
-			fastq_R1 = sample.fastq_R1,
-			fastq_R2 = sample.fastq_R2,
-			cellranger_reference_data = cellranger_reference_data,
-			container_registry = container_registry
+			expected_output_files = [
+				cellranger_raw_counts,
+				cellranger_filtered_counts,
+				cellranger_molecule_info,
+				cellranger_metrics_csv,
+				preprocessed_seurat_object
+			]
 	}
 
-	call counts_to_seurat {
-		input:
-			sample_id = sample.sample_id,
-			batch = sample.batch,
-			raw_counts = cellranger.raw_counts,
-			filtered_counts = cellranger.filtered_counts,
-			soup_rate = soup_rate,
-			container_registry = container_registry
+	# If preprocessing pipeline outputs do not exist, run preprocessing
+	if (! check_output_files_exist.outputs_exist) {
+		call cellranger {
+			input:
+				sample_id = sample.sample_id,
+				fastq_R1 = sample.fastq_R1,
+				fastq_R2 = sample.fastq_R2,
+				cellranger_reference_data = cellranger_reference_data,
+				raw_data_path = raw_data_path,
+				curated_data_path = curated_data_path,
+				container_registry = container_registry
+		}
+
+		call counts_to_seurat {
+			input:
+				sample_id = sample.sample_id,
+				batch = sample.batch,
+				raw_counts = cellranger.raw_counts, # !FileCoercion
+				filtered_counts = cellranger.filtered_counts, # !FileCoercion
+				soup_rate = soup_rate,
+				raw_data_path = raw_data_path,
+				container_registry = container_registry
+		}
 	}
 
 	output {
 		# Cellranger
-		File raw_counts = cellranger.raw_counts
-		File filtered_counts = cellranger.filtered_counts
-		File molecule_info = cellranger.molecule_info
-		File cellranger_metrics_csv = cellranger.metrics_csv
+		String raw_counts = select_first([cellranger.raw_counts, cellranger_raw_counts])
+		String filtered_counts = select_first([cellranger.filtered_counts, cellranger_filtered_counts])
+		String molecule_info = select_first([cellranger.molecule_info, cellranger_molecule_info])
+		String metrics_csv = select_first([cellranger.metrics_csv, cellranger_metrics_csv])
 
-		File preprocessed_seurat_object = counts_to_seurat.preprocessed_seurat_object
+		# Seurat counts
+		String seurat_object = select_first([counts_to_seurat.preprocessed_seurat_object, preprocessed_seurat_object])
+	}
+}
+
+# For this version of the pipeline, determine whether the sample has been run
+# (i.e. output files exist for this sample)
+task check_output_files_exist {
+	input {
+		Array[String] expected_output_files
+	}
+
+	command <<<
+		set -euo pipefail
+
+		while read -r output_file || [[ -n "${output_file}" ]]; do
+			if gsutil ls "${output_file}"; then
+				echo "true" > output_exists.txt
+			else
+				echo "false" > output_exists.txt
+				break
+			fi
+		done < ~{write_lines(expected_output_files)}
+	>>>
+
+	output {
+		Boolean outputs_exist = read_boolean("outputs_exists.txt")
+	}
+
+	runtime {
+		docker: "gcr.io/google.com/cloudsdktool/google-cloud-cli:444.0.0-slim"
+		cpu: 1
+		memory: "1 GB"
+		disks: "local-disk 10 HDD"
+		preemptible: 3
 	}
 }
 
@@ -54,6 +120,8 @@ task cellranger {
 
 		File cellranger_reference_data
 
+		String raw_data_path
+		String curated_data_path
 		String container_registry = "us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images"
 	}
 
@@ -90,13 +158,24 @@ task cellranger {
 		mv ~{sample_id}/outs/filtered_feature_bc_matrix.h5 ~{sample_id}.filtered_feature_bc_matrix.h5
 		mv ~{sample_id}/outs/molecule_info.h5 ~{sample_id}.molecule_info.h5
 		mv ~{sample_id}/outs/metrics_summary.csv ~{sample_id}.metrics_summary.csv
+
+		# Upload outputs
+		gsutil -m cp \
+			~{sample_id}.raw_feature_bc_matrix.h5 \
+			~{sample_id}.filtered_feature_bc_matrix.h5 \
+			~{sample_id}.molecule_info.h5 \
+			~{raw_data_path}/
+
+		gsutil -m cp \
+			~{sample_id}.metrics_summary.csv \
+			~{curated_data_path}/
 	>>>
 
 	output {
-		File raw_counts = "~{sample_id}.raw_feature_bc_matrix.h5"
-		File filtered_counts = "~{sample_id}.filtered_feature_bc_matrix.h5"
-		File molecule_info = "~{sample_id}.molecule_info.h5"
-		File metrics_csv = "~{sample_id}.metrics_summary.csv"
+		String raw_counts = "~{raw_data_path}/~{sample_id}.raw_feature_bc_matrix.h5"
+		String filtered_counts = "~{raw_data_path}/~{sample_id}.filtered_feature_bc_matrix.h5"
+		String molecule_info = "~{raw_data_path}/~{sample_id}.molecule_info.h5"
+		String metrics_csv = "~{curated_data_path}/~{sample_id}.metrics_summary.csv"
 	}
 
 	runtime {
@@ -118,6 +197,7 @@ task counts_to_seurat {
 
 		Float soup_rate
 
+		String raw_data_path
 		String container_registry
 	}
 
@@ -135,10 +215,15 @@ task counts_to_seurat {
 			--filtered-counts ~{filtered_counts} \
 			--soup-rate ~{soup_rate} \
 			--output-seurat-object ~{sample_id}.seurat_object.preprocessed_01.rds
+
+		# Upload outputs
+		gsutil -m cp \
+			~{sample_id}.seurat_object.preprocessed_01.rds \
+			~{raw_data_path}/
 	>>>
 
 	output {
-		File preprocessed_seurat_object = "~{sample_id}.seurat_object.preprocessed_01.rds"
+		String preprocessed_seurat_object = "~{raw_data_path}/~{sample_id}.seurat_object.preprocessed_01.rds"
 	}
 
 	runtime {
