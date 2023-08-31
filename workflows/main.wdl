@@ -16,6 +16,8 @@ workflow harmonized_pmdbs_analysis {
 
 		Float soup_rate = 0.20
 
+		Boolean run_cohort_analysis = false
+
 		Int clustering_algorithm = 3
 		Float clustering_resolution = 0.3
 		File cell_type_markers_list
@@ -36,39 +38,41 @@ workflow harmonized_pmdbs_analysis {
 		}
 	}
 
-	call QualityControl.quality_control {
-		input:
-			project_name = project_name,
-			preprocessed_seurat_objects = preprocess.preprocessed_seurat_object,
-			container_registry = container_registry
-	}
-
-	scatter (preprocessed_seurat_object in preprocess.preprocessed_seurat_object) {
-		call Filter.filter {
+	if (run_cohort_analysis) {
+		call QualityControl.quality_control {
 			input:
-				preprocessed_seurat_object = preprocessed_seurat_object,
-				unfiltered_metadata = quality_control.unfiltered_metadata,
+				project_name = project_name,
+				preprocessed_seurat_objects = preprocess.preprocessed_seurat_object,
 				container_registry = container_registry
 		}
-	}
 
-	call Cluster.cluster {
-		input:
-			project_name = project_name,
-			normalized_seurat_objects = filter.normalized_seurat_object,
-			clustering_algorithm = clustering_algorithm,
-			clustering_resolution = clustering_resolution,
-			cell_type_markers_list = cell_type_markers_list,
-			container_registry = container_registry
-	}
+		scatter (preprocessed_seurat_object in preprocess.preprocessed_seurat_object) {
+			call Filter.filter {
+				input:
+					preprocessed_seurat_object = preprocessed_seurat_object,
+					unfiltered_metadata = quality_control.unfiltered_metadata,
+					container_registry = container_registry
+			}
+		}
 
-	call Plot.plot {
-		input:
-			project_name = project_name,
-			metadata = cluster.metadata,
-			groups = groups,
-			features = features,
-			container_registry = container_registry
+		call Cluster.cluster {
+			input:
+				project_name = project_name,
+				normalized_seurat_objects = filter.normalized_seurat_object,
+				clustering_algorithm = clustering_algorithm,
+				clustering_resolution = clustering_resolution,
+				cell_type_markers_list = cell_type_markers_list,
+				container_registry = container_registry
+		}
+
+		call Plot.plot {
+			input:
+				project_name = project_name,
+				metadata = cluster.metadata,
+				groups = groups,
+				features = features,
+				container_registry = container_registry
+		}
 	}
 
 	output {
@@ -79,16 +83,16 @@ workflow harmonized_pmdbs_analysis {
 		Array[File] cellranger_metrics_csv = preprocess.cellranger_metrics_csv
 
 		# QC plots
-		File qc_violin_plots = quality_control.qc_violin_plots
-		File qc_umis_genes_plot = quality_control.qc_umis_genes_plot
+		File? qc_violin_plots = quality_control.qc_violin_plots
+		File? qc_umis_genes_plot = quality_control.qc_umis_genes_plot
 
 		# Clustering and sctyping output
-		File cluster_seurat_object = cluster.cluster_seurat_object
-		File metadata = cluster.metadata
+		File? cluster_seurat_object = cluster.cluster_seurat_object
+		File? metadata = cluster.metadata
 
 		# Group and feature plots for final metadata
-		Array[File] group_umap_plots = plot.group_umap_plots
-		Array[File] feature_umap_plots = plot.feature_umap_plots
+		Array[File]? group_umap_plots = plot.group_umap_plots
+		Array[File]? feature_umap_plots = plot.feature_umap_plots
 	}
 
 	meta {
@@ -100,6 +104,7 @@ workflow harmonized_pmdbs_analysis {
 		samples: {help: "The set of samples and their associated reads and metadata"}
 		cellranger_reference_data: {help: "Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest."}
 		soup_rate: {help: "Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data [0.2]"}
+		run_cohort_analysis: {help: "Whether to run downstream harmonization steps. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}
 		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}
 		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
 		cell_type_markers_list: {help: "Seurat object RDS file containing a list of major cell type markers; used to annotate clusters."}
