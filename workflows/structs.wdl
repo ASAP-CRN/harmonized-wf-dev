@@ -12,7 +12,7 @@ struct Project {
 	String project_id
 	Array[Sample] samples
 
-	Boolean run_cohort_analysis
+	Boolean run_project_cohort_analysis
 
 	String raw_data_bucket
 	String curated_data_bucket

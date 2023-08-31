@@ -15,7 +15,7 @@ workflow harmonized_pmdbs_analysis {
 
 		Float soup_rate = 0.20
 
-		Boolean run_cohort_analysis = false
+		Boolean run_cross_team_cohort_analysis = false
 
 		Int clustering_algorithm = 3
 		Float clustering_resolution = 0.3
@@ -38,7 +38,7 @@ workflow harmonized_pmdbs_analysis {
 			}
 		}
 
-		if (project.run_cohort_analysis) {
+		if (project.run_project_cohort_analysis) {
 			call CohortAnalysis.cohort_analysis as project_cohort_analysis {
 				input:
 					cohort_id = project.project_id,
@@ -53,7 +53,7 @@ workflow harmonized_pmdbs_analysis {
 		}
 	}
 
-	if (run_cohort_analysis) {
+	if (run_cross_team_cohort_analysis) {
 		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
 			input:
 				cohort_id = cohort_id,
@@ -110,10 +110,10 @@ workflow harmonized_pmdbs_analysis {
 
 	parameter_meta {
 		cohort_id: {help: "Name of the cohort; used to name output files"}
-		projects: {help: "The project ID, set of samples and their associated reads and metadata, as well as output bucket locations"}
+		projects: {help: "The project ID, set of samples and their associated reads and metadata, output bucket locations, and whether or not to run project-level cohort analysis."}
 		cellranger_reference_data: {help: "Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest."}
 		soup_rate: {help: "Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data [0.2]"}
-		run_cohort_analysis: {help: "Whether to run downstream harmonization steps. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}
+		run_cross_team_cohort_analysis: {help: "Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}
 		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}
 		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
 		cell_type_markers_list: {help: "Seurat object RDS file containing a list of major cell type markers; used to annotate clusters."}

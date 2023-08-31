@@ -1,9 +1,9 @@
 {
-  "harmonized_pmdbs_analysis.project_name": "String",
-  "harmonized_pmdbs_analysis.samples": "Array[WomCompositeType {\n sample_id -> String\nbatch -> String\nfastq_R1 -> File\nfastq_R2 -> File \n}]",
+  "harmonized_pmdbs_analysis.cohort_id": "String",
+  "harmonized_pmdbs_analysis.projects": "Array[WomCompositeType {\n curated_data_bucket -> String\nsamples -> Array[WomCompositeType {\n sample_id -> String\nbatch -> String\nfastq_R1 -> File\nfastq_R2 -> File \n}]\nproject_id -> String\nrun_project_cohort_analysis -> Boolean\nraw_data_bucket -> String \n}]",
   "harmonized_pmdbs_analysis.cellranger_reference_data": "String",
   "harmonized_pmdbs_analysis.soup_rate": "Float (optional, default = 0.2)",
-  "harmonized_pmdbs_analysis.run_cohort_analysis": "Boolean (optional, default = false)",
+  "harmonized_pmdbs_analysis.run_cross_team_cohort_analysis": "Boolean (optional, default = false)",
   "harmonized_pmdbs_analysis.clustering_algorithm": "Int (optional, default = 3)",
   "harmonized_pmdbs_analysis.clustering_resolution": "Float (optional, default = 0.3)",
   "harmonized_pmdbs_analysis.cell_type_markers_list": "File",
