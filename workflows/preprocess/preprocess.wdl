@@ -128,7 +128,7 @@ task cellranger {
 	Int threads = 16
 	# TODO not sure this amount of RAM is necessary - cellranger docs claim it is, but test runs using ~15 GB (may be missing part of the process..?)
 	Int mem_gb = threads * 8
-	Int disk_size = ceil(size([fastq_R1, fastq_R2], "GB") * 2 + 30)
+	Int disk_size = ceil(size([fastq_R1, fastq_R2, cellranger_reference_data], "GB") * 4 + 50)
 
 	command <<<
 		set -euo pipefail
