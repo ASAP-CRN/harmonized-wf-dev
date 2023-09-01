@@ -7,6 +7,8 @@ workflow quality_control {
 		String cohort_id
 		Array[File] preprocessed_seurat_objects
 
+		String raw_data_path
+		String curated_data_path
 		String container_registry
 	}
 
@@ -14,22 +16,24 @@ workflow quality_control {
 		input:
 			cohort_id = cohort_id,
 			preprocessed_seurat_objects = preprocessed_seurat_objects,
+			raw_data_path = raw_data_path,
 			container_registry = container_registry
 	}
 
 	call plot_qc {
 		input:
 			cohort_id = cohort_id,
-			unfiltered_metadata = doublets.unfiltered_metadata,
+			unfiltered_metadata = doublets.unfiltered_metadata, #!FileCoercion
+			curated_data_path = curated_data_path,
 			container_registry = container_registry
 	}
 
 	output {
 		# QC plots
-		File qc_violin_plots = plot_qc.qc_violin_plots
-		File qc_umis_genes_plot = plot_qc.qc_umis_genes_plot
+		File qc_violin_plots = plot_qc.qc_violin_plots #!FileCoercion
+		File qc_umis_genes_plot = plot_qc.qc_umis_genes_plot #!FileCoercion
 
-		File unfiltered_metadata = doublets.unfiltered_metadata
+		File unfiltered_metadata = doublets.unfiltered_metadata #!FileCoercion
 	}
 }
 
@@ -38,6 +42,7 @@ task doublets {
 		String cohort_id
 		Array[File] preprocessed_seurat_objects
 
+		String raw_data_path
 		String container_registry
 	}
 
@@ -54,10 +59,15 @@ task doublets {
 			--seurat-objects-fofn ~{write_lines(preprocessed_seurat_objects)} \
 			--project-name ~{cohort_id} \
 			--output-metadata-file ~{cohort_id}.unfiltered_metadata.csv
+
+		# Upload outputs
+		gsutil -m cp \
+			~{cohort_id}.unfiltered_metadata.csv \
+			~{raw_data_path}/
 	>>>
 
 	output {
-		File unfiltered_metadata = "~{cohort_id}.unfiltered_metadata.csv"
+		String unfiltered_metadata = "~{raw_data_path}/~{cohort_id}.unfiltered_metadata.csv"
 	}
 
 	runtime {
@@ -75,6 +85,7 @@ task plot_qc {
 		String cohort_id
 		File unfiltered_metadata
 
+		String curated_data_path
 		String container_registry
 	}
 
@@ -92,11 +103,17 @@ task plot_qc {
 			--project-name ~{cohort_id} \
 			--output-violin-plots ~{cohort_id}.qc.violin_plots.pdf \
 			--output-umis-genes-plot ~{cohort_id}.qc.umis_genes_plot.pdf
+
+		# Upload outputs
+		gsutil -m cp \
+			~{cohort_id}.qc.violin_plots.pdf \
+			~{cohort_id}.qc.umis_genes_plot.pdf \
+			~{curated_data_path}/
 	>>>
 
 	output {
-		File qc_violin_plots = "~{cohort_id}.qc.violin_plots.pdf"
-		File qc_umis_genes_plot = "~{cohort_id}.qc.umis_genes_plot.pdf"
+		String qc_violin_plots = "~{curated_data_path}/~{cohort_id}.qc.violin_plots.pdf"
+		String qc_umis_genes_plot = "~{curated_data_path}/~{cohort_id}.qc.umis_genes_plot.pdf"
 	}
 
 	runtime {

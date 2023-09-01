@@ -11,6 +11,8 @@ workflow cluster {
 		Float clustering_resolution
 		File cell_type_markers_list
 
+		String raw_data_path
+		String curated_data_path
 		String container_registry
 	}
 
@@ -18,42 +20,48 @@ workflow cluster {
 		input:
 			cohort_id = cohort_id,
 			normalized_seurat_objects = normalized_seurat_objects,
+			raw_data_path = raw_data_path,
 			container_registry = container_registry
 	}
 
 	call neighbors {
 		input:
-			harmony_seurat_object = harmony.harmony_seurat_object,
+			harmony_seurat_object = harmony.harmony_seurat_object, #!FileCoercion
+			raw_data_path = raw_data_path,
 			container_registry = container_registry
 	}
 
 	call umap {
 		input:
-			neighbors_seurat_object = neighbors.neighbors_seurat_object,
+			neighbors_seurat_object = neighbors.neighbors_seurat_object, #!FileCoercion
+			raw_data_path = raw_data_path,
 			container_registry = container_registry
 	}
 
 	call clustering {
 		input:
 			cohort_id = cohort_id,
-			umap_seurat_object = umap.umap_seurat_object,
+			umap_seurat_object = umap.umap_seurat_object, #!FileCoercion
 			clustering_algorithm = clustering_algorithm,
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
+			raw_data_path = raw_data_path,
+			curated_data_path = curated_data_path,
 			container_registry = container_registry
 	}
 
 	call sctype {
 		input:
 			cohort_id = cohort_id,
-			cluster_seurat_object = clustering.cluster_seurat_object,
+			cluster_seurat_object = clustering.cluster_seurat_object, #!FileCoercion
 			cell_type_markers_list = cell_type_markers_list,
+			curated_data_path = curated_data_path,
 			container_registry = container_registry
 	}
 
 	output {
-		File cluster_seurat_object = clustering.cluster_seurat_object
-		File metadata = sctype.metadata
+		File cluster_seurat_object = clustering.cluster_seurat_object #!FileCoercion
+		File metadata = sctype.metadata #!FileCoercion
 	}
 }
 
@@ -62,6 +70,7 @@ task harmony {
 		String cohort_id
 		Array[File] normalized_seurat_objects
 
+		String raw_data_path
 		String container_registry
 	}
 
@@ -78,10 +87,15 @@ task harmony {
 			--threads ~{threads} \
 			--seurat-objects-fofn ~{write_lines(normalized_seurat_objects)} \
 			--output-seurat-object ~{cohort_id}.seurat_object.harmony_integrated_04.rds
+
+		# Upload outputs
+		gsutil -m cp \
+			~{cohort_id}.seurat_object.harmony_integrated_04.rds \
+			~{raw_data_path}/
 	>>>
 
 	output {
-		File harmony_seurat_object = "~{cohort_id}.seurat_object.harmony_integrated_04.rds"
+		String harmony_seurat_object = "~{raw_data_path}/~{cohort_id}.seurat_object.harmony_integrated_04.rds"
 	}
 
 	runtime {
@@ -98,6 +112,7 @@ task neighbors {
 	input {
 		File harmony_seurat_object
 
+		String raw_data_path
 		String container_registry
 	}
 
@@ -112,10 +127,15 @@ task neighbors {
 			--script-dir /opt/scripts \
 			--seurat-object ~{harmony_seurat_object} \
 			--output-seurat-object ~{harmony_seurat_object_basename}_neighbors_05.rds
+
+		# Upload outputs
+		gsutil -m cp \
+			~{harmony_seurat_object_basename}_neighbors_05.rds \
+			~{raw_data_path}/
 	>>>
 
 	output {
-		File neighbors_seurat_object = "~{harmony_seurat_object_basename}_neighbors_05.rds"
+		String neighbors_seurat_object = "~{raw_data_path}/~{harmony_seurat_object_basename}_neighbors_05.rds"
 	}
 
 	runtime {
@@ -132,6 +152,7 @@ task umap {
 	input {
 		File neighbors_seurat_object
 
+		String raw_data_path
 		String container_registry
 	}
 
@@ -146,10 +167,15 @@ task umap {
 			--script-dir /opt/scripts \
 			--seurat-object ~{neighbors_seurat_object} \
 			--output-seurat-object ~{neighbors_seurat_object_basename}_umap_06.rds
+
+		# Upload outputs
+		gsutil -m cp \
+			~{neighbors_seurat_object_basename}_umap_06.rds \
+			~{raw_data_path}/
 	>>>
 
 	output {
-		File umap_seurat_object = "~{neighbors_seurat_object_basename}_umap_06.rds"
+		String umap_seurat_object = "~{raw_data_path}/~{neighbors_seurat_object_basename}_umap_06.rds"
 	}
 
 	runtime {
@@ -171,6 +197,8 @@ task clustering {
 		Float clustering_resolution
 		File cell_type_markers_list
 
+		String raw_data_path
+		String curated_data_path
 		String container_registry
 	}
 
@@ -192,11 +220,20 @@ task clustering {
 			--cell-type-markers-list ~{cell_type_markers_list} \
 			--output-cell-type-plot ~{cohort_id}.major_type_module_umap.pdf \
 			--output-seurat-object ~{umap_seurat_object_basename}_cluster_07.rds
+
+		# Upload outputs
+		gsutil -m cp \
+			~{umap_seurat_object_basename}_cluster_07.rds \
+			~{raw_data_path}/
+
+		gsutil -m cp \
+			~{cohort_id}.major_type_module_umap.pdf \
+			~{curated_data_path}/
 	>>>
 
 	output {
-		File major_cell_type_plot = "~{cohort_id}.major_type_module_umap.pdf"
-		File cluster_seurat_object = "~{umap_seurat_object_basename}_cluster_07.rds"
+		String major_cell_type_plot = "~{curated_data_path}/~{cohort_id}.major_type_module_umap.pdf"
+		String cluster_seurat_object = "~{raw_data_path}/~{umap_seurat_object_basename}_cluster_07.rds"
 	}
 
 	runtime {
@@ -216,6 +253,7 @@ task sctype {
 
 		File cell_type_markers_list
 
+		String curated_data_path
 		String container_registry
 	}
 
@@ -234,10 +272,15 @@ task sctype {
 			--seurat-object ~{cluster_seurat_object} \
 			--cell-type-markers-list ~{cell_type_markers_list} \
 			--output-metadata-file ~{cohort_id}.final_metadata.csv
+
+		# Upload outputs
+		gsutil -m cp \
+			~{cohort_id}.final_metadata.csv \
+			~{curated_data_path}/
 	>>>
 
 	output {
-		File metadata = "~{cohort_id}.final_metadata.csv"
+		String metadata = "~{curated_data_path}/~{cohort_id}.final_metadata.csv"
 	}
 
 	runtime {

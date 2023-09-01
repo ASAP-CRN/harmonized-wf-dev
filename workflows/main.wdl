@@ -16,6 +16,7 @@ workflow harmonized_pmdbs_analysis {
 		Float soup_rate = 0.20
 
 		Boolean run_cross_team_cohort_analysis = false
+		String cohort_raw_data_bucket
 		String cohort_curated_data_output_bucket
 
 		Int clustering_algorithm = 3
@@ -30,18 +31,20 @@ workflow harmonized_pmdbs_analysis {
 
 	String intermediate_file_path = "intermediate_workflow_execution"
 
+	call get_utc_timestamp
+
 	scatter (project in projects) {
-		String raw_data_path_prefix = "~{project.raw_data_bucket}/~{intermediate_file_path}"
-		String curated_data_path_prefix = "~{project.curated_data_output_bucket}"
+		String project_raw_data_path_prefix = "~{project.raw_data_bucket}/~{intermediate_file_path}"
+		String project_curated_data_path_prefix = project.curated_data_output_bucket
 
 		scatter (sample in project.samples) {
 			call Preprocess.preprocess {
 				input:
 					sample = sample,
-					raw_data_path_prefix = raw_data_path_prefix,
-					curated_data_path_prefix = curated_data_path_prefix,
 					cellranger_reference_data = cellranger_reference_data,
 					soup_rate = soup_rate,
+					raw_data_path_prefix = project_raw_data_path_prefix,
+					curated_data_path_prefix = project_curated_data_path_prefix,
 					container_registry = container_registry
 			}
 		}
@@ -56,12 +59,18 @@ workflow harmonized_pmdbs_analysis {
 					cell_type_markers_list = cell_type_markers_list,
 					groups = groups,
 					features = features,
+					run_timestamp = get_utc_timestamp.timestamp,
+					raw_data_path_prefix = project_raw_data_path_prefix,
+					curated_data_path_prefix = project_curated_data_path_prefix,
 					container_registry = container_registry
 			}
 		}
 	}
 
 	if (run_cross_team_cohort_analysis) {
+		String cohort_raw_data_path_prefix = "~{cohort_raw_data_bucket}/~{intermediate_file_path}"
+		String cohort_curated_data_path_prefix = cohort_curated_data_output_bucket
+
 		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
 			input:
 				cohort_id = cohort_id,
@@ -71,6 +80,9 @@ workflow harmonized_pmdbs_analysis {
 				cell_type_markers_list = cell_type_markers_list,
 				groups = groups,
 				features = features,
+				run_timestamp = get_utc_timestamp.timestamp,
+				raw_data_path_prefix = cohort_raw_data_path_prefix,
+				curated_data_path_prefix = cohort_curated_data_path_prefix,
 				container_registry = container_registry
 		}
 	}
@@ -78,10 +90,10 @@ workflow harmonized_pmdbs_analysis {
 	output {
 		# Sample-level outputs
 		## Cellranger
-		Array[Array[String]] raw_counts = preprocess.raw_counts
-		Array[Array[String]] filtered_counts = preprocess.filtered_counts
-		Array[Array[String]] molecule_info = preprocess.molecule_info
-		Array[Array[String]] cellranger_metrics_csvs = preprocess.metrics_csv
+		Array[Array[File]] raw_counts = preprocess.raw_counts
+		Array[Array[File]] filtered_counts = preprocess.filtered_counts
+		Array[Array[File]] molecule_info = preprocess.molecule_info
+		Array[Array[File]] cellranger_metrics_csvs = preprocess.metrics_csv
 
 
 		# Project cohort analysis outputs
@@ -122,6 +134,7 @@ workflow harmonized_pmdbs_analysis {
 		cellranger_reference_data: {help: "Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest."}
 		soup_rate: {help: "Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data. [0.2]"}
 		run_cross_team_cohort_analysis: {help: "Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}
+		cohort_raw_data_bucket: {help: "Bucket to upload cross-team cohort intermediate files to."}
 		cohort_curated_data_output_bucket: {help: "Bucket to upload cross-team cohort analysis outputs to."}
 		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}
 		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
@@ -129,5 +142,28 @@ workflow harmonized_pmdbs_analysis {
 		groups: {help: "Groups to produce umap plots for. ['sample', 'batch', 'seurat_clusters']"}
 		features: {help: "Features to produce umap plots for. ['doublet_scores', 'nCount_RNA', 'nFeature_RNA', 'percent.mt', 'percent.rb']"}
 		container_registry: {help: "Container registry where Docker images are hosted."}
+	}
+}
+
+# UTC timestamp in format
+task get_utc_timestamp {
+	input {}
+
+	command <<<
+		set -euo pipefail
+
+		date -u +"%FT%H-%M-%SZ" > timestamp.txt
+	>>>
+
+	output {
+		String timestamp = read_string("timestamp.txt")
+	}
+
+	runtime {
+		docker: "ubuntu:jammy"
+		cpu: 1
+		memory: "1 GB"
+		disks: "local-disk 10 HDD"
+		preemptible: 3
 	}
 }

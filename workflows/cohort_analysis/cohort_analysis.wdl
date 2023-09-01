@@ -19,13 +19,26 @@ workflow cohort_analysis {
 		Array[String] groups
 		Array[String] features
 
+		String run_timestamp
+		String raw_data_path_prefix
+		String curated_data_path_prefix
 		String container_registry
 	}
+
+	# TODO dummy version
+	# TODO this is the version of all underlying workflows, as well
+	String workflow_name = "cohort_analysis"
+	String workflow_version = "0.0.1"
+
+	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
+	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
 
 	call QualityControl.quality_control {
 		input:
 			cohort_id = cohort_id,
 			preprocessed_seurat_objects = preprocessed_seurat_objects,
+			raw_data_path = raw_data_path,
+			curated_data_path = curated_data_path,
 			container_registry = container_registry
 	}
 
@@ -34,6 +47,7 @@ workflow cohort_analysis {
 			input:
 				preprocessed_seurat_object = preprocessed_seurat_object,
 				unfiltered_metadata = quality_control.unfiltered_metadata,
+				raw_data_path = raw_data_path,
 				container_registry = container_registry
 		}
 	}
@@ -45,6 +59,8 @@ workflow cohort_analysis {
 			clustering_algorithm = clustering_algorithm,
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
+			raw_data_path = raw_data_path,
+			curated_data_path = curated_data_path,
 			container_registry = container_registry
 	}
 
@@ -54,6 +70,7 @@ workflow cohort_analysis {
 			metadata = cluster.metadata,
 			groups = groups,
 			features = features,
+			curated_data_path = curated_data_path,
 			container_registry = container_registry
 	}
 

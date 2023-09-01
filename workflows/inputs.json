@@ -4,6 +4,7 @@
   "harmonized_pmdbs_analysis.cellranger_reference_data": "String",
   "harmonized_pmdbs_analysis.soup_rate": "Float (optional, default = 0.2)",
   "harmonized_pmdbs_analysis.run_cross_team_cohort_analysis": "Boolean (optional, default = false)",
+  "harmonized_pmdbs_analysis.cohort_raw_data_bucket": "String",
   "harmonized_pmdbs_analysis.cohort_curated_data_output_bucket": "String",
   "harmonized_pmdbs_analysis.clustering_algorithm": "Int (optional, default = 3)",
   "harmonized_pmdbs_analysis.clustering_resolution": "Float (optional, default = 0.3)",

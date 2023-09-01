@@ -7,6 +7,7 @@ workflow filter {
 		File preprocessed_seurat_object
 		File unfiltered_metadata
 
+		String raw_data_path
 		String container_registry
 	}
 
@@ -14,17 +15,19 @@ workflow filter {
 		input:
 			preprocessed_seurat_object = preprocessed_seurat_object,
 			unfiltered_metadata = unfiltered_metadata,
+			raw_data_path = raw_data_path,
 			container_registry = container_registry
 	}
 
 	call process {
 		input:
-			filtered_seurat_object = filtering.filtered_seurat_object,
+			filtered_seurat_object = filtering.filtered_seurat_object, #!FileCoercion
+			raw_data_path = raw_data_path,
 			container_registry = container_registry
 	}
 
 	output {
-		File normalized_seurat_object = process.normalized_seurat_object
+		File normalized_seurat_object = process.normalized_seurat_object #!FileCoercion
 	}
 }
 
@@ -33,6 +36,7 @@ task filtering {
 		File preprocessed_seurat_object
 		File unfiltered_metadata
 
+		String raw_data_path
 		String container_registry
 	}
 
@@ -48,10 +52,15 @@ task filtering {
 			--seurat-object ~{preprocessed_seurat_object} \
 			--metadata ~{unfiltered_metadata} \
 			--output-seurat-object ~{seurat_object_basename}_filtered_02.rds
+
+		# Upload outputs
+		gsutil -m cp \
+			~{seurat_object_basename}_filtered_02.rds \
+			~{raw_data_path}/
 	>>>
 
 	output {
-		File filtered_seurat_object = "~{seurat_object_basename}_filtered_02.rds"
+		String filtered_seurat_object = "~{raw_data_path}/~{seurat_object_basename}_filtered_02.rds"
 	}
 
 	runtime {
@@ -68,6 +77,7 @@ task process {
 	input {
 		File filtered_seurat_object
 
+		String raw_data_path
 		String container_registry
 	}
 
@@ -84,10 +94,15 @@ task process {
 			--threads ~{threads} \
 			--seurat-object ~{filtered_seurat_object} \
 			--output-seurat-object ~{seurat_object_basename}_normalized_03.rds
+
+		# Upload outputs
+		gsutil -m cp \
+			~{seurat_object_basename}_normalized_03.rds \
+			~{raw_data_path}/
 	>>>
 
 	output {
-		File normalized_seurat_object = "~{seurat_object_basename}_normalized_03.rds"
+		String normalized_seurat_object = "~{raw_data_path}/~{seurat_object_basename}_normalized_03.rds"
 	}
 
 	runtime {

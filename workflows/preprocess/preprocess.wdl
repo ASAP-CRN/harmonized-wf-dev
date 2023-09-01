@@ -70,13 +70,13 @@ workflow preprocess {
 
 	output {
 		# Cellranger
-		String raw_counts = select_first([cellranger.raw_counts, cellranger_raw_counts])
-		String filtered_counts = select_first([cellranger.filtered_counts, cellranger_filtered_counts])
-		String molecule_info = select_first([cellranger.molecule_info, cellranger_molecule_info])
-		String metrics_csv = select_first([cellranger.metrics_csv, cellranger_metrics_csv])
+		File raw_counts = select_first([cellranger.raw_counts, cellranger_raw_counts]) #!FileCoercion
+		File filtered_counts = select_first([cellranger.filtered_counts, cellranger_filtered_counts]) #!FileCoercion
+		File molecule_info = select_first([cellranger.molecule_info, cellranger_molecule_info]) #!FileCoercion
+		File metrics_csv = select_first([cellranger.metrics_csv, cellranger_metrics_csv]) #!FileCoercion
 
 		# Seurat counts
-		String seurat_object = select_first([counts_to_seurat.preprocessed_seurat_object, preprocessed_seurat_object])
+		File seurat_object = select_first([counts_to_seurat.preprocessed_seurat_object, preprocessed_seurat_object]) #!FileCoercion
 	}
 }
 
