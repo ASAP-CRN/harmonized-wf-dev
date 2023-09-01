@@ -30,6 +30,8 @@ workflow preprocess {
 	String cellranger_metrics_csv = "~{curated_data_path}/~{sample.sample_id}.metrics_summary.csv"
 	String preprocessed_seurat_object = "~{raw_data_path}/~{sample.sample_id}.seurat_object.preprocessed_01.rds"
 
+	# For this version of the pipeline, determine whether the sample has been run
+	# (i.e. output files exist for this sample)
 	call check_output_files_exist {
 		input:
 			expected_output_files = [
@@ -78,8 +80,6 @@ workflow preprocess {
 	}
 }
 
-# For this version of the pipeline, determine whether the sample has been run
-# (i.e. output files exist for this sample)
 task check_output_files_exist {
 	input {
 		Array[String] expected_output_files
@@ -99,7 +99,7 @@ task check_output_files_exist {
 	>>>
 
 	output {
-		Boolean outputs_exist = read_boolean("outputs_exists.txt")
+		Boolean outputs_exist = read_boolean("output_exists.txt")
 	}
 
 	runtime {
