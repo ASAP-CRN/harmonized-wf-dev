@@ -10,7 +10,8 @@ ARG CONDA_ENVIRONMENT "${CONDA_ENVIRONMENT}"
 
 RUN apt-get -qq update \
 	&& apt-get -qq install \
-		wget
+		wget \
+		time
 
 ARG CELLRANGER_VERSION
 # N.B. this must be passed as a build arg (using the utility script: -b CELLRANGER_DOWNLOAD_QUERY_STRING='xxyy')

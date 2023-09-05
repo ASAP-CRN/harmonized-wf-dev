@@ -27,6 +27,10 @@ ARG IMAGE_TAG
 ENV IMAGE_TAG "${IMAGE_TAG}"
 ARG CONDA_ENVIRONMENT "${CONDA_ENVIRONMENT}"
 
+RUN apt-get -qq update \
+	&& apt-get -qq install \
+		time
+
 # Add conda environment definition
 COPY --from=builder /opt/Multiome-SeuratV4/envs/${CONDA_ENVIRONMENT}.yml /opt/envs/
 RUN conda env create --file "/opt/envs/${CONDA_ENVIRONMENT}.yml" --name "${CONDA_ENVIRONMENT}"
