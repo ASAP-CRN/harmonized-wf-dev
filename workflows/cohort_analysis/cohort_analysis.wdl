@@ -2,10 +2,10 @@ version 1.0
 
 # Run steps in the cohort analysis
 
-import "quality_control/quality_control.wdl" as QualityControl
-import "filter/filter.wdl" as Filter
-import "cluster/cluster.wdl" as Cluster
-import "plot/plot.wdl" as Plot
+import "run_quality_control/run_quality_control.wdl" as RunQualityControl
+import "filter_data/filter_data.wdl" as FilterData
+import "cluster_data/cluster_data.wdl" as ClusterData
+import "plot_groups_and_features/plot_groups_and_features.wdl" as PlotGroupsAndFeatures
 
 workflow cohort_analysis {
 	input {
@@ -33,7 +33,7 @@ workflow cohort_analysis {
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
 	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
 
-	call QualityControl.quality_control {
+	call RunQualityControl.run_quality_control {
 		input:
 			cohort_id = cohort_id,
 			preprocessed_seurat_objects = preprocessed_seurat_objects,
@@ -43,19 +43,19 @@ workflow cohort_analysis {
 	}
 
 	scatter (preprocessed_seurat_object in preprocessed_seurat_objects) {
-		call Filter.filter {
+		call FilterData.filter_data {
 			input:
 				preprocessed_seurat_object = preprocessed_seurat_object,
-				unfiltered_metadata = quality_control.unfiltered_metadata,
+				unfiltered_metadata = run_quality_control.unfiltered_metadata,
 				raw_data_path = raw_data_path,
 				container_registry = container_registry
 		}
 	}
 
-	call Cluster.cluster {
+	call ClusterData.cluster_data {
 		input:
 			cohort_id = cohort_id,
-			normalized_seurat_objects = filter.normalized_seurat_object,
+			normalized_seurat_objects = filter_data.normalized_seurat_object,
 			clustering_algorithm = clustering_algorithm,
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
@@ -64,10 +64,10 @@ workflow cohort_analysis {
 			container_registry = container_registry
 	}
 
-	call Plot.plot {
+	call PlotGroupsAndFeatures.plot_groups_and_features {
 		input:
 			cohort_id = cohort_id,
-			metadata = cluster.metadata,
+			metadata = cluster_data.metadata,
 			groups = groups,
 			features = features,
 			curated_data_path = curated_data_path,
@@ -76,15 +76,15 @@ workflow cohort_analysis {
 
 	output {
 		# QC plots
-		File qc_violin_plots = quality_control.qc_violin_plots
-		File qc_umis_genes_plot = quality_control.qc_umis_genes_plot
+		File qc_violin_plots = run_quality_control.qc_violin_plots
+		File qc_umis_genes_plot = run_quality_control.qc_umis_genes_plot
 
 		# Clustering and sctyping output
-		File cluster_seurat_object = cluster.cluster_seurat_object
-		File metadata = cluster.metadata
+		File cluster_seurat_object = cluster_data.cluster_seurat_object
+		File metadata = cluster_data.metadata
 
 		# Group and feature plots for final metadata
-		Array[File] group_umap_plots = plot.group_umap_plots
-		Array[File] feature_umap_plots = plot.feature_umap_plots
+		Array[File] group_umap_plots = plot_groups_and_features.group_umap_plots
+		Array[File] feature_umap_plots = plot_groups_and_features.feature_umap_plots
 	}
 }

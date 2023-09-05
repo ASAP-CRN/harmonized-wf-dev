@@ -2,7 +2,7 @@ version 1.0
 
 # Perform filtering steps
 
-workflow filter {
+workflow filter_data {
 	input {
 		File preprocessed_seurat_object
 		File unfiltered_metadata
@@ -11,7 +11,8 @@ workflow filter {
 		String container_registry
 	}
 
-	call filtering {
+	# Filter sample data by nCount_RNA, nFeature_RNA, percent.mt, percent.rb; remove doublets
+	call apply_filters {
 		input:
 			preprocessed_seurat_object = preprocessed_seurat_object,
 			unfiltered_metadata = unfiltered_metadata,
@@ -19,19 +20,19 @@ workflow filter {
 			container_registry = container_registry
 	}
 
-	call process {
+	call normalize_scale_data {
 		input:
-			filtered_seurat_object = filtering.filtered_seurat_object, #!FileCoercion
+			filtered_seurat_object = apply_filters.filtered_seurat_object, #!FileCoercion
 			raw_data_path = raw_data_path,
 			container_registry = container_registry
 	}
 
 	output {
-		File normalized_seurat_object = process.normalized_seurat_object #!FileCoercion
+		File normalized_seurat_object = normalize_scale_data.normalized_seurat_object #!FileCoercion
 	}
 }
 
-task filtering {
+task apply_filters {
 	input {
 		File preprocessed_seurat_object
 		File unfiltered_metadata
@@ -73,7 +74,7 @@ task filtering {
 	}
 }
 
-task process {
+task normalize_scale_data {
 	input {
 		File filtered_seurat_object
 

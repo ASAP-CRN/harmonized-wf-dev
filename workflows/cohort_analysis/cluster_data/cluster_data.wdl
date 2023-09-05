@@ -1,8 +1,8 @@
 version 1.0
 
-# Perform harmonization, umapping, and clustering steps
+# Perform dataset integration, umap, clustering, and annotation steps
 
-workflow cluster {
+workflow cluster_data {
 	input {
 		String cohort_id
 		Array[File] normalized_seurat_objects
@@ -16,7 +16,7 @@ workflow cluster {
 		String container_registry
 	}
 
-	call harmony {
+	call integrate_sample_data {
 		input:
 			cohort_id = cohort_id,
 			normalized_seurat_objects = normalized_seurat_objects,
@@ -24,24 +24,24 @@ workflow cluster {
 			container_registry = container_registry
 	}
 
-	call neighbors {
+	call find_neighbors {
 		input:
-			harmony_seurat_object = harmony.harmony_seurat_object, #!FileCoercion
+			integrated_seurat_object = integrate_sample_data.integrated_seurat_object, #!FileCoercion
 			raw_data_path = raw_data_path,
 			container_registry = container_registry
 	}
 
-	call umap {
+	call run_umap {
 		input:
-			neighbors_seurat_object = neighbors.neighbors_seurat_object, #!FileCoercion
+			neighbors_seurat_object = find_neighbors.neighbors_seurat_object, #!FileCoercion
 			raw_data_path = raw_data_path,
 			container_registry = container_registry
 	}
 
-	call clustering {
+	call cluster_cells {
 		input:
 			cohort_id = cohort_id,
-			umap_seurat_object = umap.umap_seurat_object, #!FileCoercion
+			umap_seurat_object = run_umap.umap_seurat_object, #!FileCoercion
 			clustering_algorithm = clustering_algorithm,
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
@@ -50,22 +50,22 @@ workflow cluster {
 			container_registry = container_registry
 	}
 
-	call sctype {
+	call annotate_clusters {
 		input:
 			cohort_id = cohort_id,
-			cluster_seurat_object = clustering.cluster_seurat_object, #!FileCoercion
+			cluster_seurat_object = cluster_cells.cluster_seurat_object, #!FileCoercion
 			cell_type_markers_list = cell_type_markers_list,
 			curated_data_path = curated_data_path,
 			container_registry = container_registry
 	}
 
 	output {
-		File cluster_seurat_object = clustering.cluster_seurat_object #!FileCoercion
-		File metadata = sctype.metadata #!FileCoercion
+		File cluster_seurat_object = cluster_cells.cluster_seurat_object #!FileCoercion
+		File metadata = annotate_clusters.metadata #!FileCoercion
 	}
 }
 
-task harmony {
+task integrate_sample_data {
 	input {
 		String cohort_id
 		Array[File] normalized_seurat_objects
@@ -95,7 +95,7 @@ task harmony {
 	>>>
 
 	output {
-		String harmony_seurat_object = "~{raw_data_path}/~{cohort_id}.seurat_object.harmony_integrated_04.rds"
+		String integrated_seurat_object = "~{raw_data_path}/~{cohort_id}.seurat_object.harmony_integrated_04.rds"
 	}
 
 	runtime {
@@ -108,16 +108,16 @@ task harmony {
 	}
 }
 
-task neighbors {
+task find_neighbors {
 	input {
-		File harmony_seurat_object
+		File integrated_seurat_object
 
 		String raw_data_path
 		String container_registry
 	}
 
-	String harmony_seurat_object_basename = basename(harmony_seurat_object, "_04.rds")
-	Int disk_size = ceil(size(harmony_seurat_object, "GB") * 2 + 20)
+	String integrated_seurat_object_basename = basename(integrated_seurat_object, "_04.rds")
+	Int disk_size = ceil(size(integrated_seurat_object, "GB") * 2 + 20)
 
 	command <<<
 		set -euo pipefail
@@ -125,17 +125,17 @@ task neighbors {
 		Rscript /opt/scripts/main/find_neighbors.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
-			--seurat-object ~{harmony_seurat_object} \
-			--output-seurat-object ~{harmony_seurat_object_basename}_neighbors_05.rds
+			--seurat-object ~{integrated_seurat_object} \
+			--output-seurat-object ~{integrated_seurat_object_basename}_neighbors_05.rds
 
 		# Upload outputs
 		gsutil -m cp \
-			~{harmony_seurat_object_basename}_neighbors_05.rds \
+			~{integrated_seurat_object_basename}_neighbors_05.rds \
 			~{raw_data_path}/
 	>>>
 
 	output {
-		String neighbors_seurat_object = "~{raw_data_path}/~{harmony_seurat_object_basename}_neighbors_05.rds"
+		String neighbors_seurat_object = "~{raw_data_path}/~{integrated_seurat_object_basename}_neighbors_05.rds"
 	}
 
 	runtime {
@@ -148,7 +148,7 @@ task neighbors {
 	}
 }
 
-task umap {
+task run_umap {
 	input {
 		File neighbors_seurat_object
 
@@ -188,7 +188,7 @@ task umap {
 	}
 }
 
-task clustering {
+task cluster_cells {
 	input {
 		String cohort_id
 		File umap_seurat_object
@@ -246,7 +246,8 @@ task clustering {
 	}
 }
 
-task sctype {
+# TODO output file could be called ~{cohort_id}.annotated.csv ?
+task annotate_clusters {
 	input {
 		String cohort_id
 		File cluster_seurat_object

@@ -1,8 +1,8 @@
 version 1.0
 
-# Call doublets and generate QC plots
+# Identify doublets and generate QC plots
 
-workflow quality_control {
+workflow run_quality_control {
 	input {
 		String cohort_id
 		Array[File] preprocessed_seurat_objects
@@ -12,7 +12,7 @@ workflow quality_control {
 		String container_registry
 	}
 
-	call doublets {
+	call identify_doublets {
 		input:
 			cohort_id = cohort_id,
 			preprocessed_seurat_objects = preprocessed_seurat_objects,
@@ -20,24 +20,24 @@ workflow quality_control {
 			container_registry = container_registry
 	}
 
-	call plot_qc {
+	call plot_qc_metrics {
 		input:
 			cohort_id = cohort_id,
-			unfiltered_metadata = doublets.unfiltered_metadata, #!FileCoercion
+			unfiltered_metadata = identify_doublets.unfiltered_metadata, #!FileCoercion
 			curated_data_path = curated_data_path,
 			container_registry = container_registry
 	}
 
 	output {
 		# QC plots
-		File qc_violin_plots = plot_qc.qc_violin_plots #!FileCoercion
-		File qc_umis_genes_plot = plot_qc.qc_umis_genes_plot #!FileCoercion
+		File qc_violin_plots = plot_qc_metrics.qc_violin_plots #!FileCoercion
+		File qc_umis_genes_plot = plot_qc_metrics.qc_umis_genes_plot #!FileCoercion
 
-		File unfiltered_metadata = doublets.unfiltered_metadata #!FileCoercion
+		File unfiltered_metadata = identify_doublets.unfiltered_metadata #!FileCoercion
 	}
 }
 
-task doublets {
+task identify_doublets {
 	input {
 		String cohort_id
 		Array[File] preprocessed_seurat_objects
@@ -80,7 +80,7 @@ task doublets {
 	}
 }
 
-task plot_qc {
+task plot_qc_metrics {
 	input {
 		String cohort_id
 		File unfiltered_metadata

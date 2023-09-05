@@ -43,9 +43,9 @@ workflow preprocess {
 			]
 	}
 
-	# If preprocessing pipeline outputs do not exist, run preprocessing
+	# If preprocessing pipeline outputs do not exist, run preprocessing steps
 	if (! check_output_files_exist.outputs_exist) {
-		call cellranger {
+		call cellranger_count {
 			input:
 				sample_id = sample.sample_id,
 				fastq_R1 = sample.fastq_R1,
@@ -56,12 +56,13 @@ workflow preprocess {
 				container_registry = container_registry
 		}
 
+		# Import counts and convert to a Seurat object
 		call counts_to_seurat {
 			input:
 				sample_id = sample.sample_id,
 				batch = sample.batch,
-				raw_counts = cellranger.raw_counts, # !FileCoercion
-				filtered_counts = cellranger.filtered_counts, # !FileCoercion
+				raw_counts = cellranger_count.raw_counts, # !FileCoercion
+				filtered_counts = cellranger_count.filtered_counts, # !FileCoercion
 				soup_rate = soup_rate,
 				raw_data_path = raw_data_path,
 				container_registry = container_registry
@@ -70,10 +71,10 @@ workflow preprocess {
 
 	output {
 		# Cellranger
-		File raw_counts = select_first([cellranger.raw_counts, cellranger_raw_counts]) #!FileCoercion
-		File filtered_counts = select_first([cellranger.filtered_counts, cellranger_filtered_counts]) #!FileCoercion
-		File molecule_info = select_first([cellranger.molecule_info, cellranger_molecule_info]) #!FileCoercion
-		File metrics_csv = select_first([cellranger.metrics_csv, cellranger_metrics_csv]) #!FileCoercion
+		File raw_counts = select_first([cellranger_count.raw_counts, cellranger_raw_counts]) #!FileCoercion
+		File filtered_counts = select_first([cellranger_count.filtered_counts, cellranger_filtered_counts]) #!FileCoercion
+		File molecule_info = select_first([cellranger_count.molecule_info, cellranger_molecule_info]) #!FileCoercion
+		File metrics_csv = select_first([cellranger_count.metrics_csv, cellranger_metrics_csv]) #!FileCoercion
 
 		# Seurat counts
 		File seurat_object = select_first([counts_to_seurat.preprocessed_seurat_object, preprocessed_seurat_object]) #!FileCoercion
@@ -111,7 +112,7 @@ task check_output_files_exist {
 	}
 }
 
-task cellranger {
+task cellranger_count {
 	input {
 		String sample_id
 

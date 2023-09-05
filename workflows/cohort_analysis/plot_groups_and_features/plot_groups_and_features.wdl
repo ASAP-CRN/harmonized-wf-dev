@@ -1,8 +1,8 @@
 version 1.0
 
-# Plot groups and features from final metadata
+# Plot groups and features from the final metadata
 
-workflow plot {
+workflow plot_groups_and_features {
 	input {
 		String cohort_id
 
@@ -64,8 +64,8 @@ task plot_groups {
 				--group "${group}" \
 				--output-group-umap-plot "~{cohort_id}.${group}_group_umap.pdf"
 
-				group_plots+=("~{cohort_id}.${group}_group_umap.pdf")
-			done < ~{write_lines(groups)}
+			group_plots+=("~{cohort_id}.${group}_group_umap.pdf")
+		done < ~{write_lines(groups)}
 
 		# Upload outputs
 		gsutil -m cp \
@@ -115,7 +115,7 @@ task plot_features {
 				--feature "${feature}" \
 				--output-feature-umap-plot "~{cohort_id}.${feature}_feature_umap.pdf"
 
-				feature_plots+=("~{cohort_id}.${feature}_feature_umap.pdf")
+			feature_plots+=("~{cohort_id}.${feature}_feature_umap.pdf")
 		done < ~{write_lines(features)}
 
 		# Upload outputs
