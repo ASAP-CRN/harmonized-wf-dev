@@ -47,6 +47,7 @@ task apply_filters {
 	command <<<
 		set -euo pipefail
 
+		/usr/bin/time \
 		Rscript /opt/scripts/main/filter.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
@@ -89,6 +90,7 @@ task normalize_scale_data {
 	command <<<
 		set -euo pipefail
 
+		/usr/bin/time \
 		Rscript /opt/scripts/main/process.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \

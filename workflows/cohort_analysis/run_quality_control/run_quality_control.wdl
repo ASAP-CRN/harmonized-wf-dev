@@ -52,6 +52,7 @@ task identify_doublets {
 	command <<<
 		set -euo pipefail
 
+		/usr/bin/time \
 		Rscript /opt/scripts/main/gmm_doublet_calling.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
@@ -95,6 +96,7 @@ task plot_qc_metrics {
 	command <<<
 		set -euo pipefail
 
+		/usr/bin/time \
 		Rscript /opt/scripts/main/plot_qc_metrics.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \

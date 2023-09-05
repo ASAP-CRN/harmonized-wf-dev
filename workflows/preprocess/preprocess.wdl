@@ -147,6 +147,7 @@ task cellranger_count {
 
 		cellranger --version
 
+		/usr/bin/time \
 		cellranger count \
 			--id=~{sample_id} \
 			--transcriptome="$(pwd)/cellranger_refdata" \
@@ -207,6 +208,7 @@ task counts_to_seurat {
 	command <<<
 		set -euo pipefail
 
+		/usr/bin/time \
 		Rscript /opt/scripts/main/preprocess.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \

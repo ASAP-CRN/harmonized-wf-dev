@@ -58,6 +58,7 @@ task plot_groups {
 
 		declare -a group_plots
 		while read -r group || [[ -n "${group}" ]]; do
+			/usr/bin/time \
 			Rscript /opt/scripts/main/plot_groups.R \
 				--working-dir "$(pwd)" \
 				--metadata ~{metadata} \
@@ -109,6 +110,7 @@ task plot_features {
 
 		declare -a feature_plots
 		while read -r feature || [[ -n "${feature}" ]]; do
+			/usr/bin/time \
 			Rscript /opt/scripts/main/plot_features.R \
 				--working-dir "$(pwd)" \
 				--metadata ~{metadata} \

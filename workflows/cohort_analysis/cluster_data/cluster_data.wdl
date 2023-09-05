@@ -81,6 +81,7 @@ task integrate_sample_data {
 	command <<<
 		set -euo pipefail
 
+		/usr/bin/time \
 		Rscript /opt/scripts/main/harmony.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
@@ -122,6 +123,7 @@ task find_neighbors {
 	command <<<
 		set -euo pipefail
 
+		/usr/bin/time \
 		Rscript /opt/scripts/main/find_neighbors.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
@@ -162,6 +164,7 @@ task run_umap {
 	command <<<
 		set -euo pipefail
 
+		/usr/bin/time \
 		Rscript /opt/scripts/main/umap.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
@@ -210,6 +213,7 @@ task cluster_cells {
 	command <<<
 		set -euo pipefail
 
+		/usr/bin/time \
 		Rscript /opt/scripts/main/clustering.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
@@ -266,6 +270,7 @@ task annotate_clusters {
 	command <<<
 		set -euo pipefail
 
+		/usr/bin/time \
 		Rscript /opt/scripts/main/annotate_clusters.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
