@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+
+from argparse import ArgumentParser
+import pandas as pd
+import re
+import json
+
+
+def load_fastq_locs(fastq_locs_txt):
+    fastq_locs = []
+    with open(fastq_locs_txt, "r") as f:
+        for line in f:
+            fastq_locs.append(line.strip())
+
+    # Ensure fastq locs are sorted alphabetically, so that *_R1 will always show up before *_R2
+    fastq_locs.sort()
+
+    return fastq_locs
+
+
+def get_fastq_locs(fastq_path, sample_id, fastq_locs):
+    fastqs = [
+        fastq_loc
+        for fastq_loc in fastq_locs
+        if re.search(rf"{fastq_path}/{sample_id}", fastq_loc)
+    ]
+
+    # Confirm that there are exactly 2 fastqs, and the string 'R1' is in the first, 'R2' in the second
+    if len(fastqs) != 2:
+        raise SystemExit(
+            f"Unexpected number of FASTQS ({len(fastqs)}) found for sample {sample_id}\n{fastqs}"
+        )
+    elif "R1" not in fastqs[0] or "R2" not in fastqs[1]:
+        raise SystemExit(
+            f"Expected to find 'R1' in read 1 and 'R2' in read 2, but didn't for sample {sample_id}\nR1: {fastqs[0]}\nR2: {fastqs[1]}"
+        )
+    return fastqs[0], fastqs[1]
+
+
+def main(args):
+    run_project_cohort_analysis = args.run_project_cohort_analysis
+
+    fastq_locs = load_fastq_locs(args.fastq_locs_txt)
+
+    projects = dict()
+    for project_tsv in args.project_tsvs:
+        project_df = pd.read_csv(project_tsv, delimiter="\t")
+        for index, row in project_df.iterrows():
+            project_id = row.project_id
+            sample_id = row.sample_id
+            batch = row.batch
+            fastq_path = row.fastq_path
+
+            fastq_R1, fastq_R2 = get_fastq_locs(fastq_path, sample_id, fastq_locs)
+            sample = {
+                "sample_id": sample_id,
+                "batch": batch,
+                "fastq_R1": fastq_R1,
+                "fastq_R2": fastq_R2,
+            }
+
+            if project_id not in projects:
+                projects[project_id] = {
+                    "project_id": project_id,
+                    "samples": [sample],
+                    "run_project_cohort_analysis": run_project_cohort_analysis,
+                    "raw_data_bucket": f"gs://asap-raw-data-{project_id}",
+                    "curated_data_output_bucket": f"gs://asap-curated-data-{project_id}",
+                }
+            else:
+                projects[project_id]["samples"].append(sample)
+
+    projects = [project for project in projects.values()]
+
+    with open(args.inputs_template, "r") as f:
+        inputs_json = json.load(f)
+
+    projects_key = [
+        key for key in inputs_json.keys() if re.search(r"^[^\.]*\.projects$", key)
+    ]
+
+    if len(projects_key) != 1:
+        raise SystemExit(
+            f"Failed to find projects key in the inputs template\nProjects keys found: {projects_key}\nAvailable keys: {inputs_json.keys()}"
+        )
+    else:
+        projects_key = projects_key[0]
+
+        inputs_json[projects_key] = projects
+
+    with open(args.output_file, "w") as f:
+        json.dump(inputs_json, f)
+    print(f"Wrote input JSON file: {args.output_file}")
+
+
+if __name__ == "__main__":
+    parser = ArgumentParser(
+        description="Given a TSV of sample information, generate an inputs JSON"
+    )
+
+    parser.add_argument(
+        "-p",
+        "--project-tsv",
+        dest="project_tsvs",
+        type=str,
+        action="append",
+        required=True,
+        help="Project TSV including information for samples present in the project; columns project_id, sample_id, batch, fastq_path. Can provide one per project, or include all samples in a single TSV.",
+    )
+    parser.add_argument(
+        "-f",
+        "--fastq-locs-txt",
+        dest="fastq_locs_txt",
+        type=str,
+        required=True,
+        help="File containing the location of all fastqs associated with samples; used to determine the path to the R1 and R2 files for each sample.",
+    )
+    parser.add_argument(
+        "-i",
+        "--inputs-template",
+        dest="inputs_template",
+        type=str,
+        required=False,
+        help="If provided, use values supplied in the inputs template to write the output JSON file (projects will be added at the *.projects key).",
+    )
+    parser.add_argument(
+        "-c",
+        "--run-project-cohort-analysis",
+        dest="run_project_cohort_analysis",
+        action="store_true",
+        required=False,
+        help="Run project-level cohort analysis. This will be set for all projects included in the cohort.",
+    )
+    parser.add_argument(
+        "-o",
+        "--output-file",
+        dest="output_file",
+        required=False,
+        default="inputs.json",
+        help="Output JSON file to write workflow inputs to.",
+    )
+
+    args = parser.parse_args()
+    main(args)
