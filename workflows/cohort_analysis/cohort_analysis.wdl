@@ -109,17 +109,17 @@ task write_cohort_sample_list {
 	command <<<
 		set -euo pipefail
 
-		echo -e "project_id\tsample_id" > ~{cohort_id}.sample_list.txt
-		cat ~{write_tsv(project_sample_ids)} >> ~{cohort_id}.sample_list.txt
+		echo -e "project_id\tsample_id" > ~{cohort_id}.sample_list.tsv
+		cat ~{write_tsv(project_sample_ids)} >> ~{cohort_id}.sample_list.tsv
 
 		# Upload outputs
 		gsutil -m cp \
-			~{cohort_id}.sample_list.txt \
-			~{curated_data_path}/~{cohort_id}.sample_list.txt
+			~{cohort_id}.sample_list.tsv \
+			~{curated_data_path}/~{cohort_id}.sample_list.tsv
 	>>>
 
 	output {
-		String cohort_sample_list = "~{curated_data_path}/~{cohort_id}.sample_list.txt"
+		String cohort_sample_list = "~{curated_data_path}/~{cohort_id}.sample_list.tsv"
 	}
 
 	runtime {

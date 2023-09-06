@@ -148,10 +148,10 @@ workflow harmonized_pmdbs_analysis {
 		cohort_curated_data_output_bucket: {help: "Bucket to upload cross-team cohort analysis outputs to."}
 		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}
 		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
-		cell_type_markers_list: {help: "Seurat object RDS file containing a list of major cell type markers; used to annotate clusters."}
+		cell_type_markers_list: {help: "RDS file containing a list of major cell type markers; used to annotate clusters."}
 		groups: {help: "Groups to produce umap plots for. ['sample', 'batch', 'seurat_clusters']"}
 		features: {help: "Features to produce umap plots for. ['doublet_scores', 'nCount_RNA', 'nFeature_RNA', 'percent.mt', 'percent.rb']"}
-		container_registry: {help: "Container registry where Docker images are hosted."}
+		container_registry: {help: "Container registry where workflow Docker images are hosted."}
 	}
 }
 
