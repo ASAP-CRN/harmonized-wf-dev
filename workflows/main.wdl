@@ -38,7 +38,7 @@ workflow harmonized_pmdbs_analysis {
 		String project_curated_data_path_prefix = project.curated_data_output_bucket
 
 		scatter (sample in project.samples) {
-			String sample_id = sample.sample_id
+			Array[String] project_sample_id = [project.project_id, sample.sample_id]
 
 			call Preprocess.preprocess {
 				input:
@@ -55,7 +55,7 @@ workflow harmonized_pmdbs_analysis {
 			call CohortAnalysis.cohort_analysis as project_cohort_analysis {
 				input:
 					cohort_id = project.project_id,
-					sample_ids = sample_id,
+					project_sample_ids = project_sample_id,
 					preprocessed_seurat_objects = preprocess.seurat_object, # !FileCoercion
 					clustering_algorithm = clustering_algorithm,
 					clustering_resolution = clustering_resolution,
@@ -77,7 +77,7 @@ workflow harmonized_pmdbs_analysis {
 		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
 			input:
 				cohort_id = cohort_id,
-				sample_ids = flatten(sample_id),
+				project_sample_ids = flatten(project_sample_id),
 				preprocessed_seurat_objects = flatten(preprocess.seurat_object), # !FileCoercion
 				clustering_algorithm = clustering_algorithm,
 				clustering_resolution = clustering_resolution,

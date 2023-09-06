@@ -10,7 +10,7 @@ import "plot_groups_and_features/plot_groups_and_features.wdl" as PlotGroupsAndF
 workflow cohort_analysis {
 	input {
 		String cohort_id
-		Array[String] sample_ids
+		Array[Array[String]] project_sample_ids
 		Array[File] preprocessed_seurat_objects
 
 		Int clustering_algorithm
@@ -35,7 +35,7 @@ workflow cohort_analysis {
 	call write_cohort_sample_list {
 		input:
 			cohort_id = cohort_id,
-			sample_ids = sample_ids,
+			project_sample_ids = project_sample_ids,
 			curated_data_path = curated_data_path
 	}
 
@@ -101,7 +101,7 @@ workflow cohort_analysis {
 task write_cohort_sample_list {
 	input {
 		String cohort_id
-		Array[String] sample_ids
+		Array[Array[String]] project_sample_ids
 
 		String curated_data_path
 	}
@@ -109,9 +109,12 @@ task write_cohort_sample_list {
 	command <<<
 		set -euo pipefail
 
+		echo -e "project_id\tsample_id" > ~{cohort_id}.sample_list.txt
+		cat ~{write_tsv(project_sample_ids)} >> ~{cohort_id}.sample_list.txt
+
 		# Upload outputs
 		gsutil -m cp \
-			~{write_lines(sample_ids)}
+			~{cohort_id}.sample_list.txt \
 			~{curated_data_path}/~{cohort_id}.sample_list.txt
 	>>>
 
