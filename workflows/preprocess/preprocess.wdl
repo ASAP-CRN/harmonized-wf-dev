@@ -17,7 +17,6 @@ workflow preprocess {
 		String container_registry
 	}
 
-	# TODO dummy version
 	String workflow_name = "preprocess"
 	String workflow_version = "0.0.1"
 

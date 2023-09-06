@@ -25,8 +25,6 @@ workflow cohort_analysis {
 		String container_registry
 	}
 
-	# TODO dummy version
-	# TODO this is the version of all underlying workflows, as well
 	String workflow_name = "cohort_analysis"
 	String workflow_version = "0.0.1"
 
