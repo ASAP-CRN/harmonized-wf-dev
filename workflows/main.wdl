@@ -38,6 +38,8 @@ workflow harmonized_pmdbs_analysis {
 		String project_curated_data_path_prefix = project.curated_data_output_bucket
 
 		scatter (sample in project.samples) {
+			String sample_id = sample.sample_id
+
 			call Preprocess.preprocess {
 				input:
 					sample = sample,
@@ -53,6 +55,7 @@ workflow harmonized_pmdbs_analysis {
 			call CohortAnalysis.cohort_analysis as project_cohort_analysis {
 				input:
 					cohort_id = project.project_id,
+					sample_ids = sample_id,
 					preprocessed_seurat_objects = preprocess.seurat_object, # !FileCoercion
 					clustering_algorithm = clustering_algorithm,
 					clustering_resolution = clustering_resolution,
@@ -74,6 +77,7 @@ workflow harmonized_pmdbs_analysis {
 		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
 			input:
 				cohort_id = cohort_id,
+				sample_ids = flatten(sample_id),
 				preprocessed_seurat_objects = flatten(preprocess.seurat_object), # !FileCoercion
 				clustering_algorithm = clustering_algorithm,
 				clustering_resolution = clustering_resolution,
@@ -97,6 +101,9 @@ workflow harmonized_pmdbs_analysis {
 
 
 		# Project cohort analysis outputs
+		## List of samples included in the cohort
+		Array[File?] project_cohort_sample_list = project_cohort_analysis.cohort_sample_list
+
 		## QC plots
 		Array[File?] project_qc_violin_plots = project_cohort_analysis.qc_violin_plots
 		Array[File?] project_qc_umis_genes_plot = project_cohort_analysis.qc_umis_genes_plot
@@ -111,6 +118,9 @@ workflow harmonized_pmdbs_analysis {
 
 
 		# Cross-team cohort analysis outputs
+		## List of samples included in the cohort
+		File? cohort_sample_list = cross_team_cohort_analysis.cohort_sample_list
+
 		## QC plots
 		File? cohort_qc_violin_plots = cross_team_cohort_analysis.qc_violin_plots
 		File? cohort_qc_umis_genes_plot = cross_team_cohort_analysis.qc_umis_genes_plot

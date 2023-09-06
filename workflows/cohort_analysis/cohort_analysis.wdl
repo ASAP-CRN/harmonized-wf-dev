@@ -10,6 +10,7 @@ import "plot_groups_and_features/plot_groups_and_features.wdl" as PlotGroupsAndF
 workflow cohort_analysis {
 	input {
 		String cohort_id
+		Array[String] sample_ids
 		Array[File] preprocessed_seurat_objects
 
 		Int clustering_algorithm
@@ -30,6 +31,13 @@ workflow cohort_analysis {
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
 	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
+
+	call write_cohort_sample_list {
+		input:
+			cohort_id = cohort_id,
+			sample_ids = sample_ids,
+			curated_data_path = curated_data_path
+	}
 
 	call RunQualityControl.run_quality_control {
 		input:
@@ -73,6 +81,8 @@ workflow cohort_analysis {
 	}
 
 	output {
+		File cohort_sample_list = write_cohort_sample_list.cohort_sample_list #!FileCoercion
+
 		# QC plots
 		File qc_violin_plots = run_quality_control.qc_violin_plots
 		File qc_umis_genes_plot = run_quality_control.qc_umis_genes_plot
@@ -84,5 +94,36 @@ workflow cohort_analysis {
 		# Group and feature plots for final metadata
 		Array[File] group_umap_plots = plot_groups_and_features.group_umap_plots
 		Array[File] feature_umap_plots = plot_groups_and_features.feature_umap_plots
+	}
+}
+
+# Upload the list of samples used for this cohort analysis to the output bucket
+task write_cohort_sample_list {
+	input {
+		String cohort_id
+		Array[String] sample_ids
+
+		String curated_data_path
+	}
+
+	command <<<
+		set -euo pipefail
+
+		# Upload outputs
+		gsutil -m cp \
+			~{write_lines(sample_ids)}
+			~{curated_data_path}/~{cohort_id}.sample_list.txt
+	>>>
+
+	output {
+		String cohort_sample_list = "~{curated_data_path}/~{cohort_id}.sample_list.txt"
+	}
+
+	runtime {
+		docker: "gcr.io/google.com/cloudsdktool/google-cloud-cli:444.0.0-slim"
+		cpu: 1
+		memory: "1 GB"
+		disks: "local-disk 10 HDD"
+		preemptible: 3
 	}
 }
