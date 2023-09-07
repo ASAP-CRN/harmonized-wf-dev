@@ -203,6 +203,8 @@ task counts_to_seurat {
 	}
 
 	Int disk_size = ceil(size([raw_counts, filtered_counts], "GB") * 2 + 20)
+	# Memory scales with filtered_counts size
+	Int mem_gb = ceil((size(filtered_counts, "GB") - 0.00132) / 0.0015 + 5)
 
 	command <<<
 		set -euo pipefail
@@ -231,7 +233,7 @@ task counts_to_seurat {
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84"
 		cpu: 8
-		memory: "12 GB"
+		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
