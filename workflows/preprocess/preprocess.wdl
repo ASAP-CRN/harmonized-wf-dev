@@ -204,7 +204,7 @@ task counts_to_seurat {
 
 	Int disk_size = ceil(size([raw_counts, filtered_counts], "GB") * 2 + 20)
 	# Memory scales with filtered_counts size
-	Int mem_gb = ceil((size(filtered_counts, "GB") - 0.00132) / 0.0015 + 5)
+	Int mem_gb = ceil((size(filtered_counts, "GB") - 0.00132) / 0.0015 + 10)
 
 	command <<<
 		set -euo pipefail
