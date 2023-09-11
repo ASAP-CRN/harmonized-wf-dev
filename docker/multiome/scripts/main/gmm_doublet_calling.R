@@ -21,10 +21,16 @@ project_name <- if (is.null(args$project_name)) snakemake@params[['project_name'
 output_metadata_file <- if (is.null(args$output_metadata_file)) snakemake@output[['metadata']] else args$output_metadata_file
 
 # Main
-future::plan('multicore', workers=threads)
-options(future.globals.maxSize=ngbs * 1000 * 1024^2)
+# Using future when running with 75 samples was causing the error:
+## Error: Failed to retrieve the result of MulticoreFuture (future_lapply-1) from the forked worker (on localhost; PID 496). Post-mortem diagnostic: No process exists with this PID, i.e. the forked localhost worker is no longer alive. The total size of the 5 globals exported is 30.95 KiB. The three largest globals are ‘...future.FUN’ (22.34 KiB of class ‘function’), ‘...future.elements_ii’ (8.61 KiB of class ‘list’) and ‘future.call.arguments’ (0 bytes of class ‘list’)
+# future::plan('multicore', workers=threads)
+# options(future.globals.maxSize=ngbs * 1000 * 1024^2)
+# object.list <- future.apply::future_lapply(seurat_objects, readRDS)
 
-object.list <- future.apply::future_lapply(seurat_objects, readRDS)
+object.list <- list()
+for (seurat_object in seurat_objects) {
+    object.list <- append(object.list, readRDS(seurat_object))
+}
 
 m <- rbindlist(lapply(object.list, function(object) {
     m <- copy(object@meta.data); setDT(m, keep.rownames='cells')

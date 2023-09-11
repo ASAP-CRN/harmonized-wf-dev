@@ -66,7 +66,7 @@ task apply_filters {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84"
+		docker: "~{container_registry}/multiome:4a7fd84_1"
 		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -109,7 +109,7 @@ task normalize_scale_data {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84"
+		docker: "~{container_registry}/multiome:4a7fd84_1"
 		cpu: threads
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"

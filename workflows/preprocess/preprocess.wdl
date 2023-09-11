@@ -231,7 +231,7 @@ task counts_to_seurat {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84"
+		docker: "~{container_registry}/multiome:4a7fd84_1"
 		cpu: 8
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
