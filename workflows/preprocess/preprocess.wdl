@@ -6,7 +6,8 @@ import "../structs.wdl"
 
 workflow preprocess {
 	input {
-		Sample sample
+		String project_id
+		Array[Sample] samples
 
 		File cellranger_reference_data
 
@@ -23,60 +24,72 @@ workflow preprocess {
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}"
 	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/~{workflow_version}"
 
-	String cellranger_raw_counts = "~{raw_data_path}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
-	String cellranger_filtered_counts = "~{raw_data_path}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
-	String cellranger_molecule_info = "~{raw_data_path}/~{sample.sample_id}.molecule_info.h5"
-	String cellranger_metrics_csv = "~{curated_data_path}/~{sample.sample_id}.metrics_summary.csv"
-	String preprocessed_seurat_object = "~{raw_data_path}/~{sample.sample_id}.seurat_object.preprocessed_01.rds"
-
-	# For this version of the pipeline, determine whether the sample has been run
-	# (i.e. output files exist for this sample)
-	call check_output_files_exist {
-		input:
-			expected_output_files = [
-				cellranger_raw_counts,
-				cellranger_filtered_counts,
-				cellranger_molecule_info,
-				cellranger_metrics_csv,
-				preprocessed_seurat_object
-			]
+	scatter (sample_object in samples) {
+		String preprocess_final_output = "~{raw_data_path}/~{sample_object.sample_id}.seurat_object.preprocessed_01.rds"
 	}
 
-	# If preprocessing pipeline outputs do not exist, run preprocessing steps
-	if (! check_output_files_exist.outputs_exist) {
-		call cellranger_count {
-			input:
-				sample_id = sample.sample_id,
-				fastq_R1 = sample.fastq_R1,
-				fastq_R2 = sample.fastq_R2,
-				cellranger_reference_data = cellranger_reference_data,
-				raw_data_path = raw_data_path,
-				curated_data_path = curated_data_path,
-				container_registry = container_registry
+	call check_output_files_exist {
+		input:
+			expected_output_files = preprocess_final_output
+	}
+
+	scatter (index in range(length(samples))) {
+		Sample sample = samples[index]
+		String sample_preprocessing_complete = check_output_files_exist.sample_preprocessing_complete[index]
+
+		Array[String] project_sample_id = [project_id, sample.sample_id]
+
+		String cellranger_raw_counts = "~{raw_data_path}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
+		String cellranger_filtered_counts = "~{raw_data_path}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
+		String cellranger_molecule_info = "~{raw_data_path}/~{sample.sample_id}.molecule_info.h5"
+		String cellranger_metrics_csv = "~{curated_data_path}/~{sample.sample_id}.metrics_summary.csv"
+		String preprocessed_seurat_object = "~{raw_data_path}/~{sample.sample_id}.seurat_object.preprocessed_01.rds"
+
+		if (sample_preprocessing_complete == "false") {
+			call cellranger_count {
+				input:
+					sample_id = sample.sample_id,
+					fastq_R1 = sample.fastq_R1,
+					fastq_R2 = sample.fastq_R2,
+					cellranger_reference_data = cellranger_reference_data,
+					raw_data_path = raw_data_path,
+					curated_data_path = curated_data_path,
+					container_registry = container_registry
+			}
+
+			# Import counts and convert to a Seurat object
+			call counts_to_seurat {
+				input:
+					sample_id = sample.sample_id,
+					batch = sample.batch,
+					raw_counts = cellranger_count.raw_counts, # !FileCoercion
+					filtered_counts = cellranger_count.filtered_counts, # !FileCoercion
+					soup_rate = soup_rate,
+					raw_data_path = raw_data_path,
+					container_registry = container_registry
+			}
 		}
 
-		# Import counts and convert to a Seurat object
-		call counts_to_seurat {
-			input:
-				sample_id = sample.sample_id,
-				batch = sample.batch,
-				raw_counts = cellranger_count.raw_counts, # !FileCoercion
-				filtered_counts = cellranger_count.filtered_counts, # !FileCoercion
-				soup_rate = soup_rate,
-				raw_data_path = raw_data_path,
-				container_registry = container_registry
-		}
+		File raw_counts_output = select_first([cellranger_count.raw_counts, cellranger_raw_counts]) #!FileCoercion
+		File filtered_counts_output = select_first([cellranger_count.filtered_counts, cellranger_filtered_counts]) #!FileCoercion
+		File molecule_info_output = select_first([cellranger_count.molecule_info, cellranger_molecule_info]) #!FileCoercion
+		File metrics_csv_output = select_first([cellranger_count.metrics_csv, cellranger_metrics_csv]) #!FileCoercion
+
+		File seurat_object_output = select_first([counts_to_seurat.preprocessed_seurat_object, preprocessed_seurat_object]) #!FileCoercion
 	}
 
 	output {
+		# Sample list
+		Array[Array[String]] project_sample_ids = project_sample_id
+
 		# Cellranger
-		File raw_counts = select_first([cellranger_count.raw_counts, cellranger_raw_counts]) #!FileCoercion
-		File filtered_counts = select_first([cellranger_count.filtered_counts, cellranger_filtered_counts]) #!FileCoercion
-		File molecule_info = select_first([cellranger_count.molecule_info, cellranger_molecule_info]) #!FileCoercion
-		File metrics_csv = select_first([cellranger_count.metrics_csv, cellranger_metrics_csv]) #!FileCoercion
+		Array[File] raw_counts = raw_counts_output
+		Array[File] filtered_counts = filtered_counts_output
+		Array[File] molecule_info = molecule_info_output
+		Array[File] metrics_csv = metrics_csv_output
 
 		# Seurat counts
-		File seurat_object = select_first([counts_to_seurat.preprocessed_seurat_object, preprocessed_seurat_object]) #!FileCoercion
+		Array[File] seurat_object = seurat_object_output
 	}
 }
 
@@ -90,16 +103,15 @@ task check_output_files_exist {
 
 		while read -r output_file || [[ -n "${output_file}" ]]; do
 			if gsutil ls "${output_file}"; then
-				echo "true" > output_exists.txt
+				echo "true" >> sample_preprocessing_complete.txt
 			else
-				echo "false" > output_exists.txt
-				break
+				echo "false" >> sample_preprocessing_complete.txt
 			fi
 		done < ~{write_lines(expected_output_files)}
 	>>>
 
 	output {
-		Boolean outputs_exist = read_boolean("output_exists.txt")
+		Array[String] sample_preprocessing_complete = read_lines("sample_preprocessing_complete.txt")
 	}
 
 	runtime {
