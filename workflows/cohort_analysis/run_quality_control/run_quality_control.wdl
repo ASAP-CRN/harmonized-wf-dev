@@ -48,6 +48,7 @@ task identify_doublets {
 
 	Int threads = 2
 	Int disk_size = ceil(size(preprocessed_seurat_objects[0], "GB") * length(preprocessed_seurat_objects) * 2 + 30)
+	Int mem_gb = ceil(threads * 4 + length(preprocessed_seurat_objects) * 0.2)
 
 	command <<<
 		set -euo pipefail
@@ -72,9 +73,9 @@ task identify_doublets {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84"
+		docker: "~{container_registry}/multiome:4a7fd84_1"
 		cpu: threads
-		memory: "4 GB"
+		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
@@ -119,7 +120,7 @@ task plot_qc_metrics {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84"
+		docker: "~{container_registry}/multiome:4a7fd84_1"
 		cpu: threads
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"

@@ -83,7 +83,7 @@ task plot_groups {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84"
+		docker: "~{container_registry}/multiome:4a7fd84_1"
 		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -135,7 +135,7 @@ task plot_features {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84"
+		docker: "~{container_registry}/multiome:4a7fd84_1"
 		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"
