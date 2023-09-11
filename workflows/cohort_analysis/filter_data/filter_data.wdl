@@ -20,15 +20,17 @@ workflow filter_data {
 			container_registry = container_registry
 	}
 
-	call normalize_scale_data {
-		input:
-			filtered_seurat_object = apply_filters.filtered_seurat_object, #!FileCoercion
-			raw_data_path = raw_data_path,
-			container_registry = container_registry
+	if (defined(apply_filters.filtered_seurat_object)) {
+		call normalize_scale_data {
+			input:
+				filtered_seurat_object = select_first([apply_filters.filtered_seurat_object]), #!FileCoercion
+				raw_data_path = raw_data_path,
+				container_registry = container_registry
+		}
 	}
 
 	output {
-		File normalized_seurat_object = normalize_scale_data.normalized_seurat_object #!FileCoercion
+		File? normalized_seurat_object = normalize_scale_data.normalized_seurat_object #!FileCoercion
 	}
 }
 
@@ -39,6 +41,9 @@ task apply_filters {
 
 		String raw_data_path
 		String container_registry
+
+		# Purposefully set to null; do not set
+		String? my_none
 	}
 
 	String seurat_object_basename = basename(preprocessed_seurat_object, "_01.rds")
@@ -55,18 +60,24 @@ task apply_filters {
 			--metadata ~{unfiltered_metadata} \
 			--output-seurat-object ~{seurat_object_basename}_filtered_02.rds
 
-		# Upload outputs
-		gsutil -m cp \
-			~{seurat_object_basename}_filtered_02.rds \
-			~{raw_data_path}/
+		if [[ -s "~{seurat_object_basename}_filtered_02.rds" ]]; then
+			# Upload outputs
+			gsutil -m cp \
+				~{seurat_object_basename}_filtered_02.rds \
+				~{raw_data_path}/
+
+			echo true > cells_found.txt
+		else
+			echo false > cells_found.txt
+		fi
 	>>>
 
 	output {
-		String filtered_seurat_object = "~{raw_data_path}/~{seurat_object_basename}_filtered_02.rds"
+		String? filtered_seurat_object = if read_boolean("cells_found.txt") then "~{raw_data_path}/~{seurat_object_basename}_filtered_02.rds" else my_none
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_1"
+		docker: "~{container_registry}/multiome:4a7fd84_2"
 		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"

@@ -61,7 +61,7 @@ workflow cohort_analysis {
 	call ClusterData.cluster_data {
 		input:
 			cohort_id = cohort_id,
-			normalized_seurat_objects = filter_data.normalized_seurat_object,
+			normalized_seurat_objects = select_all(filter_data.normalized_seurat_object),
 			clustering_algorithm = clustering_algorithm,
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
