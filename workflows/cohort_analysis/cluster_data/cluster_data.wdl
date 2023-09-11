@@ -264,8 +264,8 @@ task annotate_clusters {
 
 	# TODO uses 2 cores
 	Int threads = 8
-	Int mem_gb = threads
-	Int disk_size = ceil(size(cell_type_markers_list, "GB") * 2 + 20)
+	Int mem_gb = ceil(size(cluster_seurat_object, "GB") * 16 + 16)
+	Int disk_size = ceil(size(cluster_seurat_object, "GB") + size(cell_type_markers_list, "GB") * 2 + 20)
 
 	command <<<
 		set -euo pipefail
@@ -290,7 +290,7 @@ task annotate_clusters {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_1"
+		docker: "~{container_registry}/multiome:4a7fd84_3"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
