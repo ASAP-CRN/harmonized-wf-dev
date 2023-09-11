@@ -22,8 +22,10 @@ cell_type_markers_list <- if (is.null(args$cell_type_markers_list)) snakemake@in
 output_metadata_file <- if (is.null(args$output_metadata_file)) snakemake@output[['metadata']] else args$output_metadata_file
 
 # Main
-future::plan('multicore', workers=threads)
-options(future.globals.maxSize=ngbs * 1000 * 1024^2)
+# Using future when running with 75 samples was causing the error:
+## Error: Failed to retrieve the result of MulticoreFuture (future_lapply-6) from the forked worker (on localhost; PID 201). Post-mortem diagnostic: No process exists with this PID, i.e. the forked localhost worker is no longer alive. The total size of the 15 globals exported is 2.31 GiB. The three largest globals are ‘object’ (2.30 GiB of class ‘S4’), ‘split.cells’ (7.23 MiB of class ‘list’) and ‘features’ (2.37 MiB of class ‘character’)
+# future::plan('multicore', workers=threads)
+# options(future.globals.maxSize=ngbs * 1000 * 1024^2)
 
 markers <- readRDS(cell_type_markers_list)
 object <- readRDS(seurat_object)
