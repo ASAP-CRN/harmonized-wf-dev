@@ -17,6 +17,8 @@ Worfklows are defined in [the `workflows` directory](workflows).
 
 This workflow is set up to implement the [Harmony RNA snakemake workflow](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/main) in WDL. The WDL version of the workflow aims to maintain backwards compatibility with the snakemake scripts.
 
+![Workflow diagram](workflows/workflow_diagram.svg "Workflow diagram")
+
 **Entrypoint**: [workflows/main.wdl](workflows/main.wdl)
 
 **Input template**: [workflows/inputs.json](workflows/inputs.json)
