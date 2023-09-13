@@ -107,6 +107,7 @@ workflow harmonized_pmdbs_analysis {
 
 		## Clustering and sctyping output
 		Array[File?] project_cluster_seurat_object = project_cohort_analysis.cluster_seurat_object
+		Array[File?] project_major_cell_type_plot = project_cohort_analysis.major_cell_type_plot
 		Array[File?] project_metadata = project_cohort_analysis.metadata
 
 		## Group and feature plots for final metadata
@@ -124,6 +125,7 @@ workflow harmonized_pmdbs_analysis {
 
 		## Clustering and sctyping output
 		File? cohort_cluster_seurat_object = cross_team_cohort_analysis.cluster_seurat_object
+		File? cohort_major_cell_type_plot = cross_team_cohort_analysis.major_cell_type_plot
 		File? cohort_metadata = cross_team_cohort_analysis.metadata
 
 		## Group and feature plots for final metadata
@@ -168,8 +170,8 @@ task get_utc_timestamp {
 
 	runtime {
 		docker: "ubuntu:jammy"
-		cpu: 1
-		memory: "1 GB"
+		cpu: 2
+		memory: "4 GB"
 		disks: "local-disk 10 HDD"
 		preemptible: 3
 	}

@@ -116,8 +116,8 @@ task check_output_files_exist {
 
 	runtime {
 		docker: "gcr.io/google.com/cloudsdktool/google-cloud-cli:444.0.0-slim"
-		cpu: 1
-		memory: "1 GB"
+		cpu: 2
+		memory: "4 GB"
 		disks: "local-disk 10 HDD"
 		preemptible: 3
 	}
@@ -138,9 +138,8 @@ task cellranger_count {
 	}
 
 	Int threads = 16
-	# TODO not sure this amount of RAM is necessary - cellranger docs claim it is, but test runs using ~15 GB (may be missing part of the process..?)
-	Int mem_gb = threads * 8
 	Int disk_size = ceil(size([fastq_R1, fastq_R2, cellranger_reference_data], "GB") * 4 + 50)
+	Int mem_gb = 24
 
 	command <<<
 		set -euo pipefail
@@ -216,7 +215,7 @@ task counts_to_seurat {
 
 	Int disk_size = ceil(size([raw_counts, filtered_counts], "GB") * 2 + 20)
 	# Memory scales with filtered_counts size
-	Int mem_gb = ceil((size(filtered_counts, "GB") - 0.00132) / 0.0015 + 10)
+	Int mem_gb = ceil((size(filtered_counts, "GB") - 0.00132) / 0.001 + 10)
 
 	command <<<
 		set -euo pipefail
@@ -243,8 +242,8 @@ task counts_to_seurat {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_1"
-		cpu: 8
+		docker: "~{container_registry}/multiome:4a7fd84_3"
+		cpu: 4
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
