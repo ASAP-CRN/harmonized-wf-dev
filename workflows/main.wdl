@@ -37,25 +37,22 @@ workflow harmonized_pmdbs_analysis {
 		String project_raw_data_path_prefix = "~{project.raw_data_bucket}/~{intermediate_file_path}"
 		String project_curated_data_path_prefix = project.curated_data_output_bucket
 
-		scatter (sample in project.samples) {
-			Array[String] project_sample_id = [project.project_id, sample.sample_id]
-
-			call Preprocess.preprocess {
-				input:
-					sample = sample,
-					cellranger_reference_data = cellranger_reference_data,
-					soup_rate = soup_rate,
-					raw_data_path_prefix = project_raw_data_path_prefix,
-					curated_data_path_prefix = project_curated_data_path_prefix,
-					container_registry = container_registry
-			}
+		call Preprocess.preprocess {
+			input:
+				project_id = project.project_id,
+				samples = project.samples,
+				cellranger_reference_data = cellranger_reference_data,
+				soup_rate = soup_rate,
+				raw_data_path_prefix = project_raw_data_path_prefix,
+				curated_data_path_prefix = project_curated_data_path_prefix,
+				container_registry = container_registry
 		}
 
 		if (project.run_project_cohort_analysis) {
 			call CohortAnalysis.cohort_analysis as project_cohort_analysis {
 				input:
 					cohort_id = project.project_id,
-					project_sample_ids = project_sample_id,
+					project_sample_ids = preprocess.project_sample_ids,
 					preprocessed_seurat_objects = preprocess.seurat_object, # !FileCoercion
 					clustering_algorithm = clustering_algorithm,
 					clustering_resolution = clustering_resolution,
@@ -77,7 +74,7 @@ workflow harmonized_pmdbs_analysis {
 		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
 			input:
 				cohort_id = cohort_id,
-				project_sample_ids = flatten(project_sample_id),
+				project_sample_ids = flatten(preprocess.project_sample_ids),
 				preprocessed_seurat_objects = flatten(preprocess.seurat_object), # !FileCoercion
 				clustering_algorithm = clustering_algorithm,
 				clustering_resolution = clustering_resolution,
@@ -110,6 +107,7 @@ workflow harmonized_pmdbs_analysis {
 
 		## Clustering and sctyping output
 		Array[File?] project_cluster_seurat_object = project_cohort_analysis.cluster_seurat_object
+		Array[File?] project_major_cell_type_plot = project_cohort_analysis.major_cell_type_plot
 		Array[File?] project_metadata = project_cohort_analysis.metadata
 
 		## Group and feature plots for final metadata
@@ -127,6 +125,7 @@ workflow harmonized_pmdbs_analysis {
 
 		## Clustering and sctyping output
 		File? cohort_cluster_seurat_object = cross_team_cohort_analysis.cluster_seurat_object
+		File? cohort_major_cell_type_plot = cross_team_cohort_analysis.major_cell_type_plot
 		File? cohort_metadata = cross_team_cohort_analysis.metadata
 
 		## Group and feature plots for final metadata
@@ -171,8 +170,8 @@ task get_utc_timestamp {
 
 	runtime {
 		docker: "ubuntu:jammy"
-		cpu: 1
-		memory: "1 GB"
+		cpu: 2
+		memory: "4 GB"
 		disks: "local-disk 10 HDD"
 		preemptible: 3
 	}

@@ -6,6 +6,7 @@ workflow run_quality_control {
 	input {
 		String cohort_id
 		Array[File] preprocessed_seurat_objects
+		Int n_samples
 
 		String raw_data_path
 		String curated_data_path
@@ -16,6 +17,7 @@ workflow run_quality_control {
 		input:
 			cohort_id = cohort_id,
 			preprocessed_seurat_objects = preprocessed_seurat_objects,
+			n_samples = n_samples,
 			raw_data_path = raw_data_path,
 			container_registry = container_registry
 	}
@@ -24,6 +26,7 @@ workflow run_quality_control {
 		input:
 			cohort_id = cohort_id,
 			unfiltered_metadata = identify_doublets.unfiltered_metadata, #!FileCoercion
+			n_samples = n_samples,
 			curated_data_path = curated_data_path,
 			container_registry = container_registry
 	}
@@ -41,6 +44,7 @@ task identify_doublets {
 	input {
 		String cohort_id
 		Array[File] preprocessed_seurat_objects
+		Int n_samples
 
 		String raw_data_path
 		String container_registry
@@ -48,7 +52,7 @@ task identify_doublets {
 
 	Int threads = 2
 	Int disk_size = ceil(size(preprocessed_seurat_objects[0], "GB") * length(preprocessed_seurat_objects) * 2 + 30)
-	Int mem_gb = ceil(threads * 4 + length(preprocessed_seurat_objects) * 0.2)
+	Int mem_gb = ceil(0.2 * n_samples + threads * 4)
 
 	command <<<
 		set -euo pipefail
@@ -73,7 +77,7 @@ task identify_doublets {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_1"
+		docker: "~{container_registry}/multiome:4a7fd84_3"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -86,6 +90,7 @@ task plot_qc_metrics {
 	input {
 		String cohort_id
 		File unfiltered_metadata
+		Int n_samples
 
 		String curated_data_path
 		String container_registry
@@ -93,6 +98,7 @@ task plot_qc_metrics {
 
 	Int threads = 2
 	Int disk_size = ceil(size(unfiltered_metadata, "GB") * 2 + 20)
+	Int mem_gb = ceil(0.02 * n_samples + threads * 2)
 
 	command <<<
 		set -euo pipefail
@@ -120,9 +126,9 @@ task plot_qc_metrics {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_1"
+		docker: "~{container_registry}/multiome:4a7fd84_3"
 		cpu: threads
-		memory: "4 GB"
+		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
