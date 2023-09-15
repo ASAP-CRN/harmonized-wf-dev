@@ -67,12 +67,12 @@ workflow preprocess {
 		File molecule_info_output = select_first([cellranger_count.molecule_info, cellranger_molecule_info]) #!FileCoercion
 		File metrics_csv_output = select_first([cellranger_count.metrics_csv, cellranger_metrics_csv]) #!FileCoercion
 
-		if (counts_to_seurat_complete == "false") {
+		if (counts_to_seurat_complete == "false" && defined(sample.batch)) {
 			# Import counts and convert to a Seurat object
 			call counts_to_seurat {
 				input:
 					sample_id = sample.sample_id,
-					batch = sample.batch,
+					batch = select_first([sample.batch]),
 					raw_counts = raw_counts_output, # !FileCoercion
 					filtered_counts = filtered_counts_output, # !FileCoercion
 					soup_rate = soup_rate,
