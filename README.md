@@ -73,9 +73,11 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | Type | Name | Description |
 | :- | :- | :- |
 | String | sample_id | Unique identifier for the sample within the project |
-| String | batch | The sample's batch |
+| String? | batch | The sample's batch. If unset, the analysis will stop after running `cellranger_count`. |
 | File | fastq_R1 | Path to the sample's read 1 FASTQ file |
 | File | fastq_R2 | Path to the sample's read 2 FASTQ file |
+| File? | fastq_I1 | Optional fastq index 1 |
+| File? | fastq_I2 | Optional fastq index 2 |
 
 ## Generating the inputs JSON
 
