@@ -55,6 +55,8 @@ workflow preprocess {
 					sample_id = sample.sample_id,
 					fastq_R1 = sample.fastq_R1,
 					fastq_R2 = sample.fastq_R2,
+					fastq_I1 = sample.fastq_I1,
+					fastq_I2 = sample.fastq_I2,
 					cellranger_reference_data = cellranger_reference_data,
 					raw_data_path = raw_data_path,
 					curated_data_path = curated_data_path,
@@ -144,6 +146,8 @@ task cellranger_count {
 
 		File fastq_R1
 		File fastq_R2
+		File? fastq_I1
+		File? fastq_I2
 
 		File cellranger_reference_data
 
@@ -168,7 +172,7 @@ task cellranger_count {
 
 		# Ensure fastqs are in the same directory
 		mkdir fastqs
-		ln -s ~{fastq_R1} ~{fastq_R2} fastqs/
+		ln -s ~{fastq_R1} ~{fastq_R2} ~{fastq_I1} ~{fastq_I2} fastqs/
 
 		cellranger --version
 
