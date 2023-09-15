@@ -25,17 +25,21 @@ workflow preprocess {
 	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/~{workflow_version}"
 
 	scatter (sample_object in samples) {
-		String preprocess_final_output = "~{raw_data_path}/~{sample_object.sample_id}.seurat_object.preprocessed_01.rds"
+		String cellranger_count_output = "~{raw_data_path}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
+		String counts_to_seurat_output = "~{raw_data_path}/~{sample_object.sample_id}.seurat_object.preprocessed_01.rds"
 	}
 
+	# For each sample, outputs an array of true/false: [cellranger_counts_complete, counts_to_seurat_complete]
 	call check_output_files_exist {
 		input:
-			expected_output_files = preprocess_final_output
+			cellranger_count_output_files = cellranger_count_output,
+			counts_to_seurat_output_files = counts_to_seurat_output
 	}
 
 	scatter (index in range(length(samples))) {
 		Sample sample = samples[index]
-		String sample_preprocessing_complete = check_output_files_exist.sample_preprocessing_complete[index]
+		String cellranger_count_complete = check_output_files_exist.sample_preprocessing_complete[index][0]
+		String counts_to_seurat_complete = check_output_files_exist.sample_preprocessing_complete[index][1]
 
 		Array[String] project_sample_id = [project_id, sample.sample_id]
 
@@ -45,7 +49,7 @@ workflow preprocess {
 		String cellranger_metrics_csv = "~{curated_data_path}/~{sample.sample_id}.metrics_summary.csv"
 		String preprocessed_seurat_object = "~{raw_data_path}/~{sample.sample_id}.seurat_object.preprocessed_01.rds"
 
-		if (sample_preprocessing_complete == "false") {
+		if (cellranger_count_complete == "false") {
 			call cellranger_count {
 				input:
 					sample_id = sample.sample_id,
@@ -56,24 +60,26 @@ workflow preprocess {
 					curated_data_path = curated_data_path,
 					container_registry = container_registry
 			}
-
-			# Import counts and convert to a Seurat object
-			call counts_to_seurat {
-				input:
-					sample_id = sample.sample_id,
-					batch = sample.batch,
-					raw_counts = cellranger_count.raw_counts, # !FileCoercion
-					filtered_counts = cellranger_count.filtered_counts, # !FileCoercion
-					soup_rate = soup_rate,
-					raw_data_path = raw_data_path,
-					container_registry = container_registry
-			}
 		}
 
 		File raw_counts_output = select_first([cellranger_count.raw_counts, cellranger_raw_counts]) #!FileCoercion
 		File filtered_counts_output = select_first([cellranger_count.filtered_counts, cellranger_filtered_counts]) #!FileCoercion
 		File molecule_info_output = select_first([cellranger_count.molecule_info, cellranger_molecule_info]) #!FileCoercion
 		File metrics_csv_output = select_first([cellranger_count.metrics_csv, cellranger_metrics_csv]) #!FileCoercion
+
+		if (counts_to_seurat_complete == "false") {
+			# Import counts and convert to a Seurat object
+			call counts_to_seurat {
+				input:
+					sample_id = sample.sample_id,
+					batch = sample.batch,
+					raw_counts = raw_counts_output, # !FileCoercion
+					filtered_counts = filtered_counts_output, # !FileCoercion
+					soup_rate = soup_rate,
+					raw_data_path = raw_data_path,
+					container_registry = container_registry
+			}
+		}
 
 		File seurat_object_output = select_first([counts_to_seurat.preprocessed_seurat_object, preprocessed_seurat_object]) #!FileCoercion
 	}
@@ -95,30 +101,39 @@ workflow preprocess {
 
 task check_output_files_exist {
 	input {
-		Array[String] expected_output_files
+		Array[String] cellranger_count_output_files
+		Array[String] counts_to_seurat_output_files
 	}
 
 	command <<<
 		set -euo pipefail
 
-		while read -r output_file || [[ -n "${output_file}" ]]; do
-			if gsutil ls "${output_file}"; then
-				echo "true" >> sample_preprocessing_complete.txt
+		while read -r output_files || [[ -n "${output_files}" ]]; do
+			counts_file=$(echo "${output_files}" | cut -f 1)
+			seurat_object=$(echo "${output_files}" | cut -f 2)
+
+			if gsutil ls "${seurat_object}"; then
+				# If the seurat object exists, assume that the counts file does as well
+				echo -e "true\ttrue" >> sample_preprocessing_complete.tsv
 			else
-				echo "false" >> sample_preprocessing_complete.txt
+				if gsutil ls "${counts_file}"; then
+					echo -e "true\tfalse" >> sample_preprocessing_complete.tsv
+				else
+					echo -e "false\tfalse" >> sample_preprocessing_complete.tsv
+				fi
 			fi
-		done < ~{write_lines(expected_output_files)}
+		done < <(paste ~{write_lines(cellranger_count_output_files)} ~{write_lines(counts_to_seurat_output_files)})
 	>>>
 
 	output {
-		Array[String] sample_preprocessing_complete = read_lines("sample_preprocessing_complete.txt")
+		Array[Array[String]] sample_preprocessing_complete = read_tsv("sample_preprocessing_complete.tsv")
 	}
 
 	runtime {
 		docker: "gcr.io/google.com/cloudsdktool/google-cloud-cli:444.0.0-slim"
 		cpu: 2
 		memory: "4 GB"
-		disks: "local-disk 10 HDD"
+		disks: "local-disk 20 HDD"
 		preemptible: 3
 	}
 }
