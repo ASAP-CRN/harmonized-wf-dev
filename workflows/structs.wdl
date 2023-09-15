@@ -6,6 +6,8 @@ struct Sample {
 
 	File fastq_R1
 	File fastq_R2
+	File? fastq_I1
+	File? fastq_I2
 }
 
 struct Project {
