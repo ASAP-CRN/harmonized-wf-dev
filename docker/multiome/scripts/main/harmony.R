@@ -29,8 +29,8 @@ seurat_objects <- if (length(args$positional_arguments) > 0) head(args$positiona
 output_seurat_object <- if (length(args$positional_arguments) > 0) tail(args$positional_arguments, n=2) else args$output_seurat_object
 
 # Main
-future::plan('multicore', workers=threads)
-options(future.globals.maxSize=ngbs * 1000 * 1024^2)
+# future::plan('multicore', workers=threads)
+# options(future.globals.maxSize=ngbs * 1000 * 1024^2)
 
 object.list <- future.apply::future_lapply(seurat_objects, readRDS)
 

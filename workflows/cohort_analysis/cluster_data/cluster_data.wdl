@@ -74,7 +74,7 @@ task integrate_sample_data {
 
 	Int threads = 8
 	Int disk_size = ceil(size(normalized_seurat_objects[0], "GB") * length(normalized_seurat_objects) * 2 + 30)
-	Int mem_gb = ceil(0.4 * n_samples + 10)
+	Int mem_gb = ceil(0.6 * n_samples + 15)
 
 	command <<<
 		set -euo pipefail
@@ -98,7 +98,7 @@ task integrate_sample_data {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_4"
+		docker: "~{container_registry}/multiome:4a7fd84_5"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
