@@ -15,6 +15,7 @@ workflow preprocess {
 
 		String raw_data_path_prefix
 		String curated_data_path_prefix
+		String billing_project
 		String container_registry
 	}
 
@@ -33,7 +34,8 @@ workflow preprocess {
 	call check_output_files_exist {
 		input:
 			cellranger_count_output_files = cellranger_count_output,
-			counts_to_seurat_output_files = counts_to_seurat_output
+			counts_to_seurat_output_files = counts_to_seurat_output,
+			billing_project = billing_project
 	}
 
 	scatter (index in range(length(samples))) {
@@ -60,6 +62,7 @@ workflow preprocess {
 					cellranger_reference_data = cellranger_reference_data,
 					raw_data_path = raw_data_path,
 					curated_data_path = curated_data_path,
+					billing_project = billing_project,
 					container_registry = container_registry
 			}
 		}
@@ -79,6 +82,7 @@ workflow preprocess {
 					filtered_counts = filtered_counts_output, # !FileCoercion
 					soup_rate = soup_rate,
 					raw_data_path = raw_data_path,
+					billing_project = billing_project,
 					container_registry = container_registry
 			}
 		}
@@ -105,6 +109,8 @@ task check_output_files_exist {
 	input {
 		Array[String] cellranger_count_output_files
 		Array[String] counts_to_seurat_output_files
+
+		String billing_project
 	}
 
 	command <<<
@@ -114,11 +120,11 @@ task check_output_files_exist {
 			counts_file=$(echo "${output_files}" | cut -f 1)
 			seurat_object=$(echo "${output_files}" | cut -f 2)
 
-			if gsutil ls "${seurat_object}"; then
+			if gsutil -u ~{billing_project} ls "${seurat_object}"; then
 				# If the seurat object exists, assume that the counts file does as well
 				echo -e "true\ttrue" >> sample_preprocessing_complete.tsv
 			else
-				if gsutil ls "${counts_file}"; then
+				if gsutil -u ~{billing_project} ls "${counts_file}"; then
 					echo -e "true\tfalse" >> sample_preprocessing_complete.tsv
 				else
 					echo -e "false\tfalse" >> sample_preprocessing_complete.tsv
@@ -153,7 +159,8 @@ task cellranger_count {
 
 		String raw_data_path
 		String curated_data_path
-		String container_registry = "us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images"
+		String billing_project
+		String container_registry
 	}
 
 	Int threads = 16
@@ -191,13 +198,13 @@ task cellranger_count {
 		mv ~{sample_id}/outs/metrics_summary.csv ~{sample_id}.metrics_summary.csv
 
 		# Upload outputs
-		gsutil -m cp \
+		gsutil -u ~{billing_project} -m cp \
 			~{sample_id}.raw_feature_bc_matrix.h5 \
 			~{sample_id}.filtered_feature_bc_matrix.h5 \
 			~{sample_id}.molecule_info.h5 \
 			~{raw_data_path}/
 
-		gsutil -m cp \
+		gsutil -u ~{billing_project} -m cp \
 			~{sample_id}.metrics_summary.csv \
 			~{curated_data_path}/
 	>>>
@@ -229,6 +236,7 @@ task counts_to_seurat {
 		Float soup_rate
 
 		String raw_data_path
+		String billing_project
 		String container_registry
 	}
 
@@ -251,7 +259,7 @@ task counts_to_seurat {
 			--output-seurat-object ~{sample_id}.seurat_object.preprocessed_01.rds
 
 		# Upload outputs
-		gsutil -m cp \
+		gsutil -u ~{billing_project} -m cp \
 			~{sample_id}.seurat_object.preprocessed_01.rds \
 			~{raw_data_path}/
 	>>>

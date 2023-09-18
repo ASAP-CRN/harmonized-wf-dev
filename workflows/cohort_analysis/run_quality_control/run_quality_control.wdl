@@ -10,6 +10,7 @@ workflow run_quality_control {
 
 		String raw_data_path
 		String curated_data_path
+		String billing_project
 		String container_registry
 	}
 
@@ -19,6 +20,7 @@ workflow run_quality_control {
 			preprocessed_seurat_objects = preprocessed_seurat_objects,
 			n_samples = n_samples,
 			raw_data_path = raw_data_path,
+			billing_project = billing_project,
 			container_registry = container_registry
 	}
 
@@ -28,6 +30,7 @@ workflow run_quality_control {
 			unfiltered_metadata = identify_doublets.unfiltered_metadata, #!FileCoercion
 			n_samples = n_samples,
 			curated_data_path = curated_data_path,
+			billing_project = billing_project,
 			container_registry = container_registry
 	}
 
@@ -47,6 +50,7 @@ task identify_doublets {
 		Int n_samples
 
 		String raw_data_path
+		String billing_project
 		String container_registry
 	}
 
@@ -67,7 +71,7 @@ task identify_doublets {
 			--output-metadata-file ~{cohort_id}.unfiltered_metadata.csv
 
 		# Upload outputs
-		gsutil -m cp \
+		gsutil -u ~{billing_project} -m cp \
 			~{cohort_id}.unfiltered_metadata.csv \
 			~{raw_data_path}/
 	>>>
@@ -93,6 +97,7 @@ task plot_qc_metrics {
 		Int n_samples
 
 		String curated_data_path
+		String billing_project
 		String container_registry
 	}
 
@@ -114,7 +119,7 @@ task plot_qc_metrics {
 			--output-umis-genes-plot ~{cohort_id}.qc.umis_genes_plot.pdf
 
 		# Upload outputs
-		gsutil -m cp \
+		gsutil -u ~{billing_project} -m cp \
 			~{cohort_id}.qc.violin_plots.pdf \
 			~{cohort_id}.qc.umis_genes_plot.pdf \
 			~{curated_data_path}/

@@ -14,6 +14,7 @@ workflow cluster_data {
 
 		String raw_data_path
 		String curated_data_path
+		String billing_project
 		String container_registry
 	}
 
@@ -23,6 +24,7 @@ workflow cluster_data {
 			normalized_seurat_objects = normalized_seurat_objects,
 			n_samples = n_samples,
 			raw_data_path = raw_data_path,
+			billing_project = billing_project,
 			container_registry = container_registry
 	}
 
@@ -37,6 +39,7 @@ workflow cluster_data {
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			curated_data_path = curated_data_path,
+			billing_project = billing_project,
 			container_registry = container_registry
 	}
 
@@ -47,6 +50,7 @@ workflow cluster_data {
 			n_samples = n_samples,
 			cell_type_markers_list = cell_type_markers_list,
 			curated_data_path = curated_data_path,
+			billing_project = billing_project,
 			container_registry = container_registry
 	}
 
@@ -64,6 +68,7 @@ task integrate_sample_data {
 		Int n_samples
 
 		String raw_data_path
+		String billing_project
 		String container_registry
 	}
 
@@ -83,7 +88,7 @@ task integrate_sample_data {
 			--output-seurat-object ~{cohort_id}.seurat_object.harmony_integrated_04.rds
 
 		# Upload outputs
-		gsutil -m cp \
+		gsutil -u ~{billing_project} -m cp \
 			~{cohort_id}.seurat_object.harmony_integrated_04.rds \
 			~{raw_data_path}/
 	>>>
@@ -114,6 +119,7 @@ task cluster_cells {
 
 		String raw_data_path
 		String curated_data_path
+		String billing_project
 		String container_registry
 	}
 
@@ -155,13 +161,13 @@ task cluster_cells {
 			--output-seurat-object ~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds
 
 		# Upload outputs
-		gsutil -m cp \
+		gsutil -u ~{billing_project} -m cp \
 			~{integrated_seurat_object_basename}_neighbors_05.rds \
 			~{integrated_seurat_object_basename}_neighbors_umap_06.rds \
 			~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds \
 			~{raw_data_path}/
 
-		gsutil -m cp \
+		gsutil -u ~{billing_project} -m cp \
 			~{cohort_id}.major_type_module_umap.pdf \
 			~{curated_data_path}/
 	>>>
@@ -192,6 +198,7 @@ task annotate_clusters {
 		File cell_type_markers_list
 
 		String curated_data_path
+		String billing_project
 		String container_registry
 	}
 
@@ -212,7 +219,7 @@ task annotate_clusters {
 			--output-metadata-file ~{cohort_id}.final_metadata.csv
 
 		# Upload outputs
-		gsutil -m cp \
+		gsutil -u ~{billing_project} -m cp \
 			~{cohort_id}.final_metadata.csv \
 			~{curated_data_path}/
 	>>>

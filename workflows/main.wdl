@@ -31,7 +31,7 @@ workflow harmonized_pmdbs_analysis {
 
 	String intermediate_file_path = "intermediate_workflow_execution"
 
-	call get_utc_timestamp
+	call get_workflow_metadata
 
 	scatter (project in projects) {
 		String project_raw_data_path_prefix = "~{project.raw_data_bucket}/~{intermediate_file_path}"
@@ -45,6 +45,7 @@ workflow harmonized_pmdbs_analysis {
 				soup_rate = soup_rate,
 				raw_data_path_prefix = project_raw_data_path_prefix,
 				curated_data_path_prefix = project_curated_data_path_prefix,
+				billing_project = get_workflow_metadata.billing_project,
 				container_registry = container_registry
 		}
 
@@ -59,9 +60,10 @@ workflow harmonized_pmdbs_analysis {
 					cell_type_markers_list = cell_type_markers_list,
 					groups = groups,
 					features = features,
-					run_timestamp = get_utc_timestamp.timestamp,
+					run_timestamp = get_workflow_metadata.timestamp,
 					raw_data_path_prefix = project_raw_data_path_prefix,
 					curated_data_path_prefix = project_curated_data_path_prefix,
+					billing_project = get_workflow_metadata.billing_project,
 					container_registry = container_registry
 			}
 		}
@@ -81,9 +83,10 @@ workflow harmonized_pmdbs_analysis {
 				cell_type_markers_list = cell_type_markers_list,
 				groups = groups,
 				features = features,
-				run_timestamp = get_utc_timestamp.timestamp,
+				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = cohort_raw_data_path_prefix,
 				curated_data_path_prefix = cohort_curated_data_path_prefix,
+				billing_project = get_workflow_metadata.billing_project,
 				container_registry = container_registry
 		}
 	}
@@ -154,18 +157,24 @@ workflow harmonized_pmdbs_analysis {
 	}
 }
 
-# UTC timestamp in format
-task get_utc_timestamp {
+task get_workflow_metadata {
 	input {}
 
 	command <<<
 		set -euo pipefail
 
+		# UTC timestamp for the running workflow
 		date -u +"%FT%H-%M-%SZ" > timestamp.txt
+
+		# Billing project to use for file requests (matches the billing project used for compute)
+		curl "http://metadata.google.internal/computeMetadata/v1/project/project-id" \
+				-H "Metadata-Flavor: Google" \
+		> billing_project.txt
 	>>>
 
 	output {
 		String timestamp = read_string("timestamp.txt")
+		String billing_project = read_string("billing_project.txt")
 	}
 
 	runtime {

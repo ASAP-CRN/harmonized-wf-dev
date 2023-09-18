@@ -21,6 +21,7 @@ workflow cohort_analysis {
 		String run_timestamp
 		String raw_data_path_prefix
 		String curated_data_path_prefix
+		String billing_project
 		String container_registry
 	}
 
@@ -36,6 +37,7 @@ workflow cohort_analysis {
 		input:
 			cohort_id = cohort_id,
 			project_sample_ids = project_sample_ids,
+			billing_project = billing_project,
 			curated_data_path = curated_data_path
 	}
 
@@ -46,6 +48,7 @@ workflow cohort_analysis {
 			n_samples = n_samples,
 			raw_data_path = raw_data_path,
 			curated_data_path = curated_data_path,
+			billing_project = billing_project,
 			container_registry = container_registry
 	}
 
@@ -57,6 +60,7 @@ workflow cohort_analysis {
 				preprocessed_seurat_object = preprocessed_seurat_object,
 				unfiltered_metadata = run_quality_control.unfiltered_metadata,
 				raw_data_path = raw_data_path,
+				billing_project = billing_project,
 				container_registry = container_registry
 		}
 	}
@@ -71,6 +75,7 @@ workflow cohort_analysis {
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			curated_data_path = curated_data_path,
+			billing_project = billing_project,
 			container_registry = container_registry
 	}
 
@@ -81,6 +86,7 @@ workflow cohort_analysis {
 			groups = groups,
 			features = features,
 			curated_data_path = curated_data_path,
+			billing_project = billing_project,
 			container_registry = container_registry
 	}
 
@@ -109,6 +115,7 @@ task write_cohort_sample_list {
 		Array[Array[String]] project_sample_ids
 
 		String curated_data_path
+		String billing_project
 	}
 
 	command <<<
@@ -118,7 +125,7 @@ task write_cohort_sample_list {
 		cat ~{write_tsv(project_sample_ids)} >> ~{cohort_id}.sample_list.tsv
 
 		# Upload outputs
-		gsutil -m cp \
+		gsutil -u ~{billing_project} -m cp \
 			~{cohort_id}.sample_list.tsv \
 			~{curated_data_path}/~{cohort_id}.sample_list.tsv
 	>>>
@@ -142,6 +149,7 @@ task filter_and_normalize {
 		File unfiltered_metadata
 
 		String raw_data_path
+		String billing_project
 		String container_registry
 
 		# Purposefully unset
@@ -176,7 +184,7 @@ task filter_and_normalize {
 				--output-seurat-object ~{seurat_object_basename}_filtered_normalized_03.rds
 
 			# Upload outputs
-			gsutil -m cp \
+			gsutil -u ~{billing_project} -m cp \
 				~{seurat_object_basename}_filtered_02.rds \
 				~{seurat_object_basename}_filtered_normalized_03.rds \
 				~{raw_data_path}/
@@ -211,6 +219,7 @@ task plot_groups_and_features {
 		Array[String] features
 
 		String curated_data_path
+		String billing_project
 		String container_registry
 	}
 
@@ -233,7 +242,7 @@ task plot_groups_and_features {
 		done < ~{write_lines(groups)}
 
 		# Upload outputs
-		gsutil -m cp \
+		gsutil -u ~{billing_project} -m cp \
 			"${group_plots[@]}" \
 			~{curated_data_path}/
 
@@ -255,7 +264,7 @@ task plot_groups_and_features {
 		done < ~{write_lines(features)}
 
 		# Upload outputs
-		gsutil -m cp \
+		gsutil -u ~{billing_project} -m cp \
 			"${feature_plots[@]}" \
 			~{curated_data_path}/
 
