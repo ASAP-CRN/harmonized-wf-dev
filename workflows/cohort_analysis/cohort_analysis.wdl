@@ -193,7 +193,7 @@ task filter_and_normalize {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_3"
+		docker: "~{container_registry}/multiome:4a7fd84_4"
 		cpu: threads
 		memory: "8 GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -270,7 +270,7 @@ task plot_groups_and_features {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_3"
+		docker: "~{container_registry}/multiome:4a7fd84_4"
 		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"

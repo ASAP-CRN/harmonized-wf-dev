@@ -93,7 +93,7 @@ task integrate_sample_data {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_3"
+		docker: "~{container_registry}/multiome:4a7fd84_4"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -174,7 +174,7 @@ task cluster_cells {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_3"
+		docker: "~{container_registry}/multiome:4a7fd84_4"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -222,7 +222,7 @@ task annotate_clusters {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_3"
+		docker: "~{container_registry}/multiome:4a7fd84_4"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
