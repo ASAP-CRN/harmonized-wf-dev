@@ -19,8 +19,8 @@ seurat_object <- if (is.null(args$seurat_object)) snakemake@input[['seurat_objec
 output_seurat_object <- if (is.null(args$output_seurat_object)) snakemake@output[['seurat_object']] else args$output_seurat_object
 
 # Main
-future::plan('multicore', workers=threads)
-options(future.globals.maxSize=ngbs * 1000 * 1024^2)
+# future::plan('multicore', workers=threads)
+# options(future.globals.maxSize=ngbs * 1000 * 1024^2)
 
 assay <- 'RNA'
 
