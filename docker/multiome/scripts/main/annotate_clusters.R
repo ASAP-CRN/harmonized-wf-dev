@@ -33,7 +33,7 @@ object <- readRDS(seurat_object)
 all.genes <- rownames(object)
 
 scores <- object %>%
-            ScaleData(verbose=FALSE, features=all.genes) %>%
+            ScaleData(verbose=FALSE, features=unlist(markers)) %>%
             AnnotateSubtypes(genes.list=markers)
 
 umap <- copy(as.data.frame(object[['umap']]@cell.embeddings))
