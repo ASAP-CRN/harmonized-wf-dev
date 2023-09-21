@@ -100,7 +100,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]] molecule_info = preprocess.molecule_info
 		Array[Array[File]] cellranger_metrics_csvs = preprocess.metrics_csv
 
-		Array[File] preprocessing_manifest_tsv = preprocess.preprocessing_manifest_tsv
+		Array[File] preprocessing_manifest = preprocess.preprocessing_manifest_tsv
 
 		# Project cohort analysis outputs
 		## List of samples included in the cohort
@@ -119,6 +119,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]?] project_group_umap_plots = project_cohort_analysis.group_umap_plots
 		Array[Array[File]?] project_feature_umap_plots = project_cohort_analysis.feature_umap_plots
 
+		Array[File?] project_manifest = project_cohort_analysis.cohort_analysis_manifest_tsv
 
 		# Cross-team cohort analysis outputs
 		## List of samples included in the cohort
@@ -136,6 +137,8 @@ workflow harmonized_pmdbs_analysis {
 		## Group and feature plots for final metadata
 		Array[File]? cohort_group_umap_plots = cross_team_cohort_analysis.group_umap_plots
 		Array[File]? cohort_feature_umap_plots = cross_team_cohort_analysis.feature_umap_plots
+
+		File? cohort_manifest = cross_team_cohort_analysis.cohort_analysis_manifest_tsv
 	}
 
 	meta {

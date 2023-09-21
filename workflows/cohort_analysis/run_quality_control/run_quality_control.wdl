@@ -9,7 +9,6 @@ workflow run_quality_control {
 		Int n_samples
 
 		String raw_data_path
-		String curated_data_path
 		String billing_project
 		String container_registry
 	}
@@ -29,7 +28,7 @@ workflow run_quality_control {
 			cohort_id = cohort_id,
 			unfiltered_metadata = identify_doublets.unfiltered_metadata, #!FileCoercion
 			n_samples = n_samples,
-			curated_data_path = curated_data_path,
+			raw_data_path = raw_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry
 	}
@@ -96,7 +95,7 @@ task plot_qc_metrics {
 		File unfiltered_metadata
 		Int n_samples
 
-		String curated_data_path
+		String raw_data_path
 		String billing_project
 		String container_registry
 	}
@@ -122,12 +121,12 @@ task plot_qc_metrics {
 		gsutil -u ~{billing_project} -m cp \
 			~{cohort_id}.qc.violin_plots.pdf \
 			~{cohort_id}.qc.umis_genes_plot.pdf \
-			~{curated_data_path}/
+			~{raw_data_path}/
 	>>>
 
 	output {
-		String qc_violin_plots = "~{curated_data_path}/~{cohort_id}.qc.violin_plots.pdf"
-		String qc_umis_genes_plot = "~{curated_data_path}/~{cohort_id}.qc.umis_genes_plot.pdf"
+		String qc_violin_plots = "~{raw_data_path}/~{cohort_id}.qc.violin_plots.pdf"
+		String qc_umis_genes_plot = "~{raw_data_path}/~{cohort_id}.qc.umis_genes_plot.pdf"
 	}
 
 	runtime {
