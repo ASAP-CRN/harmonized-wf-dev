@@ -120,39 +120,39 @@ The raw data bucket will contain all artifacts generated as part of workflow exe
 ```bash
 asap-raw-data-{cohort,team-xxyy}
 └── workflow_execution
-    └── cohort_analysis
-        ├── ${cohort_analysis_workflow_version}
-        │    └── ${workflow_run_timestamp}
-        │        ├── ${cohort_id}.seurat_object.harmony_integrated_04.rds
-        │        ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_05.rds
-        │        ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_06.rds
-        │        ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_cluster_07.rds
-        │        ├── ${cohort_id}.unfiltered_metadata.csv
-        │        ├── ${sampleA_id}.seurat_object.preprocessed_filtered_02.rds
-        │        ├── ${sampleA_id}.seurat_object.preprocessed_filtered_normalized_03.rds
-        │        ├── ${sampleB_id}.seurat_object.preprocessed_filtered_02.rds
-        │        ├── ${sampleB_id}.seurat_object.preprocessed_filtered_normalized_03.rds
-        │        ├── ...
-        │        ├── ${sampleN_id}.seurat_object.preprocessed_filtered_02.rds
-        │        └── ${sampleN_id}.seurat_object.preprocessed_filtered_normalized_03.rds
-        └── preprocess  // only produced in project raw data buckets, not in the full cohort bucket
-            └── ${preprocess_workflow_version}
-                ├── ${sampleA_id}.filtered_feature_bc_matrix.h5
-                ├── ${sampleA_id}.metrics_summary.csv
-                ├── ${sampleA_id}.molecule_info.h5
-                ├── ${sampleA_id}.raw_feature_bc_matrix.h5
-                ├── ${sampleA_id}.seurat_object.preprocessed_01.rds
-                ├── ${sampleB_id}.filtered_feature_bc_matrix.h5
-                ├── ${sampleB_id}.metrics_summary.csv
-                ├── ${sampleB_id}.molecule_info.h5
-                ├── ${sampleB_id}.raw_feature_bc_matrix.h5
-                ├── ${sampleB_id}.seurat_object.preprocessed_01.rds
-                ├── ...
-                ├── ${sampleN_id}.filtered_feature_bc_matrix.h5
-                ├── ${sampleN_id}.metrics_summary.csv
-                ├── ${sampleN_id}.molecule_info.h5
-                ├── ${sampleN_id}.raw_feature_bc_matrix.h5
-                └── ${sampleN_id}.seurat_object.preprocessed_01.rds
+    ├── cohort_analysis
+    │   └──${cohort_analysis_workflow_version}
+    │       └── ${workflow_run_timestamp}
+    │            ├── ${cohort_id}.seurat_object.harmony_integrated_04.rds
+    │            ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_05.rds
+    │            ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_06.rds
+    │            ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_cluster_07.rds
+    │            ├── ${cohort_id}.unfiltered_metadata.csv
+    │            ├── ${sampleA_id}.seurat_object.preprocessed_filtered_02.rds
+    │            ├── ${sampleA_id}.seurat_object.preprocessed_filtered_normalized_03.rds
+    │            ├── ${sampleB_id}.seurat_object.preprocessed_filtered_02.rds
+    │            ├── ${sampleB_id}.seurat_object.preprocessed_filtered_normalized_03.rds
+    │            ├── ...
+    │            ├── ${sampleN_id}.seurat_object.preprocessed_filtered_02.rds
+    │            └── ${sampleN_id}.seurat_object.preprocessed_filtered_normalized_03.rds
+    └── preprocess  // only produced in project raw data buckets, not in the full cohort bucket
+        └── ${preprocess_workflow_version}
+            ├── ${sampleA_id}.filtered_feature_bc_matrix.h5
+            ├── ${sampleA_id}.metrics_summary.csv
+            ├── ${sampleA_id}.molecule_info.h5
+            ├── ${sampleA_id}.raw_feature_bc_matrix.h5
+            ├── ${sampleA_id}.seurat_object.preprocessed_01.rds
+            ├── ${sampleB_id}.filtered_feature_bc_matrix.h5
+            ├── ${sampleB_id}.metrics_summary.csv
+            ├── ${sampleB_id}.molecule_info.h5
+            ├── ${sampleB_id}.raw_feature_bc_matrix.h5
+            ├── ${sampleB_id}.seurat_object.preprocessed_01.rds
+            ├── ...
+            ├── ${sampleN_id}.filtered_feature_bc_matrix.h5
+            ├── ${sampleN_id}.metrics_summary.csv
+            ├── ${sampleN_id}.molecule_info.h5
+            ├── ${sampleN_id}.raw_feature_bc_matrix.h5
+            └── ${sampleN_id}.seurat_object.preprocessed_01.rds
 ```
 
 ### Curated data (final workflow outputs)
