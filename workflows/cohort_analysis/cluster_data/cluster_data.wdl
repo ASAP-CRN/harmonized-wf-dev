@@ -13,7 +13,6 @@ workflow cluster_data {
 		File cell_type_markers_list
 
 		String raw_data_path
-		String curated_data_path
 		String billing_project
 		String container_registry
 	}
@@ -38,7 +37,6 @@ workflow cluster_data {
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
-			curated_data_path = curated_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry
 	}
@@ -49,7 +47,7 @@ workflow cluster_data {
 			cluster_seurat_object = cluster_cells.cluster_seurat_object, #!FileCoercion
 			n_samples = n_samples,
 			cell_type_markers_list = cell_type_markers_list,
-			curated_data_path = curated_data_path,
+			raw_data_path = raw_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry
 	}
@@ -118,7 +116,6 @@ task cluster_cells {
 		File cell_type_markers_list
 
 		String raw_data_path
-		String curated_data_path
 		String billing_project
 		String container_registry
 	}
@@ -165,18 +162,15 @@ task cluster_cells {
 			~{integrated_seurat_object_basename}_neighbors_05.rds \
 			~{integrated_seurat_object_basename}_neighbors_umap_06.rds \
 			~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds \
-			~{raw_data_path}/
-
-		gsutil -u ~{billing_project} -m cp \
 			~{cohort_id}.major_type_module_umap.pdf \
-			~{curated_data_path}/
+			~{raw_data_path}/
 	>>>
 
 	output {
 		String neighbors_seurat_object = "~{raw_data_path}/~{integrated_seurat_object_basename}_neighbors_05.rds"
 		String umap_seurat_object = "~{raw_data_path}/~{integrated_seurat_object_basename}_neighbors_umap_06.rds"
 		String cluster_seurat_object = "~{raw_data_path}/~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds"
-		String major_cell_type_plot = "~{curated_data_path}/~{cohort_id}.major_type_module_umap.pdf"
+		String major_cell_type_plot = "~{raw_data_path}/~{cohort_id}.major_type_module_umap.pdf"
 	}
 
 	runtime {
@@ -197,7 +191,7 @@ task annotate_clusters {
 
 		File cell_type_markers_list
 
-		String curated_data_path
+		String raw_data_path
 		String billing_project
 		String container_registry
 	}
@@ -221,11 +215,11 @@ task annotate_clusters {
 		# Upload outputs
 		gsutil -u ~{billing_project} -m cp \
 			~{cohort_id}.final_metadata.csv \
-			~{curated_data_path}/
+			~{raw_data_path}/
 	>>>
 
 	output {
-		String metadata = "~{curated_data_path}/~{cohort_id}.final_metadata.csv"
+		String metadata = "~{raw_data_path}/~{cohort_id}.final_metadata.csv"
 	}
 
 	runtime {

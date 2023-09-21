@@ -4,6 +4,7 @@ version 1.0
 
 import "run_quality_control/run_quality_control.wdl" as RunQualityControl
 import "cluster_data/cluster_data.wdl" as ClusterData
+import "../common/upload_final_outputs.wdl" as UploadFinalOutputs
 
 workflow cohort_analysis {
 	input {
@@ -29,7 +30,7 @@ workflow cohort_analysis {
 	String workflow_version = "0.0.1"
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
-	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
+	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/"
 
 	Int n_samples = length(preprocessed_seurat_objects)
 
@@ -38,7 +39,7 @@ workflow cohort_analysis {
 			cohort_id = cohort_id,
 			project_sample_ids = project_sample_ids,
 			billing_project = billing_project,
-			curated_data_path = curated_data_path
+			raw_data_path = raw_data_path
 	}
 
 	call RunQualityControl.run_quality_control {
@@ -47,7 +48,6 @@ workflow cohort_analysis {
 			preprocessed_seurat_objects = preprocessed_seurat_objects,
 			n_samples = n_samples,
 			raw_data_path = raw_data_path,
-			curated_data_path = curated_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry
 	}
@@ -74,7 +74,6 @@ workflow cohort_analysis {
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
-			curated_data_path = curated_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry
 	}
@@ -85,6 +84,29 @@ workflow cohort_analysis {
 			metadata = cluster_data.metadata,
 			groups = groups,
 			features = features,
+			raw_data_path = raw_data_path,
+			billing_project = billing_project,
+			container_registry = container_registry
+	}
+
+	Array[String] cohort_analysis_final_outputs = [
+		write_cohort_sample_list.cohort_sample_list,
+		run_quality_control.qc_violin_plots,
+		run_quality_control.qc_umis_genes_plot,
+		cluster_data.major_cell_type_plot,
+		cluster_data.metadata,
+		plot_groups_and_features.group_umap_plots,
+		plot_groups_and_features.feature_umap_plots
+	] #!StringCoercion
+
+	String cohort_analysis_manifest = "~{curated_data_path}/MANIFEST.tsv"
+	call UploadFinalOutputs.upload_final_outputs {
+		input:
+			manifest_path = cohort_analysis_manifest,
+			output_file_paths = cohort_analysis_final_outputs,
+			workflow_name = workflow_name,
+			workflow_version = workflow_version,
+			run_timestamp = run_timestamp,
 			curated_data_path = curated_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry
@@ -105,6 +127,8 @@ workflow cohort_analysis {
 		# Group and feature plots for final metadata
 		Array[File] group_umap_plots = plot_groups_and_features.group_umap_plots #!FileCoercion
 		Array[File] feature_umap_plots = plot_groups_and_features.feature_umap_plots #!FileCoercion
+
+		File cohort_analysis_manifest_tsv = upload_final_outputs.updated_manifest #!FileCoercion
 	}
 }
 
@@ -114,7 +138,7 @@ task write_cohort_sample_list {
 		String cohort_id
 		Array[Array[String]] project_sample_ids
 
-		String curated_data_path
+		String raw_data_path
 		String billing_project
 	}
 
@@ -127,11 +151,11 @@ task write_cohort_sample_list {
 		# Upload outputs
 		gsutil -u ~{billing_project} -m cp \
 			~{cohort_id}.sample_list.tsv \
-			~{curated_data_path}/~{cohort_id}.sample_list.tsv
+			~{raw_data_path}/~{cohort_id}.sample_list.tsv
 	>>>
 
 	output {
-		String cohort_sample_list = "~{curated_data_path}/~{cohort_id}.sample_list.tsv"
+		String cohort_sample_list = "~{raw_data_path}/~{cohort_id}.sample_list.tsv"
 	}
 
 	runtime {
@@ -218,7 +242,7 @@ task plot_groups_and_features {
 		Array[String] groups
 		Array[String] features
 
-		String curated_data_path
+		String raw_data_path
 		String billing_project
 		String container_registry
 	}
@@ -244,9 +268,9 @@ task plot_groups_and_features {
 		# Upload outputs
 		gsutil -u ~{billing_project} -m cp \
 			"${group_plots[@]}" \
-			~{curated_data_path}/
+			~{raw_data_path}/
 
-		echo "${group_plots[@]/#/~{curated_data_path}/}" \
+		echo "${group_plots[@]/#/~{raw_data_path}/}" \
 		| tr ' ' '\n' \
 		> group_plot_locs.txt
 
@@ -266,9 +290,9 @@ task plot_groups_and_features {
 		# Upload outputs
 		gsutil -u ~{billing_project} -m cp \
 			"${feature_plots[@]}" \
-			~{curated_data_path}/
+			~{raw_data_path}/
 
-		echo "${feature_plots[@]/#/~{curated_data_path}/}" \
+		echo "${feature_plots[@]/#/~{raw_data_path}/}" \
 		| tr ' ' '\n' \
 		> feature_plot_locs.txt
 	>>>

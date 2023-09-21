@@ -111,12 +111,15 @@ Example usage:
 - `cohort_id`: either the `project_id` for project-level cohort analysis, or the `cohort_id` for the full cohort
 - `workflow_run_timestamp`: format: `%Y-%m-%dT%H-%M-%SZ`
 - The list of samples used to generate the cohort analysis will be output alongside other cohort analysis outputs in the curated data bucket (`${cohort_id}.sample_list.tsv`)
+- The MANIFEST.tsv file in the curated data bucket describes the workflow name, version, and timestamp for the run used to generate each file in that directory
 
-### Raw data (intermediate files)
+### Raw data (intermediate files and final outputs)
+
+The raw data bucket will contain all artifacts generated as part of workflow execution. Following successful workflow execution, some artifacts will also be copied into the curated bucket as final outputs.
 
 ```bash
 asap-raw-data-{cohort,team-xxyy}
-└── intermediate_workflow_execution
+└── workflow_execution
     └── cohort_analysis
         ├── ${cohort_analysis_workflow_version}
         │    └── ${workflow_run_timestamp}
@@ -135,15 +138,18 @@ asap-raw-data-{cohort,team-xxyy}
         └── preprocess  // only produced in project raw data buckets, not in the full cohort bucket
             └── ${preprocess_workflow_version}
                 ├── ${sampleA_id}.filtered_feature_bc_matrix.h5
+                ├── ${sampleA_id}.metrics_summary.csv
                 ├── ${sampleA_id}.molecule_info.h5
                 ├── ${sampleA_id}.raw_feature_bc_matrix.h5
                 ├── ${sampleA_id}.seurat_object.preprocessed_01.rds
                 ├── ${sampleB_id}.filtered_feature_bc_matrix.h5
+                ├── ${sampleB_id}.metrics_summary.csv
                 ├── ${sampleB_id}.molecule_info.h5
                 ├── ${sampleB_id}.raw_feature_bc_matrix.h5
                 ├── ${sampleB_id}.seurat_object.preprocessed_01.rds
                 ├── ...
                 ├── ${sampleN_id}.filtered_feature_bc_matrix.h5
+                ├── ${sampleN_id}.metrics_summary.csv
                 ├── ${sampleN_id}.molecule_info.h5
                 ├── ${sampleN_id}.raw_feature_bc_matrix.h5
                 └── ${sampleN_id}.seurat_object.preprocessed_01.rds
@@ -153,28 +159,27 @@ asap-raw-data-{cohort,team-xxyy}
 
 ```bash
 asap-curated-data-{cohort,team-xxyy}
-└── cohort_analysis
-    ├── ${cohort_analysis_workflow_version}
-    │   └── ${workflow_run_timestamp}
-    │       ├── ${cohort_id}.batch_group_umap.pdf
-    │       ├── ${cohort_id}.double_scores_feature_umap.pdf
-    │       ├── ${cohort_id}.final_metadata.csv
-    │       ├── ${cohort_id}.major_type_module_umap.pdf
-    │       ├── ${cohort_id}.nCount_RNA_feature_umap.pdf
-    │       ├── ${cohort_id}.nFeature_RNA_feature_umap.pdf
-    │       ├── ${cohort_id}.percent.mt_feature_umap.pdf
-    │       ├── ${cohort_id}.percent.rb_feature_umap.pdf
-    │       ├── ${cohort_id}.qc.umis_genes_plot.pdf
-    │       ├── ${cohort_id}.qc.violin_plots.pdf
-    │       ├── ${cohort_id}.sample_group_umap.pdf
-    │       ├── ${cohort_id}.sample_list.tsv
-    │       └── ${cohort_id}.seurat_clusters_group_umap.pdf
-    └── preprocess  // only produced in project curated data buckets, not in the full cohort bucket
-        └── ${preprocess_workflow_version}
-            ├── ${sampleA_id}.metrics_summary.csv
-            ├── ${sampleB_id}.metrics_summary.csv
-            ├── ...
-            └── ${sampleN_id}.metrics_summary.csv
+├── cohort_analysis
+│   ├── ${cohort_id}.batch_group_umap.pdf
+│   ├── ${cohort_id}.double_scores_feature_umap.pdf
+│   ├── ${cohort_id}.final_metadata.csv
+│   ├── ${cohort_id}.major_type_module_umap.pdf
+│   ├── ${cohort_id}.nCount_RNA_feature_umap.pdf
+│   ├── ${cohort_id}.nFeature_RNA_feature_umap.pdf
+│   ├── ${cohort_id}.percent.mt_feature_umap.pdf
+│   ├── ${cohort_id}.percent.rb_feature_umap.pdf
+│   ├── ${cohort_id}.qc.umis_genes_plot.pdf
+│   ├── ${cohort_id}.qc.violin_plots.pdf
+│   ├── ${cohort_id}.sample_group_umap.pdf
+│   ├── ${cohort_id}.sample_list.tsv
+│   ├── ${cohort_id}.seurat_clusters_group_umap.pdf
+│   └── MANIFEST.tsv
+└── preprocess  // only produced in project curated data buckets, not in the full cohort bucket
+    ├── ${sampleA_id}.metrics_summary.csv
+    ├── ${sampleB_id}.metrics_summary.csv
+    ├── ...
+    ├── ${sampleN_id}.metrics_summary.csv
+    └── MANIFEST.tsv
 ```
 
 # Docker images

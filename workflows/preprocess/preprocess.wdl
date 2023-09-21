@@ -3,6 +3,7 @@ version 1.0
 # Get read counts and generate a preprocessed Seurat object
 
 import "../structs.wdl"
+import "../common/upload_final_outputs.wdl" as UploadFinalOutputs
 
 workflow preprocess {
 	input {
@@ -13,6 +14,7 @@ workflow preprocess {
 
 		Float soup_rate
 
+		String run_timestamp
 		String raw_data_path_prefix
 		String curated_data_path_prefix
 		String billing_project
@@ -23,7 +25,7 @@ workflow preprocess {
 	String workflow_version = "0.0.1"
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}"
-	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/~{workflow_version}"
+	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}"
 
 	scatter (sample_object in samples) {
 		String cellranger_count_output = "~{raw_data_path}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
@@ -48,7 +50,7 @@ workflow preprocess {
 		String cellranger_raw_counts = "~{raw_data_path}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
 		String cellranger_filtered_counts = "~{raw_data_path}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
 		String cellranger_molecule_info = "~{raw_data_path}/~{sample.sample_id}.molecule_info.h5"
-		String cellranger_metrics_csv = "~{curated_data_path}/~{sample.sample_id}.metrics_summary.csv"
+		String cellranger_metrics_csv = "~{raw_data_path}/~{sample.sample_id}.metrics_summary.csv"
 		String preprocessed_seurat_object = "~{raw_data_path}/~{sample.sample_id}.seurat_object.preprocessed_01.rds"
 
 		if (cellranger_count_complete == "false") {
@@ -90,6 +92,22 @@ workflow preprocess {
 		File seurat_object_output = select_first([counts_to_seurat.preprocessed_seurat_object, preprocessed_seurat_object]) #!FileCoercion
 	}
 
+	String preprocessing_manifest = "~{curated_data_path}/MANIFEST.tsv"
+	Array[String] new_preprocessing_final_outputs = select_all(cellranger_count.metrics_csv)
+	if (length(new_preprocessing_final_outputs) > 0) {
+		call UploadFinalOutputs.upload_final_outputs {
+			input:
+				manifest_path = preprocessing_manifest,
+				output_file_paths = new_preprocessing_final_outputs,
+				workflow_name = workflow_name,
+				workflow_version = workflow_version,
+				run_timestamp = run_timestamp,
+				curated_data_path = curated_data_path,
+				billing_project = billing_project,
+				container_registry = container_registry
+		}
+	}
+
 	output {
 		# Sample list
 		Array[Array[String]] project_sample_ids = project_sample_id
@@ -102,6 +120,8 @@ workflow preprocess {
 
 		# Seurat counts
 		Array[File] seurat_object = seurat_object_output
+
+		File preprocessing_manifest_tsv = select_first([upload_final_outputs.updated_manifest, preprocessing_manifest]) #!FileCoercion
 	}
 }
 
