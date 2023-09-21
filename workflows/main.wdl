@@ -29,12 +29,12 @@ workflow harmonized_pmdbs_analysis {
 		String container_registry
 	}
 
-	String intermediate_file_path = "intermediate_workflow_execution"
+	String workflow_execution_path = "workflow_execution"
 
 	call get_workflow_metadata
 
 	scatter (project in projects) {
-		String project_raw_data_path_prefix = "~{project.raw_data_bucket}/~{intermediate_file_path}"
+		String project_raw_data_path_prefix = "~{project.raw_data_bucket}/~{workflow_execution_path}"
 		String project_curated_data_path_prefix = project.curated_data_output_bucket
 
 		call Preprocess.preprocess {
@@ -43,6 +43,7 @@ workflow harmonized_pmdbs_analysis {
 				samples = project.samples,
 				cellranger_reference_data = cellranger_reference_data,
 				soup_rate = soup_rate,
+				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = project_raw_data_path_prefix,
 				curated_data_path_prefix = project_curated_data_path_prefix,
 				billing_project = get_workflow_metadata.billing_project,
@@ -70,7 +71,7 @@ workflow harmonized_pmdbs_analysis {
 	}
 
 	if (run_cross_team_cohort_analysis) {
-		String cohort_raw_data_path_prefix = "~{cohort_raw_data_bucket}/~{intermediate_file_path}"
+		String cohort_raw_data_path_prefix = "~{cohort_raw_data_bucket}/~{workflow_execution_path}"
 		String cohort_curated_data_path_prefix = cohort_curated_data_output_bucket
 
 		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
@@ -99,6 +100,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]] molecule_info = preprocess.molecule_info
 		Array[Array[File]] cellranger_metrics_csvs = preprocess.metrics_csv
 
+		Array[File] preprocessing_manifest_tsv = preprocess.preprocessing_manifest_tsv
 
 		# Project cohort analysis outputs
 		## List of samples included in the cohort

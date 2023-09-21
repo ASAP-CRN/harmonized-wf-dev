@@ -13,6 +13,7 @@ workflow preprocess {
 
 		Float soup_rate
 
+		String run_timestamp
 		String raw_data_path_prefix
 		String curated_data_path_prefix
 		String billing_project
@@ -23,7 +24,7 @@ workflow preprocess {
 	String workflow_version = "0.0.1"
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}"
-	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/~{workflow_version}"
+	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}"
 
 	scatter (sample_object in samples) {
 		String cellranger_count_output = "~{raw_data_path}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
@@ -48,7 +49,7 @@ workflow preprocess {
 		String cellranger_raw_counts = "~{raw_data_path}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
 		String cellranger_filtered_counts = "~{raw_data_path}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
 		String cellranger_molecule_info = "~{raw_data_path}/~{sample.sample_id}.molecule_info.h5"
-		String cellranger_metrics_csv = "~{curated_data_path}/~{sample.sample_id}.metrics_summary.csv"
+		String cellranger_metrics_csv = "~{raw_data_path}/~{sample.sample_id}.metrics_summary.csv"
 		String preprocessed_seurat_object = "~{raw_data_path}/~{sample.sample_id}.seurat_object.preprocessed_01.rds"
 
 		if (cellranger_count_complete == "false") {
@@ -90,6 +91,22 @@ workflow preprocess {
 		File seurat_object_output = select_first([counts_to_seurat.preprocessed_seurat_object, preprocessed_seurat_object]) #!FileCoercion
 	}
 
+	String preprocessing_manifest = "~{curated_data_path}/MANIFEST.tsv"
+	Array[String] new_preprocessing_output = select_all(cellranger_count.metrics_csv)
+	if (length(new_preprocessing_output) > 0) {
+		call upload_final_outputs {
+			input:
+				manifest_path = preprocessing_manifest,
+				output_file_paths = new_preprocessing_output,
+				workflow_name = workflow_name,
+				workflow_version = workflow_version,
+				run_timestamp = run_timestamp,
+				curated_data_path = curated_data_path,
+				billing_project = billing_project,
+				container_registry = container_registry
+		}
+	}
+
 	output {
 		# Sample list
 		Array[Array[String]] project_sample_ids = project_sample_id
@@ -102,6 +119,8 @@ workflow preprocess {
 
 		# Seurat counts
 		Array[File] seurat_object = seurat_object_output
+
+		File preprocessing_manifest_tsv = select_first([upload_final_outputs.updated_manifest, preprocessing_manifest]) #!FileCoercion
 	}
 }
 
@@ -275,5 +294,59 @@ task counts_to_seurat {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+	}
+}
+
+task upload_final_outputs {
+	input {
+		String manifest_path
+		Array[String] output_file_paths
+
+		String workflow_name
+		String workflow_version
+		String run_timestamp
+
+		String curated_data_path
+		String billing_project
+		String container_registry
+	}
+
+	command <<<
+		set -euo pipefail
+
+		echo -e "filename\tworkflow\tworkflow_version\ttimestamp" > new_files.manifest.tsv
+		while read -r output_file || [[ -n "${output_file}" ]]; do
+			gsutil -u ~{billing_project} -m cp "${output_file}" ~{curated_data_path}
+
+			echo -e "$(basename "${output_file}")\t~{workflow_name}\t~{workflow_version}\t~{run_timestamp}" >> new_files.manifest.tsv
+		done < ~{write_lines(output_file_paths)}
+
+		if gsutil ls ~{manifest_path}; then
+			# If a manifest already exists, merge the previous and updated manifests
+			#   and replace the existing manifest with the updated one
+			gsutil -u ~{billing_project} -m cp ~{manifest_path} previous_manifest.tsv
+
+			update_manifest.py \
+				--previous-manifest previous_manifest.tsv \
+				--new-files-manifest new_files.manifest.tsv \
+				--updated-manifest updated_manifest.tsv
+
+			gsutil -u ~{billing_project} -m cp updated_manifest.tsv ~{manifest_path}
+		else
+			# If a manifest does not exist, create one (containing info about the files just uploaded)
+			gsutil -u ~{billing_project} -m cp new_files_manifest.tsv ~{manifest_path}
+		fi
+	>>>
+
+	output {
+		String updated_manifest = manifest_path
+	}
+
+	runtime {
+		docker: "~{container_registry}/util:0.0.1"
+		cpu: 2
+		memory: "4 GB"
+		disks: "local-disk 20 HDD"
+		preemptible: 3
 	}
 }
