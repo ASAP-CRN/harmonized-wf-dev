@@ -102,8 +102,7 @@ workflow cohort_analysis {
 			write_cohort_sample_list.cohort_sample_list,
 			run_quality_control.unfiltered_metadata
 		],
-		run_quality_control.qc_violin_plots,
-		run_quality_control.qc_umis_genes_plots,
+		run_quality_control.qc_plots_png,
 		filter_and_normalize.filtered_seurat_object,
 		filter_and_normalize.normalized_seurat_object,
 		[
@@ -114,8 +113,8 @@ workflow cohort_analysis {
 			cluster_data.major_cell_type_plot,
 			cluster_data.metadata
 		],
-		plot_groups_and_features.group_umap_plots,
-		plot_groups_and_features.feature_umap_plots
+		plot_groups_and_features.group_umap_plots_png,
+		plot_groups_and_features.feature_umap_plots_png
 	])) #!StringCoercion
 
 	String cohort_analysis_manifest = "~{curated_data_path}/MANIFEST.tsv"
@@ -135,8 +134,8 @@ workflow cohort_analysis {
 		File cohort_sample_list = write_cohort_sample_list.cohort_sample_list #!FileCoercion
 
 		# QC plots
-		Array[File] qc_violin_plots = run_quality_control.qc_violin_plots
-		Array[File] qc_umis_genes_plots = run_quality_control.qc_umis_genes_plots
+		Array[File] qc_plots_pdf = run_quality_control.qc_plots_pdf
+		Array[File] qc_plots_png = run_quality_control.qc_plots_png
 
 		# Clustering and sctyping output
 		File integrated_seurat_object = cluster_data.integrated_seurat_object
@@ -147,8 +146,10 @@ workflow cohort_analysis {
 		File metadata = cluster_data.metadata
 
 		# Group and feature plots for final metadata
-		Array[File] group_umap_plots = plot_groups_and_features.group_umap_plots #!FileCoercion
-		Array[File] feature_umap_plots = plot_groups_and_features.feature_umap_plots #!FileCoercion
+		Array[File] group_umap_plots_pdf = plot_groups_and_features.group_umap_plots_pdf #!FileCoercion
+		Array[File] group_umap_plots_png = plot_groups_and_features.group_umap_plots_png #!FileCoercion
+		Array[File] feature_umap_plots_pdf = plot_groups_and_features.feature_umap_plots_pdf #!FileCoercion
+		Array[File] feature_umap_plots_png = plot_groups_and_features.feature_umap_plots_png #!FileCoercion
 
 		File cohort_analysis_manifest_tsv = upload_final_outputs.updated_manifest #!FileCoercion
 	}
@@ -277,7 +278,7 @@ task plot_groups_and_features {
 		set -euo pipefail
 
 		# Plot groups
-		declare -a group_plots
+		declare -a group_plots_pdf group_plots_png
 		while read -r group || [[ -n "${group}" ]]; do
 			/usr/bin/time \
 			Rscript /opt/scripts/main/plot_groups.R \
@@ -286,21 +287,26 @@ task plot_groups_and_features {
 				--group "${group}" \
 				--output-group-umap-plot-prefix "~{cohort_id}.${group}_group_umap"
 
-			group_plots+=("~{cohort_id}.${group}_group_umap.pdf")
-			group_plots+=("~{cohort_id}.${group}_group_umap.png")
+			group_plots_pdf+=("~{cohort_id}.${group}_group_umap.pdf")
+			group_plots_png+=("~{cohort_id}.${group}_group_umap.png")
 		done < ~{write_lines(groups)}
 
 		# Upload outputs
 		gsutil -u ~{billing_project} -m cp \
-			"${group_plots[@]}" \
+			"${group_plots_pdf[@]}" \
+			"${group_plots_png[@]}" \
 			~{raw_data_path}/
 
-		echo "${group_plots[@]/#/~{raw_data_path}/}" \
+		echo "${group_plots_pdf[@]/#/~{raw_data_path}/}" \
 		| tr ' ' '\n' \
-		> group_plot_locs.txt
+		> group_plot_pdf_locs.txt
+
+		echo "${group_plots_png[@]/#/~{raw_data_path}/}" \
+		| tr ' ' '\n' \
+		> group_plot_png_locs.txt
 
 		# Plot features
-		declare -a feature_plots
+		declare -a feature_plots_pdf feature_plots_png
 		while read -r feature || [[ -n "${feature}" ]]; do
 			/usr/bin/time \
 			Rscript /opt/scripts/main/plot_features.R \
@@ -309,23 +315,30 @@ task plot_groups_and_features {
 				--feature "${feature}" \
 				--output-feature-umap-plot-prefix "~{cohort_id}.${feature}_feature_umap"
 
-			feature_plots+=("~{cohort_id}.${feature}_feature_umap.pdf")
-			feature_plots+=("~{cohort_id}.${feature}_feature_umap.png")
+			feature_plots_pdf+=("~{cohort_id}.${feature}_feature_umap.pdf")
+			feature_plots_png+=("~{cohort_id}.${feature}_feature_umap.png")
 		done < ~{write_lines(features)}
 
 		# Upload outputs
 		gsutil -u ~{billing_project} -m cp \
-			"${feature_plots[@]}" \
+			"${feature_plots_pdf[@]}" \
+			"${feature_plots_png[@]}" \
 			~{raw_data_path}/
 
-		echo "${feature_plots[@]/#/~{raw_data_path}/}" \
+		echo "${feature_plots_pdf[@]/#/~{raw_data_path}/}" \
 		| tr ' ' '\n' \
-		> feature_plot_locs.txt
+		> feature_plot_pdf_locs.txt
+
+		echo "${feature_plots_png[@]/#/~{raw_data_path}/}" \
+		| tr ' ' '\n' \
+		> feature_plot_png_locs.txt
 	>>>
 
 	output {
-		Array[String] group_umap_plots = read_lines("group_plot_locs.txt")
-		Array[String] feature_umap_plots = read_lines("feature_plot_locs.txt")
+		Array[String] group_umap_plots_pdf = read_lines("group_plot_pdf_locs.txt")
+		Array[String] group_umap_plots_png = read_lines("group_plot_png_locs.txt")
+		Array[String] feature_umap_plots_pdf = read_lines("feature_plot_pdf_locs.txt")
+		Array[String] feature_umap_plots_png = read_lines("feature_plot_png_locs.txt")
 	}
 
 	runtime {

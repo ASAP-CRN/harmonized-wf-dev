@@ -117,8 +117,8 @@ workflow harmonized_pmdbs_analysis {
 		Array[File?] project_cohort_sample_list = project_cohort_analysis.cohort_sample_list
 
 		## QC plots
-		Array[Array[File]?] project_qc_violin_plots = project_cohort_analysis.qc_violin_plots
-		Array[Array[File]?] project_qc_umis_genes_plots = project_cohort_analysis.qc_umis_genes_plots
+		Array[Array[File]?] project_qc_plots_pdf = project_cohort_analysis.qc_plots_pdf
+		Array[Array[File]?] project_qc_plots_png = project_cohort_analysis.qc_plots_png
 
 		## Clustering and sctyping output
 		Array[File?] project_integrated_seurat_object = project_cohort_analysis.integrated_seurat_object
@@ -129,8 +129,10 @@ workflow harmonized_pmdbs_analysis {
 		Array[File?] project_metadata = project_cohort_analysis.metadata
 
 		## Group and feature plots for final metadata
-		Array[Array[File]?] project_group_umap_plots = project_cohort_analysis.group_umap_plots
-		Array[Array[File]?] project_feature_umap_plots = project_cohort_analysis.feature_umap_plots
+		Array[Array[File]?] project_group_umap_plots_pdf = project_cohort_analysis.group_umap_plots_pdf
+		Array[Array[File]?] project_group_umap_plots_png = project_cohort_analysis.group_umap_plots_png
+		Array[Array[File]?] project_feature_umap_plots_pdf = project_cohort_analysis.feature_umap_plots_pdf
+		Array[Array[File]?] project_feature_umap_plots_png = project_cohort_analysis.feature_umap_plots_png
 
 		Array[File?] project_manifest = project_cohort_analysis.cohort_analysis_manifest_tsv
 
@@ -139,8 +141,8 @@ workflow harmonized_pmdbs_analysis {
 		File? cohort_sample_list = cross_team_cohort_analysis.cohort_sample_list
 
 		## QC plots
-		Array[File]? cohort_qc_violin_plots = cross_team_cohort_analysis.qc_violin_plots
-		Array[File]? cohort_qc_umis_genes_plots = cross_team_cohort_analysis.qc_umis_genes_plots
+		Array[File]? cohort_qc_plots_pdf = cross_team_cohort_analysis.qc_plots_pdf
+		Array[File]? cohort_qc_plots_png = cross_team_cohort_analysis.qc_plots_png
 
 		## Clustering and sctyping output
 		File? cohort_integrated_seurat_object = cross_team_cohort_analysis.integrated_seurat_object
@@ -151,8 +153,10 @@ workflow harmonized_pmdbs_analysis {
 		File? cohort_metadata = cross_team_cohort_analysis.metadata
 
 		## Group and feature plots for final metadata
-		Array[File]? cohort_group_umap_plots = cross_team_cohort_analysis.group_umap_plots
-		Array[File]? cohort_feature_umap_plots = cross_team_cohort_analysis.feature_umap_plots
+		Array[File]? cohort_group_umap_plots_pdf = cross_team_cohort_analysis.group_umap_plots_pdf
+		Array[File]? cohort_group_umap_plots_png = cross_team_cohort_analysis.group_umap_plots_png
+		Array[File]? cohort_feature_umap_plots_pdf = cross_team_cohort_analysis.feature_umap_plots_pdf
+		Array[File]? cohort_feature_umap_plots_png = cross_team_cohort_analysis.feature_umap_plots_png
 
 		File? cohort_manifest = cross_team_cohort_analysis.cohort_analysis_manifest_tsv
 	}

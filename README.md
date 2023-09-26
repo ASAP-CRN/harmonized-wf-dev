@@ -124,36 +124,10 @@ asap-raw-data-{cohort,team-xxyy}
     ├── cohort_analysis
     │   └──${cohort_analysis_workflow_version}
     │       └── ${workflow_run_timestamp}
-    │            ├── ${cohort_id}.seurat_object.harmony_integrated_04.rds
-    │            ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_05.rds
-    │            ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_06.rds
-    │            ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_cluster_07.rds
-    │            ├── ${cohort_id}.unfiltered_metadata.csv
-    │            ├── ${sampleA_id}.seurat_object.preprocessed_filtered_02.rds
-    │            ├── ${sampleA_id}.seurat_object.preprocessed_filtered_normalized_03.rds
-    │            ├── ${sampleB_id}.seurat_object.preprocessed_filtered_02.rds
-    │            ├── ${sampleB_id}.seurat_object.preprocessed_filtered_normalized_03.rds
-    │            ├── ...
-    │            ├── ${sampleN_id}.seurat_object.preprocessed_filtered_02.rds
-    │            └── ${sampleN_id}.seurat_object.preprocessed_filtered_normalized_03.rds
+    │            └── <cohort outputs>
     └── preprocess  // only produced in project raw data buckets, not in the full cohort bucket
         └── ${preprocess_workflow_version}
-            ├── ${sampleA_id}.filtered_feature_bc_matrix.h5
-            ├── ${sampleA_id}.metrics_summary.csv
-            ├── ${sampleA_id}.molecule_info.h5
-            ├── ${sampleA_id}.raw_feature_bc_matrix.h5
-            ├── ${sampleA_id}.seurat_object.preprocessed_01.rds
-            ├── ${sampleB_id}.filtered_feature_bc_matrix.h5
-            ├── ${sampleB_id}.metrics_summary.csv
-            ├── ${sampleB_id}.molecule_info.h5
-            ├── ${sampleB_id}.raw_feature_bc_matrix.h5
-            ├── ${sampleB_id}.seurat_object.preprocessed_01.rds
-            ├── ...
-            ├── ${sampleN_id}.filtered_feature_bc_matrix.h5
-            ├── ${sampleN_id}.metrics_summary.csv
-            ├── ${sampleN_id}.molecule_info.h5
-            ├── ${sampleN_id}.raw_feature_bc_matrix.h5
-            └── ${sampleN_id}.seurat_object.preprocessed_01.rds
+            └── <preprocess outputs>
 ```
 
 ### Curated data (intermediate workflow objects and final workflow outputs for the latest run of the workflow)
@@ -161,19 +135,19 @@ asap-raw-data-{cohort,team-xxyy}
 ```bash
 asap-curated-data-{cohort,team-xxyy}
 ├── cohort_analysis
-│   ├── ${cohort_id}.batch_group_umap.{pdf,png}
-│   ├── ${cohort_id}.double_scores_feature_umap.{pdf,png}
+│   ├── ${cohort_id}.batch_group_umap.png
+│   ├── ${cohort_id}.double_scores_feature_umap.png
 │   ├── ${cohort_id}.final_metadata.csv
-│   ├── ${cohort_id}.major_type_module_umap.{pdf,png}
-│   ├── ${cohort_id}.nCount_RNA_feature_umap.{pdf,png}
-│   ├── ${cohort_id}.nFeature_RNA_feature_umap.{pdf,png}
-│   ├── ${cohort_id}.percent.mt_feature_umap.{pdf,png}
-│   ├── ${cohort_id}.percent.rb_feature_umap.{pdf,png}
-│   ├── ${cohort_id}.qc.umis_genes_plot.{pdf,png}
-│   ├── ${cohort_id}.qc.violin_plots.{pdf,png}
-│   ├── ${cohort_id}.sample_group_umap.{pdf,png}
+│   ├── ${cohort_id}.major_type_module_umap.png
+│   ├── ${cohort_id}.nCount_RNA_feature_umap.png
+│   ├── ${cohort_id}.nFeature_RNA_feature_umap.png
+│   ├── ${cohort_id}.percent.mt_feature_umap.png
+│   ├── ${cohort_id}.percent.rb_feature_umap.png
+│   ├── ${cohort_id}.qc.umis_genes_plot.png
+│   ├── ${cohort_id}.qc.violin_plots.png
+│   ├── ${cohort_id}.sample_group_umap.png
 │   ├── ${cohort_id}.sample_list.tsv
-│   ├── ${cohort_id}.seurat_clusters_group_umap.{pdf,png}
+│   ├── ${cohort_id}.seurat_clusters_group_umap.png
 │   ├── ${cohort_id}.seurat_object.harmony_integrated_04.rds
 │   ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_05.rds
 │   ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_06.rds

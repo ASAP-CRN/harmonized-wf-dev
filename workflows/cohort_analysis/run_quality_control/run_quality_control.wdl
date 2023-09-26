@@ -38,8 +38,8 @@ workflow run_quality_control {
 
 	output {
 		# QC plots
-		Array[File] qc_violin_plots = plot_qc_metrics.qc_violin_plots #!FileCoercion
-		Array[File] qc_umis_genes_plots = plot_qc_metrics.qc_umis_genes_plots #!FileCoercion
+		Array[File] qc_plots_pdf = plot_qc_metrics.qc_plots_pdf #!FileCoercion
+		Array[File] qc_plots_png = plot_qc_metrics.qc_plots_png #!FileCoercion
 
 		File unfiltered_metadata = identify_doublets.unfiltered_metadata #!FileCoercion
 	}
@@ -132,12 +132,12 @@ task plot_qc_metrics {
 	>>>
 
 	output {
-		Array[String] qc_violin_plots = [
+		Array[String] qc_plots_pdf = [
 			"~{raw_data_path}/~{cohort_id}.qc.violin_plots.pdf",
-			"~{raw_data_path}/~{cohort_id}.qc.violin_plots.png"
+			"~{raw_data_path}/~{cohort_id}.qc.umis_genes_plot.pdf"
 		]
-		Array[String] qc_umis_genes_plots = [
-			"~{raw_data_path}/~{cohort_id}.qc.umis_genes_plot.pdf",
+		Array[String] qc_plots_png = [
+			"~{raw_data_path}/~{cohort_id}.qc.violin_plots.png",
 			"~{raw_data_path}/~{cohort_id}.qc.umis_genes_plot.pdf"
 		]
 	}
