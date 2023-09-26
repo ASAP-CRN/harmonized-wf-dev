@@ -17,7 +17,7 @@ workflow cluster_data {
 		String raw_data_path
 		String billing_project
 		String container_registry
-		String multiome_container_revision
+		Int multiome_container_revision
 	}
 
 	call integrate_sample_data {
@@ -60,6 +60,9 @@ workflow cluster_data {
 	}
 
 	output {
+		File integrated_seurat_object = integrate_sample_data.integrated_seurat_object #!FileCoercion
+		File neighbors_seurat_object = cluster_cells.neighbors_seurat_object #!FileCoercion
+		File umap_seurat_object = cluster_cells.umap_seurat_object #!FileCoercion
 		File cluster_seurat_object = cluster_cells.cluster_seurat_object #!FileCoercion
 		File major_cell_type_plot = cluster_cells.major_cell_type_plot #!FileCoercion
 		File metadata = annotate_clusters.metadata #!FileCoercion
@@ -77,7 +80,7 @@ task integrate_sample_data {
 		String raw_data_path
 		String billing_project
 		String container_registry
-		String multiome_container_revision
+		Int multiome_container_revision
 	}
 
 	Int threads = 8
@@ -129,7 +132,7 @@ task cluster_cells {
 		String raw_data_path
 		String billing_project
 		String container_registry
-		String multiome_container_revision
+		Int multiome_container_revision
 	}
 
 	String integrated_seurat_object_basename = basename(integrated_seurat_object, "_04.rds")
@@ -206,7 +209,7 @@ task annotate_clusters {
 		String raw_data_path
 		String billing_project
 		String container_registry
-		String multiome_container_revision
+		Int multiome_container_revision
 	}
 
 	Int threads = 2

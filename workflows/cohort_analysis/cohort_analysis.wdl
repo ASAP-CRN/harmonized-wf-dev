@@ -26,7 +26,7 @@ workflow cohort_analysis {
 		String curated_data_path_prefix
 		String billing_project
 		String container_registry
-		String multiome_container_revision
+		Int multiome_container_revision
 	}
 
 	String workflow_name = "cohort_analysis"
@@ -97,15 +97,26 @@ workflow cohort_analysis {
 			multiome_container_revision = multiome_container_revision
 	}
 
-	Array[String] cohort_analysis_final_outputs = [
-		write_cohort_sample_list.cohort_sample_list,
-		run_quality_control.qc_violin_plots,
-		run_quality_control.qc_umis_genes_plot,
-		cluster_data.major_cell_type_plot,
-		cluster_data.metadata,
+	Array[String] cohort_analysis_final_outputs = select_all(flatten([
+		[
+			write_cohort_sample_list.cohort_sample_list,
+			run_quality_control.qc_violin_plots,
+			run_quality_control.qc_umis_genes_plot,
+			run_quality_control.unfiltered_metadata
+		],
+		filter_and_normalize.filtered_seurat_object,
+		filter_and_normalize.normalized_seurat_object,
+		[
+			cluster_data.integrated_seurat_object,
+			cluster_data.neighbors_seurat_object,
+			cluster_data.umap_seurat_object,
+			cluster_data.cluster_seurat_object,
+			cluster_data.major_cell_type_plot,
+			cluster_data.metadata
+		],
 		plot_groups_and_features.group_umap_plots,
 		plot_groups_and_features.feature_umap_plots
-	] #!StringCoercion
+	])) #!StringCoercion
 
 	String cohort_analysis_manifest = "~{curated_data_path}/MANIFEST.tsv"
 	call UploadFinalOutputs.upload_final_outputs {
@@ -128,6 +139,9 @@ workflow cohort_analysis {
 		File qc_umis_genes_plot = run_quality_control.qc_umis_genes_plot
 
 		# Clustering and sctyping output
+		File integrated_seurat_object = cluster_data.integrated_seurat_object
+		File neighbors_seurat_object = cluster_data.neighbors_seurat_object
+		File umap_seurat_object = cluster_data.umap_seurat_object
 		File cluster_seurat_object = cluster_data.cluster_seurat_object
 		File major_cell_type_plot = cluster_data.major_cell_type_plot
 		File metadata = cluster_data.metadata
@@ -183,7 +197,7 @@ task filter_and_normalize {
 		String raw_data_path
 		String billing_project
 		String container_registry
-		String multiome_container_revision
+		Int multiome_container_revision
 
 		# Purposefully unset
 		String? my_none
@@ -254,7 +268,7 @@ task plot_groups_and_features {
 		String raw_data_path
 		String billing_project
 		String container_registry
-		String multiome_container_revision
+		Int multiome_container_revision
 	}
 
 	Int disk_size = ceil(size(metadata, "GB") * 4 + 20)

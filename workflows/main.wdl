@@ -31,7 +31,7 @@ workflow harmonized_pmdbs_analysis {
 		String container_registry
 	}
 
-	String multiome_container_revision = 7
+	Int multiome_container_revision = 7
 
 	String workflow_execution_path = "workflow_execution"
 
@@ -121,6 +121,9 @@ workflow harmonized_pmdbs_analysis {
 		Array[File?] project_qc_umis_genes_plot = project_cohort_analysis.qc_umis_genes_plot
 
 		## Clustering and sctyping output
+		Array[File?] project_integrated_seurat_object = project_cohort_analysis.integrated_seurat_object
+		Array[File?] project_neighbors_seurat_object = project_cohort_analysis.neighbors_seurat_object
+		Array[File?] project_umap_seurat_object = project_cohort_analysis.umap_seurat_object
 		Array[File?] project_cluster_seurat_object = project_cohort_analysis.cluster_seurat_object
 		Array[File?] project_major_cell_type_plot = project_cohort_analysis.major_cell_type_plot
 		Array[File?] project_metadata = project_cohort_analysis.metadata
@@ -140,6 +143,9 @@ workflow harmonized_pmdbs_analysis {
 		File? cohort_qc_umis_genes_plot = cross_team_cohort_analysis.qc_umis_genes_plot
 
 		## Clustering and sctyping output
+		File? cohort_integrated_seurat_object = cross_team_cohort_analysis.integrated_seurat_object
+		File? cohort_neighbors_seurat_object = cross_team_cohort_analysis.neighbors_seurat_object
+		File? cohort_umap_seurat_object = cross_team_cohort_analysis.umap_seurat_object
 		File? cohort_cluster_seurat_object = cross_team_cohort_analysis.cluster_seurat_object
 		File? cohort_major_cell_type_plot = cross_team_cohort_analysis.major_cell_type_plot
 		File? cohort_metadata = cross_team_cohort_analysis.metadata
