@@ -83,6 +83,7 @@ workflow preprocess {
 				input:
 					sample_id = sample.sample_id,
 					batch = select_first([sample.batch]),
+					project_id = project_id,
 					raw_counts = raw_counts_output, # !FileCoercion
 					filtered_counts = filtered_counts_output, # !FileCoercion
 					soup_rate = soup_rate,
@@ -260,6 +261,7 @@ task counts_to_seurat {
 	input {
 		String sample_id
 		String batch
+		String project_id
 
 		File raw_counts
 		File filtered_counts
@@ -285,6 +287,7 @@ task counts_to_seurat {
 			--script-dir /opt/scripts \
 			--sample-id ~{sample_id} \
 			--batch ~{batch} \
+			--project ~{project_id} \
 			--raw-counts ~{raw_counts} \
 			--filtered-counts ~{filtered_counts} \
 			--soup-rate ~{soup_rate} \

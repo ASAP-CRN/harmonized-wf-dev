@@ -15,7 +15,7 @@ Repo for testing and developing a common postmortem-derived brain sequencing (PM
 
 Worfklows are defined in [the `workflows` directory](workflows).
 
-This workflow is set up to implement the [Harmony RNA snakemake workflow](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/main) in WDL. The WDL version of the workflow aims to maintain backwards compatibility with the snakemake scripts.
+This workflow is set up to implement the [Harmony RNA snakemake workflow](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/main) in WDL. The WDL version of the workflow aims to maintain backwards compatibility with the snakemake scripts. Scripts used by the WDL workflow were modified from the Harmony RNA snakemake repo; originals may be found [here](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/5384b546f02b6e68f154f77d25667fed03759870/scripts), and their modified versions in [the docker/multiome/scripts directory](docker/multiome/scripts).
 
 ![Workflow diagram](workflows/workflow_diagram.svg "Workflow diagram")
 

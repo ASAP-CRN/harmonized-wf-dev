@@ -31,7 +31,7 @@ workflow harmonized_pmdbs_analysis {
 		String container_registry
 	}
 
-	Int multiome_container_revision = 7
+	Int multiome_container_revision = 8
 
 	String workflow_execution_path = "workflow_execution"
 
@@ -87,7 +87,7 @@ workflow harmonized_pmdbs_analysis {
 				cohort_id = cohort_id,
 				project_sample_ids = flatten(preprocess.project_sample_ids),
 				preprocessed_seurat_objects = flatten(preprocess.seurat_object), # !FileCoercion
-				group_by_vars = ["project"],
+				group_by_vars = ["batch_id"],
 				clustering_algorithm = clustering_algorithm,
 				clustering_resolution = clustering_resolution,
 				cell_type_markers_list = cell_type_markers_list,
