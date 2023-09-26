@@ -8,6 +8,8 @@ workflow cluster_data {
 		Array[File] normalized_seurat_objects
 		Int n_samples
 
+		Array[String] group_by_vars
+
 		Int clustering_algorithm
 		Float clustering_resolution
 		File cell_type_markers_list
@@ -22,6 +24,7 @@ workflow cluster_data {
 			cohort_id = cohort_id,
 			normalized_seurat_objects = normalized_seurat_objects,
 			n_samples = n_samples,
+			group_by_vars = group_by_vars,
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry
@@ -65,6 +68,8 @@ task integrate_sample_data {
 		Array[File] normalized_seurat_objects
 		Int n_samples
 
+		Array[String] group_by_vars
+
 		String raw_data_path
 		String billing_project
 		String container_registry
@@ -82,6 +87,7 @@ task integrate_sample_data {
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--threads ~{threads} \
+			--group-by-vars ~{sep=' ' group_by_vars} \
 			--seurat-objects-fofn ~{write_lines(normalized_seurat_objects)} \
 			--output-seurat-object ~{cohort_id}.seurat_object.harmony_integrated_04.rds
 
@@ -96,7 +102,7 @@ task integrate_sample_data {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_5"
+		docker: "~{container_registry}/multiome:4a7fd84_6"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -174,7 +180,7 @@ task cluster_cells {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_4"
+		docker: "~{container_registry}/multiome:4a7fd84_6"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -223,7 +229,7 @@ task annotate_clusters {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_4"
+		docker: "~{container_registry}/multiome:4a7fd84_6"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"

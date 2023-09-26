@@ -56,6 +56,7 @@ workflow harmonized_pmdbs_analysis {
 					cohort_id = project.project_id,
 					project_sample_ids = preprocess.project_sample_ids,
 					preprocessed_seurat_objects = preprocess.seurat_object, # !FileCoercion
+					group_by_vars = ["batch"],
 					clustering_algorithm = clustering_algorithm,
 					clustering_resolution = clustering_resolution,
 					cell_type_markers_list = cell_type_markers_list,
@@ -79,6 +80,7 @@ workflow harmonized_pmdbs_analysis {
 				cohort_id = cohort_id,
 				project_sample_ids = flatten(preprocess.project_sample_ids),
 				preprocessed_seurat_objects = flatten(preprocess.seurat_object), # !FileCoercion
+				group_by_vars = ["project"],
 				clustering_algorithm = clustering_algorithm,
 				clustering_resolution = clustering_resolution,
 				cell_type_markers_list = cell_type_markers_list,

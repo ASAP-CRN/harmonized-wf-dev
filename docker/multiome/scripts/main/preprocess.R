@@ -41,14 +41,16 @@ setDT(m, keep.rownames='cells')
 m[,
     `:=` (
         sample=dataset,
-        batch=batch
+        batch=batch,
+        project=project
         )
 ]
 
 batch <- m[, batch]
 sample <- m[, sample]
+project <- m[, project]
 
-names(sample) <- names(batch) <- m[, cells]
+names(sample) <- names(batch) <- names(project) <- m[, cells]
 
 doublet_rate <- (ncol(object) / 1000) * 0.008
 
@@ -56,6 +58,7 @@ object <- object %>%
 
     AddMetaData(metadata=factor(batch), col.name='batch') %>%
     AddMetaData(metadata=factor(sample), col.name='sample') %>%
+    AddMetaData(metadata=factor(project), col.name='project') %>%
 
     scrublet(n_prin_comps=30, expected_doublet_rate=doublet_rate)
 
