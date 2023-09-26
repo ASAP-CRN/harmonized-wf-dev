@@ -14,12 +14,14 @@ workflow preprocess {
 
 		Float soup_rate
 
+		Boolean regenerate_preprocessed_seurat_objects
+
 		String run_timestamp
 		String raw_data_path_prefix
 		String curated_data_path_prefix
 		String billing_project
 		String container_registry
-		String multiome_container_revision
+		Int multiome_container_revision
 	}
 
 	String workflow_name = "preprocess"
@@ -75,7 +77,7 @@ workflow preprocess {
 		File molecule_info_output = select_first([cellranger_count.molecule_info, cellranger_molecule_info]) #!FileCoercion
 		File metrics_csv_output = select_first([cellranger_count.metrics_csv, cellranger_metrics_csv]) #!FileCoercion
 
-		if (counts_to_seurat_complete == "false" && defined(sample.batch)) {
+		if ((counts_to_seurat_complete == "false" && defined(sample.batch)) || regenerate_preprocessed_seurat_objects) {
 			# Import counts and convert to a Seurat object
 			call counts_to_seurat {
 				input:
@@ -95,7 +97,14 @@ workflow preprocess {
 	}
 
 	String preprocessing_manifest = "~{curated_data_path}/MANIFEST.tsv"
-	Array[String] new_preprocessing_final_outputs = select_all(cellranger_count.metrics_csv)
+	Array[String] new_preprocessing_final_outputs = select_all(flatten([
+		cellranger_count.raw_counts,
+		cellranger_count.filtered_counts,
+		cellranger_count.molecule_info,
+		cellranger_count.metrics_csv,
+		counts_to_seurat.preprocessed_seurat_object
+	]))
+
 	if (length(new_preprocessing_final_outputs) > 0) {
 		call UploadFinalOutputs.upload_final_outputs {
 			input:
@@ -260,7 +269,7 @@ task counts_to_seurat {
 		String raw_data_path
 		String billing_project
 		String container_registry
-		String multiome_container_revision
+		Int multiome_container_revision
 	}
 
 	Int disk_size = ceil(size([raw_counts, filtered_counts], "GB") * 2 + 20)

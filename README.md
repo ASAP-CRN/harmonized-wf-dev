@@ -46,6 +46,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | Array[[Project](#project)] | projects | The project ID, set of samples and their associated reads and metadata, output bucket locations, and whether or not to run project-level cohort analysis. |
 | File | cellranger_reference_data | Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest. |
 | Float? | soup_rate | Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data. [0.2] |
+| Boolean? | regenerate_preprocessed_seurat_objects | Regenerate the preprocessed Seurat objects, even if these files already exist. [false] |
 | Boolean? | run_cross_team_cohort_analysis | Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false] |
 | String | cohort_raw_data_bucket | Bucket to upload cross-team cohort intermediate files to. |
 | String | cohort_curated_data_output_bucket | Bucket to upload cross-team cohort analysis outputs to. |
@@ -113,7 +114,7 @@ Example usage:
 - The list of samples used to generate the cohort analysis will be output alongside other cohort analysis outputs in the curated data bucket (`${cohort_id}.sample_list.tsv`)
 - The MANIFEST.tsv file in the curated data bucket describes the workflow name, version, and timestamp for the run used to generate each file in that directory
 
-### Raw data (intermediate files and final outputs)
+### Raw data (intermediate files and final outputs for all runs of the workflow)
 
 The raw data bucket will contain all artifacts generated as part of workflow execution. Following successful workflow execution, some artifacts will also be copied into the curated bucket as final outputs.
 
@@ -155,7 +156,7 @@ asap-raw-data-{cohort,team-xxyy}
             └── ${sampleN_id}.seurat_object.preprocessed_01.rds
 ```
 
-### Curated data (final workflow outputs)
+### Curated data (intermediate workflow objects and final workflow outputs for the latest run of the workflow)
 
 ```bash
 asap-curated-data-{cohort,team-xxyy}
@@ -173,12 +174,36 @@ asap-curated-data-{cohort,team-xxyy}
 │   ├── ${cohort_id}.sample_group_umap.{pdf,png}
 │   ├── ${cohort_id}.sample_list.tsv
 │   ├── ${cohort_id}.seurat_clusters_group_umap.{pdf,png}
+│   ├── ${cohort_id}.seurat_object.harmony_integrated_04.rds
+│   ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_05.rds
+│   ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_06.rds
+│   ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_cluster_07.rds
+│   ├── ${cohort_id}.unfiltered_metadata.csv
+│   ├── ${sampleA_id}.seurat_object.preprocessed_filtered_02.rds
+│   ├── ${sampleA_id}.seurat_object.preprocessed_filtered_normalized_03.rds
+│   ├── ${sampleB_id}.seurat_object.preprocessed_filtered_02.rds
+│   ├── ${sampleB_id}.seurat_object.preprocessed_filtered_normalized_03.rds
+│   ├── ...
+│   ├── ${sampleN_id}.seurat_object.preprocessed_filtered_02.rds
+│   ├── ${sampleN_id}.seurat_object.preprocessed_filtered_normalized_03.rds
 │   └── MANIFEST.tsv
 └── preprocess  // only produced in project curated data buckets, not in the full cohort bucket
+    ├── ${sampleA_id}.filtered_feature_bc_matrix.h5
     ├── ${sampleA_id}.metrics_summary.csv
+    ├── ${sampleA_id}.molecule_info.h5
+    ├── ${sampleA_id}.raw_feature_bc_matrix.h5
+    ├── ${sampleA_id}.seurat_object.preprocessed_01.rds
+    ├── ${sampleB_id}.filtered_feature_bc_matrix.h5
     ├── ${sampleB_id}.metrics_summary.csv
+    ├── ${sampleB_id}.molecule_info.h5
+    ├── ${sampleB_id}.raw_feature_bc_matrix.h5
+    ├── ${sampleB_id}.seurat_object.preprocessed_01.rds
     ├── ...
+    ├── ${sampleN_id}.filtered_feature_bc_matrix.h5
     ├── ${sampleN_id}.metrics_summary.csv
+    ├── ${sampleN_id}.molecule_info.h5
+    ├── ${sampleN_id}.raw_feature_bc_matrix.h5
+    ├── ${sampleN_id}.seurat_object.preprocessed_01.rds
     └── MANIFEST.tsv
 ```
 

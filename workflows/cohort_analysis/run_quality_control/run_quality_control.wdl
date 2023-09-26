@@ -11,7 +11,7 @@ workflow run_quality_control {
 		String raw_data_path
 		String billing_project
 		String container_registry
-		String multiome_container_revision
+		Int multiome_container_revision
 	}
 
 	call identify_doublets {
@@ -54,7 +54,7 @@ task identify_doublets {
 		String raw_data_path
 		String billing_project
 		String container_registry
-		String multiome_container_revision
+		Int multiome_container_revision
 	}
 
 	Int threads = 2
@@ -102,7 +102,7 @@ task plot_qc_metrics {
 		String raw_data_path
 		String billing_project
 		String container_registry
-		String multiome_container_revision
+		Int multiome_container_revision
 	}
 
 	Int threads = 2
