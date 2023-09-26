@@ -160,19 +160,19 @@ asap-raw-data-{cohort,team-xxyy}
 ```bash
 asap-curated-data-{cohort,team-xxyy}
 ├── cohort_analysis
-│   ├── ${cohort_id}.batch_group_umap.pdf
-│   ├── ${cohort_id}.double_scores_feature_umap.pdf
+│   ├── ${cohort_id}.batch_group_umap.{pdf,png}
+│   ├── ${cohort_id}.double_scores_feature_umap.{pdf,png}
 │   ├── ${cohort_id}.final_metadata.csv
-│   ├── ${cohort_id}.major_type_module_umap.pdf
-│   ├── ${cohort_id}.nCount_RNA_feature_umap.pdf
-│   ├── ${cohort_id}.nFeature_RNA_feature_umap.pdf
-│   ├── ${cohort_id}.percent.mt_feature_umap.pdf
-│   ├── ${cohort_id}.percent.rb_feature_umap.pdf
+│   ├── ${cohort_id}.major_type_module_umap.{pdf,png}
+│   ├── ${cohort_id}.nCount_RNA_feature_umap.{pdf,png}
+│   ├── ${cohort_id}.nFeature_RNA_feature_umap.{pdf,png}
+│   ├── ${cohort_id}.percent.mt_feature_umap.{pdf,png}
+│   ├── ${cohort_id}.percent.rb_feature_umap.{pdf,png}
 │   ├── ${cohort_id}.qc.umis_genes_plot.pdf
 │   ├── ${cohort_id}.qc.violin_plots.pdf
-│   ├── ${cohort_id}.sample_group_umap.pdf
+│   ├── ${cohort_id}.sample_group_umap.{pdf,png}
 │   ├── ${cohort_id}.sample_list.tsv
-│   ├── ${cohort_id}.seurat_clusters_group_umap.pdf
+│   ├── ${cohort_id}.seurat_clusters_group_umap.{pdf,png}
 │   └── MANIFEST.tsv
 └── preprocess  // only produced in project curated data buckets, not in the full cohort bucket
     ├── ${sampleA_id}.metrics_summary.csv

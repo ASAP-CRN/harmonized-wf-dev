@@ -29,7 +29,7 @@ workflow cohort_analysis {
 	}
 
 	String workflow_name = "cohort_analysis"
-	String workflow_version = "0.1.0"
+	String workflow_version = "0.1.1"
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
 	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/"
@@ -263,9 +263,10 @@ task plot_groups_and_features {
 				--working-dir "$(pwd)" \
 				--metadata ~{metadata} \
 				--group "${group}" \
-				--output-group-umap-plot "~{cohort_id}.${group}_group_umap.pdf"
+				--output-group-umap-plot-prefix "~{cohort_id}.${group}_group_umap"
 
 			group_plots+=("~{cohort_id}.${group}_group_umap.pdf")
+			group_plots+=("~{cohort_id}.${group}_group_umap.png")
 		done < ~{write_lines(groups)}
 
 		# Upload outputs
@@ -285,9 +286,10 @@ task plot_groups_and_features {
 				--working-dir "$(pwd)" \
 				--metadata ~{metadata} \
 				--feature "${feature}" \
-				--output-feature-umap-plot "~{cohort_id}.${feature}_feature_umap.pdf"
+				--output-feature-umap-plot-prefix "~{cohort_id}.${feature}_feature_umap"
 
 			feature_plots+=("~{cohort_id}.${feature}_feature_umap.pdf")
+			feature_plots+=("~{cohort_id}.${feature}_feature_umap.png")
 		done < ~{write_lines(features)}
 
 		# Upload outputs
