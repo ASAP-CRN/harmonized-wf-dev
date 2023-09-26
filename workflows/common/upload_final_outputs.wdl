@@ -29,7 +29,7 @@ task upload_final_outputs {
 			#   and replace the existing manifest with the updated one
 			gsutil -u ~{billing_project} -m cp ~{manifest_path} previous_manifest.tsv
 
-			update_manifest.py \
+			merge_manifests.py \
 				--previous-manifest previous_manifest.tsv \
 				--new-files-manifest new_files.manifest.tsv \
 				--updated-manifest updated_manifest.tsv
