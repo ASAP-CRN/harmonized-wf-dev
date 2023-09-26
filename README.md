@@ -169,8 +169,8 @@ asap-curated-data-{cohort,team-xxyy}
 │   ├── ${cohort_id}.nFeature_RNA_feature_umap.{pdf,png}
 │   ├── ${cohort_id}.percent.mt_feature_umap.{pdf,png}
 │   ├── ${cohort_id}.percent.rb_feature_umap.{pdf,png}
-│   ├── ${cohort_id}.qc.umis_genes_plot.pdf
-│   ├── ${cohort_id}.qc.violin_plots.pdf
+│   ├── ${cohort_id}.qc.umis_genes_plot.{pdf,png}
+│   ├── ${cohort_id}.qc.violin_plots.{pdf,png}
 │   ├── ${cohort_id}.sample_group_umap.{pdf,png}
 │   ├── ${cohort_id}.sample_list.tsv
 │   ├── ${cohort_id}.seurat_clusters_group_umap.{pdf,png}

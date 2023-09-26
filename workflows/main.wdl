@@ -31,7 +31,7 @@ workflow harmonized_pmdbs_analysis {
 		String container_registry
 	}
 
-	Int multiome_container_revision = 8
+	Int multiome_container_revision = 9
 
 	String workflow_execution_path = "workflow_execution"
 
@@ -117,8 +117,8 @@ workflow harmonized_pmdbs_analysis {
 		Array[File?] project_cohort_sample_list = project_cohort_analysis.cohort_sample_list
 
 		## QC plots
-		Array[File?] project_qc_violin_plots = project_cohort_analysis.qc_violin_plots
-		Array[File?] project_qc_umis_genes_plot = project_cohort_analysis.qc_umis_genes_plot
+		Array[Array[File]?] project_qc_violin_plots = project_cohort_analysis.qc_violin_plots
+		Array[Array[File]?] project_qc_umis_genes_plots = project_cohort_analysis.qc_umis_genes_plots
 
 		## Clustering and sctyping output
 		Array[File?] project_integrated_seurat_object = project_cohort_analysis.integrated_seurat_object
@@ -139,8 +139,8 @@ workflow harmonized_pmdbs_analysis {
 		File? cohort_sample_list = cross_team_cohort_analysis.cohort_sample_list
 
 		## QC plots
-		File? cohort_qc_violin_plots = cross_team_cohort_analysis.qc_violin_plots
-		File? cohort_qc_umis_genes_plot = cross_team_cohort_analysis.qc_umis_genes_plot
+		Array[File]? cohort_qc_violin_plots = cross_team_cohort_analysis.qc_violin_plots
+		Array[File]? cohort_qc_umis_genes_plots = cross_team_cohort_analysis.qc_umis_genes_plots
 
 		## Clustering and sctyping output
 		File? cohort_integrated_seurat_object = cross_team_cohort_analysis.integrated_seurat_object

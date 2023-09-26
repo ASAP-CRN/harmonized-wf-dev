@@ -38,8 +38,8 @@ workflow run_quality_control {
 
 	output {
 		# QC plots
-		File qc_violin_plots = plot_qc_metrics.qc_violin_plots #!FileCoercion
-		File qc_umis_genes_plot = plot_qc_metrics.qc_umis_genes_plot #!FileCoercion
+		Array[File] qc_violin_plots = plot_qc_metrics.qc_violin_plots #!FileCoercion
+		Array[File] qc_umis_genes_plots = plot_qc_metrics.qc_umis_genes_plots #!FileCoercion
 
 		File unfiltered_metadata = identify_doublets.unfiltered_metadata #!FileCoercion
 	}
@@ -119,19 +119,27 @@ task plot_qc_metrics {
 			--threads ~{threads} \
 			--metadata ~{unfiltered_metadata} \
 			--project-name ~{cohort_id} \
-			--output-violin-plots ~{cohort_id}.qc.violin_plots.pdf \
-			--output-umis-genes-plot ~{cohort_id}.qc.umis_genes_plot.pdf
+			--output-violin-plot-prefix ~{cohort_id}.qc.violin_plots \
+			--output-umis-genes-plot-prefix ~{cohort_id}.qc.umis_genes_plot
 
 		# Upload outputs
 		gsutil -u ~{billing_project} -m cp \
 			~{cohort_id}.qc.violin_plots.pdf \
+			~{cohort_id}.qc.violin_plots.png \
 			~{cohort_id}.qc.umis_genes_plot.pdf \
+			~{cohort_id}.qc.umis_genes_plot.png \
 			~{raw_data_path}/
 	>>>
 
 	output {
-		String qc_violin_plots = "~{raw_data_path}/~{cohort_id}.qc.violin_plots.pdf"
-		String qc_umis_genes_plot = "~{raw_data_path}/~{cohort_id}.qc.umis_genes_plot.pdf"
+		Array[String] qc_violin_plots = [
+			"~{raw_data_path}/~{cohort_id}.qc.violin_plots.pdf",
+			"~{raw_data_path}/~{cohort_id}.qc.violin_plots.png"
+		]
+		Array[String] qc_umis_genes_plots = [
+			"~{raw_data_path}/~{cohort_id}.qc.umis_genes_plot.pdf",
+			"~{raw_data_path}/~{cohort_id}.qc.umis_genes_plot.pdf"
+		]
 	}
 
 	runtime {
