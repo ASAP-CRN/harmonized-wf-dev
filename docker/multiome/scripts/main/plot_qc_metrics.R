@@ -6,8 +6,8 @@ parser$add_argument('--script-dir', dest='script_dir', type='character', help='D
 parser$add_argument('--threads', dest='threads', type='integer', help='Number of threads to use for processing')
 parser$add_argument('--metadata', dest='metadata', type='character', help='Metadata file output by gmm_doublet_calling')
 parser$add_argument('--project-name', dest='project_name', type='character', help='Project name')
-parser$add_argument('--output-violin-plots', dest='output_violin_plots', type='character', help='Name of output violin plot PDF')
-parser$add_argument('--output-umis-genes-plot', dest='output_umis_genes_plot', type='character', help='Name of output umis vs. genes plot PDF')
+parser$add_argument('--output-violin-plot-prefix', dest='output_violin_plot_prefix', type='character', help='Prefix of output violin plot PDF and PNG files')
+parser$add_argument('--output-umis-genes-plot-prefix', dest='output_umis_genes_plot_prefix', type='character', help='Prefix of output umis vs. genes plot PDF and PNG files')
 args <- parser$parse_args()
 script_dir <- args$script_dir
 
@@ -19,8 +19,8 @@ source(paste0(script_dir, '/main/load_packages.r'))
 threads <- if (is.null(args$threads)) snakemake@threads else args$threads
 metadata <- if (is.null(args$metadata)) snakemake@input[['metadata']] else args$metadata
 project_name <- if (is.null(args$project_name)) snakemake@params[['project_name']] else args$project_name
-plot1_output_file <- if (is.null(args$output_violin_plots)) snakemake@output[['plot_1']] else args$output_violin_plots
-plot2_output_file <- if (is.null(args$output_umis_genes_plot)) snakemake@output[['plot_2']] else args$output_umis_genes_plot
+plot1_output_file_prefix <- if (is.null(args$output_violin_plot_prefix)) gsub("\\.pdf$", "", snakemake@output[['plot_1']]) else args$output_violin_plot_prefix
+plot2_output_file_prefix <- if (is.null(args$output_umis_genes_plot_prefix)) gsub("\\.pdf$", "", snakemake@output[['plot_2']]) else args$output_umis_genes_plot_prefix
 
 # Main
 future::plan('multicore', workers=threads)
@@ -44,11 +44,21 @@ plot.list <- future.apply::future_lapply(noise, function(feature) {
 
 p1 <- ggpubr::ggarrange(plotlist=plot.list, legend='none', align='hv', ncol=3, nrow=3)
 
-ggsave(plot=p1, width=15, height=8, filename=plot1_output_file)
-cat("Wrote QC plot 1:", plot1_output_file, "\n")
+# Save plot 1 as PDF
+ggsave(plot=p1, width=15, height=8, device="pdf", filename=paste0(plot1_output_file_prefix, ".pdf"))
+cat("Wrote QC plot 1:", paste0(plot1_output_file_prefix, ".pdf"), "\n")
+
+# Save plot 1 as PNG
+ggsave(plot=p1, width=15, height=8, device="png", filename=paste0(plot1_output_file_prefix, ".png"))
+cat("Wrote QC plot 1:", paste0(plot1_output_file_prefix, ".png"), "\n")
 
 p2 <- m %>% ggplot(aes(x=get(noise[1]), y=get(noise[2]))) + geom_point(alpha=0.3) +
     theme_bw() + xlab('Number of UMIs') + ylab('Number of Genes')
 
-ggsave(plot=p2, width=18, height=9, filename=plot2_output_file)
-cat("Wrote QC plot 2:", plot2_output_file, "\n")
+# Save plot 2 as PDF
+ggsave(plot=p2, width=18, height=9, filename=paste0(plot2_output_file_prefix, ".pdf"))
+cat("Wrote QC plot 2:", paste0(plot2_output_file_prefix, ".pdf"), "\n")
+
+# Save plot 2 as PNG
+ggsave(plot=p2, width=18, height=9, filename=paste0(plot2_output_file_prefix, ".png"))
+cat("Wrote QC plot 2:", paste0(plot2_output_file_prefix, ".png"), "\n")

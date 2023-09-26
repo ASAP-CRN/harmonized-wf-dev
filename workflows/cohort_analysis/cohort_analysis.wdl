@@ -100,10 +100,10 @@ workflow cohort_analysis {
 	Array[String] cohort_analysis_final_outputs = select_all(flatten([
 		[
 			write_cohort_sample_list.cohort_sample_list,
-			run_quality_control.qc_violin_plots,
-			run_quality_control.qc_umis_genes_plot,
 			run_quality_control.unfiltered_metadata
 		],
+		run_quality_control.qc_violin_plots,
+		run_quality_control.qc_umis_genes_plots,
 		filter_and_normalize.filtered_seurat_object,
 		filter_and_normalize.normalized_seurat_object,
 		[
@@ -135,8 +135,8 @@ workflow cohort_analysis {
 		File cohort_sample_list = write_cohort_sample_list.cohort_sample_list #!FileCoercion
 
 		# QC plots
-		File qc_violin_plots = run_quality_control.qc_violin_plots
-		File qc_umis_genes_plot = run_quality_control.qc_umis_genes_plot
+		Array[File] qc_violin_plots = run_quality_control.qc_violin_plots
+		Array[File] qc_umis_genes_plots = run_quality_control.qc_umis_genes_plots
 
 		# Clustering and sctyping output
 		File integrated_seurat_object = cluster_data.integrated_seurat_object
