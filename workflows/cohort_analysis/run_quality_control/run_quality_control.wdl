@@ -80,7 +80,7 @@ task identify_doublets {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_4"
+		docker: "~{container_registry}/multiome:4a7fd84_6"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -130,7 +130,7 @@ task plot_qc_metrics {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_4"
+		docker: "~{container_registry}/multiome:4a7fd84_6"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"

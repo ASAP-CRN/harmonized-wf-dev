@@ -12,6 +12,8 @@ workflow cohort_analysis {
 		Array[Array[String]] project_sample_ids
 		Array[File] preprocessed_seurat_objects
 
+		Array[String] group_by_vars
+
 		Int clustering_algorithm
 		Float clustering_resolution
 		File cell_type_markers_list
@@ -27,7 +29,7 @@ workflow cohort_analysis {
 	}
 
 	String workflow_name = "cohort_analysis"
-	String workflow_version = "0.0.1"
+	String workflow_version = "0.1.0"
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
 	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/"
@@ -70,6 +72,7 @@ workflow cohort_analysis {
 			cohort_id = cohort_id,
 			normalized_seurat_objects = select_all(filter_and_normalize.normalized_seurat_object), #!FileCoercion
 			n_samples = n_samples,
+			group_by_vars = group_by_vars,
 			clustering_algorithm = clustering_algorithm,
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
@@ -225,7 +228,7 @@ task filter_and_normalize {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_4"
+		docker: "~{container_registry}/multiome:4a7fd84_6"
 		cpu: threads
 		memory: "8 GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -303,7 +306,7 @@ task plot_groups_and_features {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_4"
+		docker: "~{container_registry}/multiome:4a7fd84_6"
 		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"
