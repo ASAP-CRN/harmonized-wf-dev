@@ -26,6 +26,7 @@ workflow cohort_analysis {
 		String curated_data_path_prefix
 		String billing_project
 		String container_registry
+		String multiome_container_revision
 	}
 
 	String workflow_name = "cohort_analysis"
@@ -51,7 +52,8 @@ workflow cohort_analysis {
 			n_samples = n_samples,
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
-			container_registry = container_registry
+			container_registry = container_registry,
+			multiome_container_revision = multiome_container_revision
 	}
 
 	scatter (preprocessed_seurat_object in preprocessed_seurat_objects) {
@@ -63,7 +65,8 @@ workflow cohort_analysis {
 				unfiltered_metadata = run_quality_control.unfiltered_metadata,
 				raw_data_path = raw_data_path,
 				billing_project = billing_project,
-				container_registry = container_registry
+				container_registry = container_registry,
+				multiome_container_revision = multiome_container_revision
 		}
 	}
 
@@ -78,7 +81,8 @@ workflow cohort_analysis {
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
-			container_registry = container_registry
+			container_registry = container_registry,
+			multiome_container_revision = multiome_container_revision
 	}
 
 	call plot_groups_and_features {
@@ -89,7 +93,8 @@ workflow cohort_analysis {
 			features = features,
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
-			container_registry = container_registry
+			container_registry = container_registry,
+			multiome_container_revision = multiome_container_revision
 	}
 
 	Array[String] cohort_analysis_final_outputs = [
@@ -178,6 +183,7 @@ task filter_and_normalize {
 		String raw_data_path
 		String billing_project
 		String container_registry
+		String multiome_container_revision
 
 		# Purposefully unset
 		String? my_none
@@ -228,7 +234,7 @@ task filter_and_normalize {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_6"
+		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
 		cpu: threads
 		memory: "8 GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -248,6 +254,7 @@ task plot_groups_and_features {
 		String raw_data_path
 		String billing_project
 		String container_registry
+		String multiome_container_revision
 	}
 
 	Int disk_size = ceil(size(metadata, "GB") * 4 + 20)
@@ -308,7 +315,7 @@ task plot_groups_and_features {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_6"
+		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
 		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk ~{disk_size} HDD"

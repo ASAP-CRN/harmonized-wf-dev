@@ -11,6 +11,7 @@ workflow run_quality_control {
 		String raw_data_path
 		String billing_project
 		String container_registry
+		String multiome_container_revision
 	}
 
 	call identify_doublets {
@@ -20,7 +21,8 @@ workflow run_quality_control {
 			n_samples = n_samples,
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
-			container_registry = container_registry
+			container_registry = container_registry,
+			multiome_container_revision = multiome_container_revision
 	}
 
 	call plot_qc_metrics {
@@ -30,7 +32,8 @@ workflow run_quality_control {
 			n_samples = n_samples,
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
-			container_registry = container_registry
+			container_registry = container_registry,
+			multiome_container_revision = multiome_container_revision
 	}
 
 	output {
@@ -51,6 +54,7 @@ task identify_doublets {
 		String raw_data_path
 		String billing_project
 		String container_registry
+		String multiome_container_revision
 	}
 
 	Int threads = 2
@@ -80,7 +84,7 @@ task identify_doublets {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_6"
+		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -98,6 +102,7 @@ task plot_qc_metrics {
 		String raw_data_path
 		String billing_project
 		String container_registry
+		String multiome_container_revision
 	}
 
 	Int threads = 2
@@ -130,7 +135,7 @@ task plot_qc_metrics {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_6"
+		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"

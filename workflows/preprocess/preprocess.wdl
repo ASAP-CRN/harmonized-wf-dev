@@ -19,6 +19,7 @@ workflow preprocess {
 		String curated_data_path_prefix
 		String billing_project
 		String container_registry
+		String multiome_container_revision
 	}
 
 	String workflow_name = "preprocess"
@@ -85,7 +86,8 @@ workflow preprocess {
 					soup_rate = soup_rate,
 					raw_data_path = raw_data_path,
 					billing_project = billing_project,
-					container_registry = container_registry
+					container_registry = container_registry,
+					multiome_container_revision = multiome_container_revision
 			}
 		}
 
@@ -258,6 +260,7 @@ task counts_to_seurat {
 		String raw_data_path
 		String billing_project
 		String container_registry
+		String multiome_container_revision
 	}
 
 	Int disk_size = ceil(size([raw_counts, filtered_counts], "GB") * 2 + 20)
@@ -289,7 +292,7 @@ task counts_to_seurat {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_6"
+		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
 		cpu: 4
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"

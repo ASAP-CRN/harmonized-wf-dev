@@ -17,6 +17,7 @@ workflow cluster_data {
 		String raw_data_path
 		String billing_project
 		String container_registry
+		String multiome_container_revision
 	}
 
 	call integrate_sample_data {
@@ -27,7 +28,8 @@ workflow cluster_data {
 			group_by_vars = group_by_vars,
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
-			container_registry = container_registry
+			container_registry = container_registry,
+			multiome_container_revision = multiome_container_revision
 	}
 
 	# Find neighbors, run umap, and cluster cells
@@ -41,7 +43,8 @@ workflow cluster_data {
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
-			container_registry = container_registry
+			container_registry = container_registry,
+			multiome_container_revision = multiome_container_revision
 	}
 
 	call annotate_clusters {
@@ -52,7 +55,8 @@ workflow cluster_data {
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
-			container_registry = container_registry
+			container_registry = container_registry,
+			multiome_container_revision = multiome_container_revision
 	}
 
 	output {
@@ -73,6 +77,7 @@ task integrate_sample_data {
 		String raw_data_path
 		String billing_project
 		String container_registry
+		String multiome_container_revision
 	}
 
 	Int threads = 8
@@ -102,7 +107,7 @@ task integrate_sample_data {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_6"
+		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -124,6 +129,7 @@ task cluster_cells {
 		String raw_data_path
 		String billing_project
 		String container_registry
+		String multiome_container_revision
 	}
 
 	String integrated_seurat_object_basename = basename(integrated_seurat_object, "_04.rds")
@@ -180,7 +186,7 @@ task cluster_cells {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_6"
+		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -200,6 +206,7 @@ task annotate_clusters {
 		String raw_data_path
 		String billing_project
 		String container_registry
+		String multiome_container_revision
 	}
 
 	Int threads = 2
@@ -229,7 +236,7 @@ task annotate_clusters {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_6"
+		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"

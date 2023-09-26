@@ -29,6 +29,8 @@ workflow harmonized_pmdbs_analysis {
 		String container_registry
 	}
 
+	String multiome_container_revision = 7
+
 	String workflow_execution_path = "workflow_execution"
 
 	call get_workflow_metadata
@@ -47,7 +49,8 @@ workflow harmonized_pmdbs_analysis {
 				raw_data_path_prefix = project_raw_data_path_prefix,
 				curated_data_path_prefix = project_curated_data_path_prefix,
 				billing_project = get_workflow_metadata.billing_project,
-				container_registry = container_registry
+				container_registry = container_registry,
+				multiome_container_revision = multiome_container_revision
 		}
 
 		if (project.run_project_cohort_analysis) {
@@ -66,7 +69,8 @@ workflow harmonized_pmdbs_analysis {
 					raw_data_path_prefix = project_raw_data_path_prefix,
 					curated_data_path_prefix = project_curated_data_path_prefix,
 					billing_project = get_workflow_metadata.billing_project,
-					container_registry = container_registry
+					container_registry = container_registry,
+					multiome_container_revision = multiome_container_revision
 			}
 		}
 	}
@@ -90,7 +94,8 @@ workflow harmonized_pmdbs_analysis {
 				raw_data_path_prefix = cohort_raw_data_path_prefix,
 				curated_data_path_prefix = cohort_curated_data_path_prefix,
 				billing_project = get_workflow_metadata.billing_project,
-				container_registry = container_registry
+				container_registry = container_registry,
+				multiome_container_revision = multiome_container_revision
 		}
 	}
 
