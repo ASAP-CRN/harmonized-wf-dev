@@ -14,6 +14,8 @@ workflow preprocess {
 
 		Float soup_rate
 
+		Boolean regenerate_preprocessed_seurat_objects
+
 		String run_timestamp
 		String raw_data_path_prefix
 		String curated_data_path_prefix
@@ -75,7 +77,7 @@ workflow preprocess {
 		File molecule_info_output = select_first([cellranger_count.molecule_info, cellranger_molecule_info]) #!FileCoercion
 		File metrics_csv_output = select_first([cellranger_count.metrics_csv, cellranger_metrics_csv]) #!FileCoercion
 
-		if (counts_to_seurat_complete == "false" && defined(sample.batch)) {
+		if ((counts_to_seurat_complete == "false" && defined(sample.batch)) || regenerate_preprocessed_seurat_objects) {
 			# Import counts and convert to a Seurat object
 			call counts_to_seurat {
 				input:

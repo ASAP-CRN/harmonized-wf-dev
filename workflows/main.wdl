@@ -15,6 +15,8 @@ workflow harmonized_pmdbs_analysis {
 
 		Float soup_rate = 0.20
 
+		Boolean regenerate_preprocessed_seurat_objects = false
+
 		Boolean run_cross_team_cohort_analysis = false
 		String cohort_raw_data_bucket
 		String cohort_curated_data_output_bucket
@@ -45,6 +47,7 @@ workflow harmonized_pmdbs_analysis {
 				samples = project.samples,
 				cellranger_reference_data = cellranger_reference_data,
 				soup_rate = soup_rate,
+				regenerate_preprocessed_seurat_objects = regenerate_preprocessed_seurat_objects,
 				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = project_raw_data_path_prefix,
 				curated_data_path_prefix = project_curated_data_path_prefix,
@@ -157,6 +160,7 @@ workflow harmonized_pmdbs_analysis {
 		projects: {help: "The project ID, set of samples and their associated reads and metadata, output bucket locations, and whether or not to run project-level cohort analysis."}
 		cellranger_reference_data: {help: "Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest."}
 		soup_rate: {help: "Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data. [0.2]"}
+		regenerate_preprocessed_seurat_objects: {help: "Regenerate the preprocessed Seurat objects, even if these files already exist. [false]"}
 		run_cross_team_cohort_analysis: {help: "Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}
 		cohort_raw_data_bucket: {help: "Bucket to upload cross-team cohort intermediate files to."}
 		cohort_curated_data_output_bucket: {help: "Bucket to upload cross-team cohort analysis outputs to."}

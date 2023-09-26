@@ -46,6 +46,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | Array[[Project](#project)] | projects | The project ID, set of samples and their associated reads and metadata, output bucket locations, and whether or not to run project-level cohort analysis. |
 | File | cellranger_reference_data | Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest. |
 | Float? | soup_rate | Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data. [0.2] |
+| Boolean? | regenerate_preprocessed_seurat_objects | Regenerate the preprocessed Seurat objects, even if these files already exist. [false] |
 | Boolean? | run_cross_team_cohort_analysis | Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false] |
 | String | cohort_raw_data_bucket | Bucket to upload cross-team cohort intermediate files to. |
 | String | cohort_curated_data_output_bucket | Bucket to upload cross-team cohort analysis outputs to. |
