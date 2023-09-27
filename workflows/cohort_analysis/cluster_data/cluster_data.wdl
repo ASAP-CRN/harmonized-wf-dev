@@ -138,7 +138,7 @@ task cluster_cells {
 	String integrated_seurat_object_basename = basename(integrated_seurat_object, "_04.rds")
 	Int threads = 2
 	Int disk_size = ceil(size(integrated_seurat_object, "GB") * 6 + 50)
-	Int mem_gb = ceil(0.2 * n_samples + 5)
+	Int mem_gb = ceil(0.3 * n_samples + 15)
 
 	command <<<
 		set -euo pipefail
