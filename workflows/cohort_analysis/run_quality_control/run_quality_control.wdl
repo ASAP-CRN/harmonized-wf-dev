@@ -138,7 +138,7 @@ task plot_qc_metrics {
 		]
 		Array[String] qc_plots_png = [
 			"~{raw_data_path}/~{cohort_id}.qc.violin_plots.png",
-			"~{raw_data_path}/~{cohort_id}.qc.umis_genes_plot.pdf"
+			"~{raw_data_path}/~{cohort_id}.qc.umis_genes_plot.png"
 		]
 	}
 
