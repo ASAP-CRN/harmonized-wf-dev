@@ -17,11 +17,13 @@ task upload_final_outputs {
 	command <<<
 		set -euo pipefail
 
-		echo -e "filename\tworkflow\tworkflow_version\ttimestamp" > new_files.manifest.tsv
+		NEW_FILES_MANIFEST=new_files_manifest.tsv
+
+		echo -e "filename\tworkflow\tworkflow_version\ttimestamp" > "${NEW_FILES_MANIFEST}"
 		while read -r output_file || [[ -n "${output_file}" ]]; do
 			gsutil -u ~{billing_project} -m cp "${output_file}" ~{curated_data_path}
 
-			echo -e "$(basename "${output_file}")\t~{workflow_name}\t~{workflow_version}\t~{run_timestamp}" >> new_files.manifest.tsv
+			echo -e "$(basename "${output_file}")\t~{workflow_name}\t~{workflow_version}\t~{run_timestamp}" >> "${NEW_FILES_MANIFEST}"
 		done < ~{write_lines(output_file_paths)}
 
 		if [[ ~{workflow_name} == "preprocess" ]] && gsutil ls ~{manifest_path}; then
@@ -31,13 +33,13 @@ task upload_final_outputs {
 
 			merge_manifests.py \
 				--previous-manifest previous_manifest.tsv \
-				--new-files-manifest new_files.manifest.tsv \
+				--new-files-manifest "${NEW_FILES_MANIFEST}" \
 				--updated-manifest updated_manifest.tsv
 
 			gsutil -u ~{billing_project} -m cp updated_manifest.tsv ~{manifest_path}
 		else
 			# If a manifest does not exist or if the workflow is not preprocess, create one (containing info about the files just uploaded)
-			gsutil -u ~{billing_project} -m cp new_files_manifest.tsv ~{manifest_path}
+			gsutil -u ~{billing_project} -m cp "${NEW_FILES_MANIFEST}" ~{manifest_path}
 		fi
 	>>>
 
