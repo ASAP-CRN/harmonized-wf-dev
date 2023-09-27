@@ -97,14 +97,14 @@ workflow cohort_analysis {
 			multiome_container_revision = multiome_container_revision
 	}
 
-	Array[String] cohort_analysis_final_outputs = select_all(flatten([
+	Array[String] cohort_analysis_final_outputs = flatten([
 		[
 			write_cohort_sample_list.cohort_sample_list,
 			run_quality_control.unfiltered_metadata
 		],
 		run_quality_control.qc_plots_png,
-		filter_and_normalize.filtered_seurat_object,
-		filter_and_normalize.normalized_seurat_object,
+		select_all(filter_and_normalize.filtered_seurat_object),
+		select_all(filter_and_normalize.normalized_seurat_object),
 		[
 			cluster_data.integrated_seurat_object,
 			cluster_data.neighbors_seurat_object,
@@ -115,7 +115,7 @@ workflow cohort_analysis {
 		],
 		plot_groups_and_features.group_umap_plots_png,
 		plot_groups_and_features.feature_umap_plots_png
-	])) #!StringCoercion
+	]) #!StringCoercion
 
 	String cohort_analysis_manifest = "~{curated_data_path}/MANIFEST.tsv"
 	call UploadFinalOutputs.upload_final_outputs {
