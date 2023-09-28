@@ -8,7 +8,7 @@ parser$add_argument('--seurat-object', dest='seurat_object', type='character', h
 parser$add_argument('--clustering-algorithm', dest='clustering_algorithm', type='integer', help='Clustering algorithm to use')
 parser$add_argument('--clustering-resolution', dest='clustering_resolution', type='numeric', help='Clustering resolution')
 parser$add_argument('--cell-type-markers-list', dest='cell_type_markers_list', type='character', help='Seurat object containing a list of major cell type markers')
-parser$add_argument('--output-cell-type-plot', dest='output_cell_type_plot', type='character', help='Output file to save major cell type umap plot in PDF format')
+parser$add_argument('--output-cell-type-plot-prefix', dest='output_cell_type_plot_prefix', type='character', help='Prefix for output file to save major cell type umap plot in PDF and PNG formats')
 parser$add_argument('--output-seurat-object', dest='output_seurat_object', type='character', help='Output file to save Seurat object to')
 args <- parser$parse_args()
 script_dir <- args$script_dir
@@ -23,7 +23,7 @@ seurat_object <- if (is.null(args$seurat_object)) snakemake@input[['seurat_objec
 clustering_algorithm <- if (is.null(args$clustering_algorithm)) snakemake@params[['algorithm']] else args$clustering_algorithm
 clustering_resolution <- if (is.null(args$clustering_resolution)) snakemake@params[['resolution']] else args$clustering_resolution
 cell_type_markers_list <- if (is.null(args$cell_type_markers_list)) snakemake@input[['markers']] else args$cell_type_markers_list
-output_cell_type_plot <- if (is.null(args$output_cell_type_plot)) snakemake@output[['plot']] else args$output_cell_type_plot
+output_cell_type_plot_prefix <- if (is.null(args$output_cell_type_plot_prefix)) gsub("\\.pdf$", "", snakemake@output[['plot']]) else args$output_cell_type_plot_prefix
 output_seurat_object <- if (is.null(args$output_seurat_object)) snakemake@output[['seurat_object']] else args$output_seurat_object
 
 # Main
@@ -35,6 +35,6 @@ object <- readRDS(seurat_object) %>%
                             algorithm=clustering_algorithm) %>%
 
             AnnotateClusters(genes=readRDS(cell_type_markers_list),
-                                plot.out=output_cell_type_plot, cell.size=1.0)
+                                plot.out=output_cell_type_plot_prefix, cell.size=1.0)
 
 saveRDS(object, output_seurat_object)

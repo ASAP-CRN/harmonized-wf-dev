@@ -15,7 +15,9 @@ Repo for testing and developing a common postmortem-derived brain sequencing (PM
 
 Worfklows are defined in [the `workflows` directory](workflows).
 
-This workflow is set up to implement the [Harmony RNA snakemake workflow](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/main) in WDL. The WDL version of the workflow aims to maintain backwards compatibility with the snakemake scripts.
+This workflow is set up to implement the [Harmony RNA snakemake workflow](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/main) in WDL. The WDL version of the workflow aims to maintain backwards compatibility with the snakemake scripts. Scripts used by the WDL workflow were modified from the Harmony RNA snakemake repo; originals may be found [here](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/5384b546f02b6e68f154f77d25667fed03759870/scripts), and their modified versions in [the docker/multiome/scripts directory](docker/multiome/scripts).
+
+![Workflow diagram](workflows/workflow_diagram.svg "Workflow diagram")
 
 **Entrypoint**: [workflows/main.wdl](workflows/main.wdl)
 
@@ -44,6 +46,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | Array[[Project](#project)] | projects | The project ID, set of samples and their associated reads and metadata, output bucket locations, and whether or not to run project-level cohort analysis. |
 | File | cellranger_reference_data | Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest. |
 | Float? | soup_rate | Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data. [0.2] |
+| Boolean? | regenerate_preprocessed_seurat_objects | Regenerate the preprocessed Seurat objects, even if these files already exist. [false] |
 | Boolean? | run_cross_team_cohort_analysis | Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false] |
 | String | cohort_raw_data_bucket | Bucket to upload cross-team cohort intermediate files to. |
 | String | cohort_curated_data_output_bucket | Bucket to upload cross-team cohort analysis outputs to. |
@@ -71,9 +74,11 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | Type | Name | Description |
 | :- | :- | :- |
 | String | sample_id | Unique identifier for the sample within the project |
-| String | batch | The sample's batch |
+| String? | batch | The sample's batch. If unset, the analysis will stop after running `cellranger_count`. |
 | File | fastq_R1 | Path to the sample's read 1 FASTQ file |
 | File | fastq_R2 | Path to the sample's read 2 FASTQ file |
+| File? | fastq_I1 | Optional fastq index 1 |
+| File? | fastq_I2 | Optional fastq index 2 |
 
 ## Generating the inputs JSON
 
@@ -107,70 +112,76 @@ Example usage:
 - `cohort_id`: either the `project_id` for project-level cohort analysis, or the `cohort_id` for the full cohort
 - `workflow_run_timestamp`: format: `%Y-%m-%dT%H-%M-%SZ`
 - The list of samples used to generate the cohort analysis will be output alongside other cohort analysis outputs in the curated data bucket (`${cohort_id}.sample_list.tsv`)
+- The MANIFEST.tsv file in the curated data bucket describes the workflow name, version, and timestamp for the run used to generate each file in that directory
 
-### Raw data (intermediate files)
+### Raw data (intermediate files and final outputs for all runs of the workflow)
+
+The raw data bucket will contain all artifacts generated as part of workflow execution. Following successful workflow execution, some artifacts will also be copied into the curated bucket as final outputs.
 
 ```bash
 asap-raw-data-{cohort,team-xxyy}
-└── intermediate_workflow_execution
-    └── cohort_analysis
-        ├── ${cohort_analysis_workflow_version}
-        │    └── ${workflow_run_timestamp}
-        │        ├── ${cohort_id}.seurat_object.harmony_integrated_04.rds
-        │        ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_05.rds
-        │        ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_06.rds
-        │        ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_cluster_07.rds
-        │        ├── ${cohort_id}.unfiltered_metadata.csv
-        │        ├── ${sampleA_id}.seurat_object.preprocessed_filtered_02.rds
-        │        ├── ${sampleA_id}.seurat_object.preprocessed_filtered_normalized_03.rds
-        │        ├── ${sampleB_id}.seurat_object.preprocessed_filtered_02.rds
-        │        ├── ${sampleB_id}.seurat_object.preprocessed_filtered_normalized_03.rds
-        │        ├── ...
-        │        ├── ${sampleN_id}.seurat_object.preprocessed_filtered_02.rds
-        │        └── ${sampleN_id}.seurat_object.preprocessed_filtered_normalized_03.rds
-        └── preprocess  // only produced in project raw data buckets, not in the full cohort bucket
-            └── ${preprocess_workflow_version}
-                ├── ${sampleA_id}.filtered_feature_bc_matrix.h5
-                ├── ${sampleA_id}.molecule_info.h5
-                ├── ${sampleA_id}.raw_feature_bc_matrix.h5
-                ├── ${sampleA_id}.seurat_object.preprocessed_01.rds
-                ├── ${sampleB_id}.filtered_feature_bc_matrix.h5
-                ├── ${sampleB_id}.molecule_info.h5
-                ├── ${sampleB_id}.raw_feature_bc_matrix.h5
-                ├── ${sampleB_id}.seurat_object.preprocessed_01.rds
-                ├── ...
-                ├── ${sampleN_id}.filtered_feature_bc_matrix.h5
-                ├── ${sampleN_id}.molecule_info.h5
-                ├── ${sampleN_id}.raw_feature_bc_matrix.h5
-                └── ${sampleN_id}.seurat_object.preprocessed_01.rds
+└── workflow_execution
+    ├── cohort_analysis
+    │   └──${cohort_analysis_workflow_version}
+    │       └── ${workflow_run_timestamp}
+    │            └── <cohort outputs>
+    └── preprocess  // only produced in project raw data buckets, not in the full cohort bucket
+        ├── cellranger
+        │   └── ${cellranger_task_version}
+        │       └── <cellranger output>
+        └── counts_to_seurat
+            └── ${counts_to_seurat_task_version}
+                └── <counts_to_seurat output>
 ```
 
-### Curated data (final workflow outputs)
+### Curated data (intermediate workflow objects and final workflow outputs for the latest run of the workflow)
 
 ```bash
 asap-curated-data-{cohort,team-xxyy}
-└── cohort_analysis
-    ├── ${cohort_analysis_workflow_version}
-    │   └── ${workflow_run_timestamp}
-    │       ├── ${cohort_id}.batch_group_umap.pdf
-    │       ├── ${cohort_id}.double_scores_feature_umap.pdf
-    │       ├── ${cohort_id}.final_metadata.csv
-    │       ├── ${cohort_id}.major_type_module_umap.pdf
-    │       ├── ${cohort_id}.nCount_RNA_feature_umap.pdf
-    │       ├── ${cohort_id}.nFeature_RNA_feature_umap.pdf
-    │       ├── ${cohort_id}.percent.mt_feature_umap.pdf
-    │       ├── ${cohort_id}.percent.rb_feature_umap.pdf
-    │       ├── ${cohort_id}.qc.umis_genes_plot.pdf
-    │       ├── ${cohort_id}.qc.violin_plots.pdf
-    │       ├── ${cohort_id}.sample_group_umap.pdf
-    │       ├── ${cohort_id}.sample_list.tsv
-    │       └── ${cohort_id}.seurat_clusters_group_umap.pdf
-    └── preprocess  // only produced in project curated data buckets, not in the full cohort bucket
-        └── ${preprocess_workflow_version}
-            ├── ${sampleA_id}.metrics_summary.csv
-            ├── ${sampleB_id}.metrics_summary.csv
-            ├── ...
-            └── ${sampleN_id}.metrics_summary.csv
+├── cohort_analysis
+│   ├── ${cohort_id}.batch_group_umap.png
+│   ├── ${cohort_id}.double_scores_feature_umap.png
+│   ├── ${cohort_id}.final_metadata.csv
+│   ├── ${cohort_id}.major_type_module_umap.png
+│   ├── ${cohort_id}.nCount_RNA_feature_umap.png
+│   ├── ${cohort_id}.nFeature_RNA_feature_umap.png
+│   ├── ${cohort_id}.percent.mt_feature_umap.png
+│   ├── ${cohort_id}.percent.rb_feature_umap.png
+│   ├── ${cohort_id}.qc.umis_genes_plot.png
+│   ├── ${cohort_id}.qc.violin_plots.png
+│   ├── ${cohort_id}.sample_group_umap.png
+│   ├── ${cohort_id}.sample_list.tsv
+│   ├── ${cohort_id}.seurat_clusters_group_umap.png
+│   ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_cluster_07.rds
+│   └── MANIFEST.tsv
+└── preprocess
+    ├── ${cohort_id}.seurat_object.harmony_integrated_04.rds
+    ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_05.rds
+    ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_06.rds
+    ├── ${cohort_id}.unfiltered_metadata.csv
+    ├── ${sampleA_id}.filtered_feature_bc_matrix.h5
+    ├── ${sampleA_id}.metrics_summary.csv
+    ├── ${sampleA_id}.molecule_info.h5
+    ├── ${sampleA_id}.raw_feature_bc_matrix.h5
+    ├── ${sampleA_id}.seurat_object.preprocessed_01.rds
+    ├── ${sampleA_id}.seurat_object.preprocessed_filtered_02.rds
+    ├── ${sampleA_id}.seurat_object.preprocessed_filtered_normalized_03.rds
+    ├── ${sampleB_id}.filtered_feature_bc_matrix.h5
+    ├── ${sampleB_id}.metrics_summary.csv
+    ├── ${sampleB_id}.molecule_info.h5
+    ├── ${sampleB_id}.raw_feature_bc_matrix.h5
+    ├── ${sampleB_id}.seurat_object.preprocessed_01.rds
+    ├── ${sampleB_id}.seurat_object.preprocessed_filtered_02.rds
+    ├── ${sampleB_id}.seurat_object.preprocessed_filtered_normalized_03.rds
+    ├── ...
+    ├── ${sampleN_id}.filtered_feature_bc_matrix.h5
+    ├── ${sampleN_id}.metrics_summary.csv
+    ├── ${sampleN_id}.molecule_info.h5
+    ├── ${sampleN_id}.raw_feature_bc_matrix.h5
+    ├── ${sampleN_id}.seurat_object.preprocessed_01.rds
+    ├── ${sampleN_id}.seurat_object.preprocessed_filtered_02.rds
+    ├── ${sampleN_id}.seurat_object.preprocessed_filtered_normalized_03.rds
+    └── MANIFEST.tsv
 ```
 
 # Docker images

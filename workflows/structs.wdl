@@ -2,10 +2,12 @@ version 1.0
 
 struct Sample {
 	String sample_id
-	String batch
+	String? batch
 
 	File fastq_R1
 	File fastq_R2
+	File? fastq_I1
+	File? fastq_I2
 }
 
 struct Project {

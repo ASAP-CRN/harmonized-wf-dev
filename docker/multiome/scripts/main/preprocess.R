@@ -5,6 +5,7 @@ parser$add_argument('--working-dir', dest='working_dir', type='character', help=
 parser$add_argument('--script-dir', dest='script_dir', type='character', help='Directory containing workflow scripts', default='scripts')
 parser$add_argument('--sample-id', dest='sample_id', type='character', help='Sample/dataset ID')
 parser$add_argument('--batch', dest='batch', type='character', help="Batch from which the sample/dataset originated")
+parser$add_argument('--project', dest='project', type='character', help="Project ID")
 parser$add_argument('--raw-counts', dest='raw_counts', type='character', help='Unfiltered feature-barcode matrices HDF5 output by cellranger')
 parser$add_argument('--filtered-counts', dest='filtered_counts', type='character', help='Filtered feature-barcode matrices HDF5 output by cellranger')
 parser$add_argument('--soup-rate', dest='soup_rate', type='numeric', help='Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data')
@@ -19,6 +20,8 @@ source(paste0(script_dir, '/main/load_packages.r'))
 # Set variables from args or snakemake parameters
 dataset <- if (is.null(args$sample_id)) snakemake@params[['dataset']] else args$sample_id
 batch <- if (is.null(args$batch)) fread(snakemake@input[['datasets']])[sample %chin% dataset, batch] else args$batch
+project <- if (is.null(args$project)) NULL else gsub("-", "_", args$project)
+batch_id <- gsub("-", "_", paste(project, batch, sep="_"))
 raw_counts_file <- if (is.null(args$raw_counts)) paste0(data_path, batch, '/Multiome/', dataset, '/outs/raw_feature_bc_matrix.h5') else args$raw_counts
 filtered_counts_file <- if (is.null(args$filtered_counts)) paste0(data_path, batch, '/Multiome/', dataset, '/outs/filtered_feature_bc_matrix.h5') else args$filtered_counts
 
@@ -41,14 +44,18 @@ setDT(m, keep.rownames='cells')
 m[,
     `:=` (
         sample=dataset,
-        batch=batch
+        batch=batch,
+        project=project,
+        batch_id=batch_id
         )
 ]
 
 batch <- m[, batch]
 sample <- m[, sample]
+project <- m[, project]
+batch_id <- m[, batch_id]
 
-names(sample) <- names(batch) <- m[, cells]
+names(sample) <- names(batch) <- names(project) <- names(batch_id) <- m[, cells]
 
 doublet_rate <- (ncol(object) / 1000) * 0.008
 
@@ -56,6 +63,8 @@ object <- object %>%
 
     AddMetaData(metadata=factor(batch), col.name='batch') %>%
     AddMetaData(metadata=factor(sample), col.name='sample') %>%
+    AddMetaData(metadata=factor(project), col.name='project') %>%
+    AddMetaData(metadata=factor(batch_id), col.name='batch_id') %>%
 
     scrublet(n_prin_comps=30, expected_doublet_rate=doublet_rate)
 

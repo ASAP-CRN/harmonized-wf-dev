@@ -30,7 +30,12 @@ object <- object %>% subset(
             fread(metadata)[
                 sample %chin% Project(object) &
                 predicted_gmm_doublets %chin% 'singlet', cells
-            ]
+            ],
+    return.null = TRUE
     )
 
-saveRDS(object, output_seurat_object)
+if (is.null(object)) {
+    print("No cells remaining after filtering")
+} else {
+    saveRDS(object, output_seurat_object)
+}
