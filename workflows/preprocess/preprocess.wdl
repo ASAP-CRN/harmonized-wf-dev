@@ -25,14 +25,19 @@ workflow preprocess {
 	}
 
 	String workflow_name = "preprocess"
-	String workflow_version = "1.0.0"
 
-	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}"
+	String cellranger_task_version = "1.0.0"
+	String counts_to_seurat_task_version = "1.0.0"
+
+	# Used in the manifest; doesn't influence output locations or whether the task needs to be rerun
+	String workflow_version = "~{cellranger_task_version}_~{counts_to_seurat_task_version}"
+
+	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}"
 	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}"
 
 	scatter (sample_object in samples) {
-		String cellranger_count_output = "~{raw_data_path}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
-		String counts_to_seurat_output = "~{raw_data_path}/~{sample_object.sample_id}.seurat_object.preprocessed_01.rds"
+		String cellranger_count_output = "~{raw_data_path}/cellranger/~{cellranger_task_version}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
+		String counts_to_seurat_output = "~{raw_data_path}/counts_to_seurat/~{counts_to_seurat_task_version}/~{sample_object.sample_id}.seurat_object.preprocessed_01.rds"
 	}
 
 	# For each sample, outputs an array of true/false: [cellranger_counts_complete, counts_to_seurat_complete]
@@ -50,11 +55,11 @@ workflow preprocess {
 
 		Array[String] project_sample_id = [project_id, sample.sample_id]
 
-		String cellranger_raw_counts = "~{raw_data_path}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
-		String cellranger_filtered_counts = "~{raw_data_path}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
-		String cellranger_molecule_info = "~{raw_data_path}/~{sample.sample_id}.molecule_info.h5"
-		String cellranger_metrics_csv = "~{raw_data_path}/~{sample.sample_id}.metrics_summary.csv"
-		String preprocessed_seurat_object = "~{raw_data_path}/~{sample.sample_id}.seurat_object.preprocessed_01.rds"
+		String cellranger_raw_counts = "~{raw_data_path}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
+		String cellranger_filtered_counts = "~{raw_data_path}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
+		String cellranger_molecule_info = "~{raw_data_path}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.molecule_info.h5"
+		String cellranger_metrics_csv = "~{raw_data_path}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.metrics_summary.csv"
+		String preprocessed_seurat_object = "~{raw_data_path}/counts_to_seurat/~{counts_to_seurat_task_version}/~{sample.sample_id}.seurat_object.preprocessed_01.rds"
 
 		if (cellranger_count_complete == "false") {
 			call cellranger_count {
@@ -65,8 +70,7 @@ workflow preprocess {
 					fastq_I1 = sample.fastq_I1,
 					fastq_I2 = sample.fastq_I2,
 					cellranger_reference_data = cellranger_reference_data,
-					raw_data_path = raw_data_path,
-					curated_data_path = curated_data_path,
+					raw_data_path = "~{raw_data_path}/cellranger/~{cellranger_task_version}",
 					billing_project = billing_project,
 					container_registry = container_registry
 			}
@@ -87,7 +91,7 @@ workflow preprocess {
 					raw_counts = raw_counts_output, # !FileCoercion
 					filtered_counts = filtered_counts_output, # !FileCoercion
 					soup_rate = soup_rate,
-					raw_data_path = raw_data_path,
+					raw_data_path = "~{raw_data_path}/counts_to_seurat/~{counts_to_seurat_task_version}",
 					billing_project = billing_project,
 					container_registry = container_registry,
 					multiome_container_revision = multiome_container_revision
@@ -190,7 +194,6 @@ task cellranger_count {
 		File cellranger_reference_data
 
 		String raw_data_path
-		String curated_data_path
 		String billing_project
 		String container_registry
 	}
@@ -234,18 +237,15 @@ task cellranger_count {
 			~{sample_id}.raw_feature_bc_matrix.h5 \
 			~{sample_id}.filtered_feature_bc_matrix.h5 \
 			~{sample_id}.molecule_info.h5 \
-			~{raw_data_path}/
-
-		gsutil -u ~{billing_project} -m cp \
 			~{sample_id}.metrics_summary.csv \
-			~{curated_data_path}/
+			~{raw_data_path}/
 	>>>
 
 	output {
 		String raw_counts = "~{raw_data_path}/~{sample_id}.raw_feature_bc_matrix.h5"
 		String filtered_counts = "~{raw_data_path}/~{sample_id}.filtered_feature_bc_matrix.h5"
 		String molecule_info = "~{raw_data_path}/~{sample_id}.molecule_info.h5"
-		String metrics_csv = "~{curated_data_path}/~{sample_id}.metrics_summary.csv"
+		String metrics_csv = "~{raw_data_path}/~{sample_id}.metrics_summary.csv"
 	}
 
 	runtime {
