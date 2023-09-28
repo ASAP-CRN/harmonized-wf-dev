@@ -26,19 +26,19 @@ task upload_final_outputs {
 			echo -e "$(basename "${output_file}")\t~{workflow_name}\t~{workflow_version}\t~{run_timestamp}" >> "${NEW_FILES_MANIFEST}"
 		done < ~{write_lines(output_file_paths)}
 
-		if [[ ~{workflow_name} == "preprocess" ]] && gsutil ls ~{manifest_path}; then
+		if gsutil ls ~{manifest_path}; then
 			# If a manifest already exists, merge the previous and updated manifests
 			#   and replace the existing manifest with the updated one
 			gsutil -u ~{billing_project} -m cp ~{manifest_path} previous_manifest.tsv
 
-			merge_manifests.py \
+			update_manifest.py \
 				--previous-manifest previous_manifest.tsv \
 				--new-files-manifest "${NEW_FILES_MANIFEST}" \
 				--updated-manifest updated_manifest.tsv
 
 			gsutil -u ~{billing_project} -m cp updated_manifest.tsv ~{manifest_path}
 		else
-			# If a manifest does not exist or if the workflow is not preprocess, create one (containing info about the files just uploaded)
+			# If a manifest does not exist, create one (containing info about the files just uploaded)
 			gsutil -u ~{billing_project} -m cp "${NEW_FILES_MANIFEST}" ~{manifest_path}
 		fi
 	>>>
@@ -48,7 +48,7 @@ task upload_final_outputs {
 	}
 
 	runtime {
-		docker: "~{container_registry}/util:0.0.1"
+		docker: "~{container_registry}/util:1.0.0"
 		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk 20 HDD"
