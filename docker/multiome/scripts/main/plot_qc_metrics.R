@@ -56,9 +56,9 @@ p2 <- m %>% ggplot(aes(x=get(noise[1]), y=get(noise[2]))) + geom_point(alpha=0.3
     theme_bw() + xlab('Number of UMIs') + ylab('Number of Genes')
 
 # Save plot 2 as PDF
-ggsave(plot=p2, width=18, height=9, filename=paste0(plot2_output_file_prefix, ".pdf"))
+ggsave(plot=p2, width=18, height=9, device="pdf", filename=paste0(plot2_output_file_prefix, ".pdf"))
 cat("Wrote QC plot 2:", paste0(plot2_output_file_prefix, ".pdf"), "\n")
 
 # Save plot 2 as PNG
-ggsave(plot=p2, width=18, height=9, filename=paste0(plot2_output_file_prefix, ".png"))
+ggsave(plot=p2, width=18, height=9, device="png", filename=paste0(plot2_output_file_prefix, ".png"))
 cat("Wrote QC plot 2:", paste0(plot2_output_file_prefix, ".png"), "\n")

@@ -28,8 +28,8 @@ g <- metadata %>% ggplot(aes(x=UMAP_1, y=UMAP_2)) +
         scale_color_gradient2(low=pal[1], mid=pal[2], high=pal[3], midpoint=middle) +
         labs(color=metadata[, get(feature)]) + theme_classic() + ggtitle('')
 
-# Save as PDF
+# Save plot as PDF
 ggsave(plot=g, width=13, height=9, device="pdf", filename=paste0(output_feature_umap_plot_prefix, ".pdf"))
 
-# Save as PNG
+# Save plot as PNG
 ggsave(plot=g, width=13, height=9, device="png", filename=paste0(output_feature_umap_plot_prefix, ".png"))

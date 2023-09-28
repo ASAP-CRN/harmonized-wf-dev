@@ -64,7 +64,8 @@ workflow cluster_data {
 		File neighbors_seurat_object = cluster_cells.neighbors_seurat_object #!FileCoercion
 		File umap_seurat_object = cluster_cells.umap_seurat_object #!FileCoercion
 		File cluster_seurat_object = cluster_cells.cluster_seurat_object #!FileCoercion
-		File major_cell_type_plot = cluster_cells.major_cell_type_plot #!FileCoercion
+		File major_cell_type_plot_pdf = cluster_cells.major_cell_type_plot_pdf #!FileCoercion
+		File major_cell_type_plot_png = cluster_cells.major_cell_type_plot_png #!FileCoercion
 		File metadata = annotate_clusters.metadata #!FileCoercion
 	}
 }
@@ -169,7 +170,7 @@ task cluster_cells {
 			--clustering-algorithm ~{clustering_algorithm} \
 			--clustering-resolution ~{clustering_resolution} \
 			--cell-type-markers-list ~{cell_type_markers_list} \
-			--output-cell-type-plot ~{cohort_id}.major_type_module_umap.pdf \
+			--output-cell-type-plot-prefix ~{cohort_id}.major_type_module_umap \
 			--output-seurat-object ~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds
 
 		# Upload outputs
@@ -178,6 +179,7 @@ task cluster_cells {
 			~{integrated_seurat_object_basename}_neighbors_umap_06.rds \
 			~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds \
 			~{cohort_id}.major_type_module_umap.pdf \
+			~{cohort_id}.major_type_module_umap.png \
 			~{raw_data_path}/
 	>>>
 
@@ -185,7 +187,8 @@ task cluster_cells {
 		String neighbors_seurat_object = "~{raw_data_path}/~{integrated_seurat_object_basename}_neighbors_05.rds"
 		String umap_seurat_object = "~{raw_data_path}/~{integrated_seurat_object_basename}_neighbors_umap_06.rds"
 		String cluster_seurat_object = "~{raw_data_path}/~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds"
-		String major_cell_type_plot = "~{raw_data_path}/~{cohort_id}.major_type_module_umap.pdf"
+		String major_cell_type_plot_pdf = "~{raw_data_path}/~{cohort_id}.major_type_module_umap.pdf"
+		String major_cell_type_plot_png = "~{raw_data_path}/~{cohort_id}.major_type_module_umap.png"
 	}
 
 	runtime {
