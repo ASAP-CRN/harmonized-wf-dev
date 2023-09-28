@@ -25,7 +25,7 @@ workflow preprocess {
 	}
 
 	String workflow_name = "preprocess"
-	String workflow_version = "0.0.1"
+	String workflow_version = "1.0.0"
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}"
 	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}"
