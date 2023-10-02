@@ -24,8 +24,10 @@ colors <- sample(colors(), nrow(metadata[, .N, get(group)]))
 g <- metadata %>% ggplot(aes(x=UMAP_1, y=UMAP_2)) + theme_classic() +
 
         geom_point(aes(color=as.factor(metadata[, get(group)])), alpha=0.8, size=0.1) +
-        scale_color_manual(values=colors) + labs(color=metadata[, get(group)]) +
-        guides(color=guide_legend(override.aes=list(size=5)))
+        scale_color_manual(values=colors) + labs(color=group) +
+        guides(color=guide_legend(override.aes=list(size=5))) +
+        theme_classic() + ggtitle('')
+  
 
 # Save plot as PDF
 ggsave(plot=g, width=13, height=9, device="pdf", filename=paste0(output_group_umap_plot_prefix, ".pdf"))
