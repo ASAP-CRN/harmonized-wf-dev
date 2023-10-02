@@ -31,7 +31,7 @@ workflow harmonized_pmdbs_analysis {
 		String container_registry
 	}
 
-	Int multiome_container_revision = 10
+	Int multiome_container_revision = 11
 
 	String workflow_execution_path = "workflow_execution"
 
