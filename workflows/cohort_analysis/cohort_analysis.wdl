@@ -33,7 +33,7 @@ workflow cohort_analysis {
 	String workflow_version = "1.0.0"
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
-	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/"
+	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}"
 
 	Int n_samples = length(preprocessed_seurat_objects)
 
