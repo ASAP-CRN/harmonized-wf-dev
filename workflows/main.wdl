@@ -19,7 +19,7 @@ workflow harmonized_pmdbs_analysis {
 
 		Boolean run_cross_team_cohort_analysis = false
 		String cohort_raw_data_bucket
-		String cohort_curated_data_output_bucket
+		String cohort_staging_data_bucket
 
 		Int clustering_algorithm = 3
 		Float clustering_resolution = 0.3
@@ -39,7 +39,7 @@ workflow harmonized_pmdbs_analysis {
 
 	scatter (project in projects) {
 		String project_raw_data_path_prefix = "~{project.raw_data_bucket}/~{workflow_execution_path}"
-		String project_curated_data_path_prefix = project.curated_data_output_bucket
+		String project_staging_data_path_prefix = project.staging_data_bucket
 
 		call Preprocess.preprocess {
 			input:
@@ -50,7 +50,7 @@ workflow harmonized_pmdbs_analysis {
 				regenerate_preprocessed_seurat_objects = regenerate_preprocessed_seurat_objects,
 				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = project_raw_data_path_prefix,
-				curated_data_path_prefix = project_curated_data_path_prefix,
+				staging_data_path_prefix = project_staging_data_path_prefix,
 				billing_project = get_workflow_metadata.billing_project,
 				container_registry = container_registry,
 				multiome_container_revision = multiome_container_revision
@@ -70,7 +70,7 @@ workflow harmonized_pmdbs_analysis {
 					features = features,
 					run_timestamp = get_workflow_metadata.timestamp,
 					raw_data_path_prefix = project_raw_data_path_prefix,
-					curated_data_path_prefix = project_curated_data_path_prefix,
+					staging_data_path_prefix = project_staging_data_path_prefix,
 					billing_project = get_workflow_metadata.billing_project,
 					container_registry = container_registry,
 					multiome_container_revision = multiome_container_revision
@@ -80,7 +80,7 @@ workflow harmonized_pmdbs_analysis {
 
 	if (run_cross_team_cohort_analysis) {
 		String cohort_raw_data_path_prefix = "~{cohort_raw_data_bucket}/~{workflow_execution_path}"
-		String cohort_curated_data_path_prefix = cohort_curated_data_output_bucket
+		String cohort_staging_data_path_prefix = cohort_staging_data_bucket
 
 		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
 			input:
@@ -95,7 +95,7 @@ workflow harmonized_pmdbs_analysis {
 				features = features,
 				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = cohort_raw_data_path_prefix,
-				curated_data_path_prefix = cohort_curated_data_path_prefix,
+				staging_data_path_prefix = cohort_staging_data_path_prefix,
 				billing_project = get_workflow_metadata.billing_project,
 				container_registry = container_registry,
 				multiome_container_revision = multiome_container_revision
@@ -175,7 +175,7 @@ workflow harmonized_pmdbs_analysis {
 		regenerate_preprocessed_seurat_objects: {help: "Regenerate the preprocessed Seurat objects, even if these files already exist. [false]"}
 		run_cross_team_cohort_analysis: {help: "Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}
 		cohort_raw_data_bucket: {help: "Bucket to upload cross-team cohort intermediate files to."}
-		cohort_curated_data_output_bucket: {help: "Bucket to upload cross-team cohort analysis outputs to."}
+		cohort_staging_data_bucket: {help: "Bucket to stage cross-team cohort analysis outputs in."}
 		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}
 		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
 		cell_type_markers_list: {help: "RDS file containing a list of major cell type markers; used to annotate clusters."}

@@ -107,7 +107,7 @@ def main(args):
                     "samples": [sample],
                     "run_project_cohort_analysis": run_project_cohort_analysis,
                     "raw_data_bucket": f"gs://asap-raw-data-{project_id}",
-                    "curated_data_output_bucket": f"gs://asap-curated-data-{project_id}",
+                    "staging_data_output_bucket": f"gs://asap-staging-data-{project_id}",
                 }
             else:
                 projects[project_id]["samples"].append(sample)

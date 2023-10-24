@@ -9,7 +9,7 @@ task upload_final_outputs {
 		String workflow_version
 		String run_timestamp
 
-		String curated_data_path
+		String staging_data_path
 		String billing_project
 		String container_registry
 	}
@@ -21,7 +21,7 @@ task upload_final_outputs {
 
 		echo -e "filename\tworkflow\tworkflow_version\ttimestamp" > "${NEW_FILES_MANIFEST}"
 		while read -r output_file || [[ -n "${output_file}" ]]; do
-			gsutil -u ~{billing_project} -m cp "${output_file}" ~{curated_data_path}/
+			gsutil -u ~{billing_project} -m cp "${output_file}" ~{staging_data_path}/
 
 			echo -e "$(basename "${output_file}")\t~{workflow_name}\t~{workflow_version}\t~{run_timestamp}" >> "${NEW_FILES_MANIFEST}"
 		done < ~{write_lines(output_file_paths)}
