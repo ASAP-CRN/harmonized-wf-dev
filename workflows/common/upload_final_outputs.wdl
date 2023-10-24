@@ -55,3 +55,35 @@ task upload_final_outputs {
 		preemptible: 3
 	}
 }
+
+task sync_buckets {
+	input {
+		Array[String] source_buckets
+		String target_bucket
+
+		String billing_project
+		String container_registry
+	}
+
+	command <<<
+		set -euo pipefail
+
+		while read -r source_bucket || [[ -n "${source_bucket}" ]]; do
+			gsutil -u ~{billing_project} \
+				-m rsync -r \
+				"${source_bucket}/" \
+				"~{target_bucket}/"
+		done < ~{write_lines(source_buckets)}
+	>>>
+
+	output {
+	}
+
+	runtime {
+		docker: "~{container_registry}/util:1.0.0"
+		cpu: 2
+		memory: "4 GB"
+		disks: "local-disk 20 HDD"
+		preemptible: 3
+	}
+}

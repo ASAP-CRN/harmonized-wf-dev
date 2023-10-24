@@ -124,6 +124,19 @@ workflow preprocess {
 		}
 	}
 
+	if (length(new_preprocessing_final_outputs) == 0) {
+		call UploadFinalOutputs.sync_buckets {
+			input:
+				source_buckets = [
+					"~{raw_data_path}/cellranger/~{cellranger_task_version}",
+					"~{raw_data_path}/counts_to_seurat/~{counts_to_seurat_task_version}"
+				],
+				target_bucket = staging_data_path,
+				billing_project = billing_project,
+				container_registry = container_registry
+		}
+	}
+
 	output {
 		# Sample list
 		Array[Array[String]] project_sample_ids = project_sample_id
