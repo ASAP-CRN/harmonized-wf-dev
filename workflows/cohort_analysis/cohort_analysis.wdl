@@ -23,7 +23,7 @@ workflow cohort_analysis {
 
 		String run_timestamp
 		String raw_data_path_prefix
-		String curated_data_path_prefix
+		String staging_data_path_prefix
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
@@ -33,7 +33,7 @@ workflow cohort_analysis {
 	String workflow_version = "1.0.0"
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
-	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}/"
+	String staging_data_path = "~{staging_data_path_prefix}/~{workflow_name}"
 
 	Int n_samples = length(preprocessed_seurat_objects)
 
@@ -110,7 +110,7 @@ workflow cohort_analysis {
 		]
 	]) #!StringCoercion
 
-	String preprocess_manifest = "~{curated_data_path_prefix}/preprocess/MANIFEST.tsv"
+	String preprocess_manifest = "~{staging_data_path_prefix}/preprocess/MANIFEST.tsv"
 	call UploadFinalOutputs.upload_final_outputs as upload_intermediate_cohort_analysis_outputs {
 		input:
 			manifest_path = preprocess_manifest,
@@ -118,7 +118,7 @@ workflow cohort_analysis {
 			workflow_name = workflow_name,
 			workflow_version = workflow_version,
 			run_timestamp = run_timestamp,
-			curated_data_path = "~{curated_data_path_prefix}/preprocess",
+			staging_data_path = "~{staging_data_path_prefix}/preprocess",
 			billing_project = billing_project,
 			container_registry = container_registry
 	}
@@ -137,7 +137,7 @@ workflow cohort_analysis {
 		plot_groups_and_features.feature_umap_plots_png
 	]) #!StringCoercion
 
-	String cohort_analysis_manifest = "~{curated_data_path}/MANIFEST.tsv"
+	String cohort_analysis_manifest = "~{staging_data_path}/MANIFEST.tsv"
 	call UploadFinalOutputs.upload_final_outputs as upload_final_cohort_analysis_outputs {
 		input:
 			manifest_path = cohort_analysis_manifest,
@@ -145,7 +145,7 @@ workflow cohort_analysis {
 			workflow_name = workflow_name,
 			workflow_version = workflow_version,
 			run_timestamp = run_timestamp,
-			curated_data_path = curated_data_path,
+			staging_data_path = staging_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry
 	}

@@ -30,7 +30,7 @@ The workflow is broken up into two main chunks:
 
 ## Preprocessing
 
-Run once per sample; only rerun when the preprocessing workflow version is updated. Preprocessing outputs are stored in the originating team's raw and curated data buckets.
+Run once per sample; only rerun when the preprocessing workflow version is updated. Preprocessing outputs are stored in the originating team's raw and staging data buckets.
 
 ## Cohort analysis
 
@@ -49,7 +49,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | Boolean? | regenerate_preprocessed_seurat_objects | Regenerate the preprocessed Seurat objects, even if these files already exist. [false] |
 | Boolean? | run_cross_team_cohort_analysis | Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false] |
 | String | cohort_raw_data_bucket | Bucket to upload cross-team cohort intermediate files to. |
-| String | cohort_curated_data_output_bucket | Bucket to upload cross-team cohort analysis outputs to. |
+| String | cohort_staging_data_bucket | Bucket to upload cross-team cohort analysis outputs to. |
 | Int? | clustering_algorithm | Clustering algorithm to use. [3] |
 | Float? | clustering_resolution | Clustering resolution to use during clustering. [0.3] |
 | File | cell_type_markers_list | RDS file containing a list of major cell type markers; used to annotate clusters. |
@@ -67,7 +67,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | Array[[Sample](#sample)] | samples | The set of samples associated with this project |
 | Boolean | run_project_cohort_analysis | Whether or not to run cohort analysis within the project |
 | String | raw_data_bucket | Raw data bucket; intermediate output files that are not final workflow outputs are stored here |
-| String | curated_data_output_bucket | Curated data bucket; final project-level outputs are stored here |
+| String | staging_data_bucket | Staging data bucket; final project-level outputs are stored here |
 
 ### Sample
 
@@ -111,12 +111,12 @@ Example usage:
 
 - `cohort_id`: either the `project_id` for project-level cohort analysis, or the `cohort_id` for the full cohort
 - `workflow_run_timestamp`: format: `%Y-%m-%dT%H-%M-%SZ`
-- The list of samples used to generate the cohort analysis will be output alongside other cohort analysis outputs in the curated data bucket (`${cohort_id}.sample_list.tsv`)
-- The MANIFEST.tsv file in the curated data bucket describes the workflow name, version, and timestamp for the run used to generate each file in that directory
+- The list of samples used to generate the cohort analysis will be output alongside other cohort analysis outputs in the staging data bucket (`${cohort_id}.sample_list.tsv`)
+- The MANIFEST.tsv file in the staging data bucket describes the workflow name, version, and timestamp for the run used to generate each file in that directory
 
 ### Raw data (intermediate files and final outputs for all runs of the workflow)
 
-The raw data bucket will contain all artifacts generated as part of workflow execution. Following successful workflow execution, some artifacts will also be copied into the curated bucket as final outputs.
+The raw data bucket will contain all artifacts generated as part of workflow execution. Following successful workflow execution, some artifacts will also be copied into the staging bucket as final outputs.
 
 ```bash
 asap-raw-data-{cohort,team-xxyy}
@@ -134,10 +134,14 @@ asap-raw-data-{cohort,team-xxyy}
                 └── <counts_to_seurat output>
 ```
 
-### Curated data (intermediate workflow objects and final workflow outputs for the latest run of the workflow)
+### Staging data (intermediate workflow objects and final workflow outputs for the latest run of the workflow)
+
+Following QC by researchers, the objects in the staging bucket are synced into the curated data buckets, maintaining the same file structure. Curated data buckets are named `asap-curated-data-{cohort,team-xxyy}`.
+
+Data may be synced using [the `promote_staging_data` script](#promoting-staging-data).
 
 ```bash
-asap-curated-data-{cohort,team-xxyy}
+asap-staging-data-{cohort,team-xxyy}
 ├── cohort_analysis
 │   ├── ${cohort_id}.batch_group_umap.png
 │   ├── ${cohort_id}.double_scores_feature_umap.png
@@ -182,6 +186,37 @@ asap-curated-data-{cohort,team-xxyy}
     ├── ${sampleN_id}.seurat_object.preprocessed_filtered_02.rds
     ├── ${sampleN_id}.seurat_object.preprocessed_filtered_normalized_03.rds
     └── MANIFEST.tsv
+```
+
+## Promoting staging data
+
+The [`promote_staging_data` script](util/promote_staging_data) can be used to promote staging data that has been approved to the curated data bucket for a team or set of teams.
+
+This script rsync all files in the staging bucket to the curated bucket's preprocess and cohort_analysis directories. **Exercise caution when using this script**; files that are not present in the source (staging) bucket will be deleted at the destination (curated) bucket.
+
+The script defaults to a dry run, printing out the files that would be copied or deleted for each selected team.
+
+### Options
+
+```bash
+-h  Display this message and exit
+-t  Comma-separated set of teams to promote data for
+-a  Promote all teams' data
+-l  List available teams
+-p  Promote data. If this option is not selected, data that would be copied or deleted is printed out, but files are not actually changed (dry run)
+```
+
+### Usage
+
+```bash
+# List available teams
+./util/promote_staging_data -l
+
+# Print out the files that would be copied or deleted from the staging bucket to the curated bucket for teams team-hafler, team-lee, and cohort
+./util/promote_staging_data -t team-hafler,team-lee,cohort
+
+# Promote data for team-hafler, team-lee, and cohort
+./util/promote_staging_data -a -p
 ```
 
 # Docker images
