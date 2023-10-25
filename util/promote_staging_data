@@ -19,7 +19,7 @@ cat << EOF
     $(tput bold)-t$(tput sgr0)  Comma-separated set of teams to promote data for
     $(tput bold)-a$(tput sgr0)  Promote all teams' data
     $(tput bold)-l$(tput sgr0)  List available teams
-    $(tput bold)-d$(tput sgr0)  Dry run; print files that would be copied or deleted
+    $(tput bold)-p$(tput sgr0)  Promote data. If this option is not selected, data that would be copied or deleted is printed out, but files are not actually changed (dry run)
 
 EOF
 }
@@ -52,18 +52,19 @@ gsync() {
 
 ALL_TEAMS=(cohort team-hafler team-hardy team-jakobsson team-lee team-scherzer team-sulzer team-voet team-wood)
 
-while getopts "ht:ald" OPTION; do
+while getopts "ht:alp" OPTION; do
   case $OPTION in
     h) usage; exit ;;
     t) read -ra TEAMS <<< "$(echo "${OPTARG}" | tr ',' ' ')" ;;
     a) TEAMS=( "${ALL_TEAMS[@]}" ) ;;
     l) list_teams; exit ;;
-    d) DRY_RUN_ARG="-n" ;;
+    p) DRY_RUN_ARG="" ;;
     \?) usage; exit ;;
   esac
 done
 
-DRY_RUN_ARG=${DRY_RUN_ARG:-}
+# Default to dry run if promotion is not selected
+DRY_RUN_ARG=${DRY_RUN_ARG:--n}
 
 if [[ -z "${TEAMS:-}" ]]; then
   usage
