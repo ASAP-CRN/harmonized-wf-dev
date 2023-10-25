@@ -138,6 +138,8 @@ asap-raw-data-{cohort,team-xxyy}
 
 Following QC by researchers, the objects in the staging bucket are synced into the curated data buckets, maintaining the same file structure. Curated data buckets are named `asap-curated-data-{cohort,team-xxyy}`.
 
+Data may be synced using [the `promote_staging_data` script](#promoting-staging-data).
+
 ```bash
 asap-staging-data-{cohort,team-xxyy}
 ├── cohort_analysis
@@ -184,6 +186,37 @@ asap-staging-data-{cohort,team-xxyy}
     ├── ${sampleN_id}.seurat_object.preprocessed_filtered_02.rds
     ├── ${sampleN_id}.seurat_object.preprocessed_filtered_normalized_03.rds
     └── MANIFEST.tsv
+```
+
+## Promoting staging data
+
+The [`promote_staging_data` script](util/promote_staging_data) can be used to promote staging data that has been approved to the curated data bucket for a team or set of teams.
+
+This script rsync all files in the staging bucket to the curated bucket's preprocess and cohort_analysis directories. **Exercise caution when using this script**; files that are not present in the source (staging) bucket will be deleted at the destination (curated) bucket.
+
+The script defaults to a dry run, printing out the files that would be copied or deleted for each selected team.
+
+### Options
+
+```bash
+-h  Display this message and exit
+-t  Comma-separated set of teams to promote data for
+-a  Promote all teams' data
+-l  List available teams
+-p  Promote data. If this option is not selected, data that would be copied or deleted is printed out, but files are not actually changed (dry run)
+```
+
+### Usage
+
+```bash
+# List available teams
+./util/promote_staging_data -l
+
+# Print out the files that would be copied or deleted from the staging bucket to the curated bucket for teams team-hafler, team-lee, and cohort
+./util/promote_staging_data -t team-hafler,team-lee,cohort
+
+# Promote data for team-hafler, team-lee, and cohort
+./util/promote_staging_data -a -p
 ```
 
 # Docker images
