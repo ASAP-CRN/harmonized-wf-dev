@@ -1,0 +1,99 @@
+#!/bin/bash
+#
+# Promote data in staging buckets to production
+
+set -eEuo pipefail
+
+usage() {
+cat << EOF
+
+  Promote data in staging buckets to production.
+
+  $(tput bold)[CAUTION] This also deletes data in the production bucket that is not found in the staging bucket.$(tput sgr0)
+
+  Usage: $0 [OPTIONS]
+
+  OPTIONS
+  ───────
+    $(tput bold)-h$(tput sgr0)  Display this message and exit
+    $(tput bold)-t$(tput sgr0)  Comma-separated set of teams to promote data for
+    $(tput bold)-a$(tput sgr0)  Promote all teams' data
+    $(tput bold)-l$(tput sgr0)  List available teams
+    $(tput bold)-d$(tput sgr0)  Dry run; print files that would be copied or deleted
+
+EOF
+}
+
+log() {
+  echo -e "$(tput bold)$(tput setaf 110)[$(date +'%Y-%m-%d %H:%M:%S')] $*$(tput sgr0)" >&1
+}
+
+err() {
+  echo -e "$(tput bold)$(tput setaf 203)[$(date +'%Y-%m-%d %H:%M:%S')]: $*$(tput sgr0)" >&2
+}
+
+list_teams() {
+  echo "$(tput bold)Available teams:$(tput sgr0)"
+  echo "${ALL_TEAMS[@]}" | tr ' ' '\n'
+}
+
+gsync() {
+  source_path="${1#/}/"
+  destination_path="${2#/}/"
+
+  # shellcheck disable=SC2086
+  gsutil -m rsync \
+    -d \
+    -r \
+    ${DRY_RUN_ARG} \
+    "${source_path}" \
+    "${destination_path}"
+}
+
+ALL_TEAMS=(cohort team-hafler team-hardy team-jakobsson team-lee team-scherzer team-sulzer team-voet team-wood)
+
+while getopts "ht:ald" OPTION; do
+  case $OPTION in
+    h) usage; exit ;;
+    t) read -ra TEAMS <<< "$(echo "${OPTARG}" | tr ',' ' ')" ;;
+    a) TEAMS=( "${ALL_TEAMS[@]}" ) ;;
+    l) list_teams; exit ;;
+    d) DRY_RUN_ARG="-n" ;;
+    \?) usage; exit ;;
+  esac
+done
+
+DRY_RUN_ARG=${DRY_RUN_ARG:-}
+
+if [[ -z "${TEAMS:-}" ]]; then
+  usage
+  list_teams
+  exit
+fi
+
+# Confirm that the teams provided are valid
+for team in "${TEAMS[@]}"; do
+  if [[ ! "${ALL_TEAMS[*]}" =~ ${team} ]]; then
+    err "Team [${team}] is not one of the available teams"
+    list_teams
+    exit 1
+  fi
+done
+
+# Try syncing staging data to production
+for team in "${TEAMS[@]}"; do
+  staging_bucket=gs://asap-staging-data-${team}
+  production_bucket=gs://asap-curated-data-${team}
+
+  log "Promoting [${team}] data to production"
+  log "\tStaging bucket:\t\t[${staging_bucket}]"
+  log "\tProduction bucket:\t[${production_bucket}]"
+
+  gsync \
+    "${staging_bucket}/preprocess" \
+    "${production_bucket}/preprocess"
+
+  gsync \
+    "${staging_bucket}/cohort_analysis" \
+    "${production_bucket}/cohort_analysis"
+done
