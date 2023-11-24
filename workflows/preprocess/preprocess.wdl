@@ -18,7 +18,7 @@ workflow preprocess {
 
 		String run_timestamp
 		String raw_data_path_prefix
-		String curated_data_path_prefix
+		String staging_data_path_prefix
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
@@ -33,7 +33,7 @@ workflow preprocess {
 	String workflow_version = "~{cellranger_task_version}_~{counts_to_seurat_task_version}"
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}"
-	String curated_data_path = "~{curated_data_path_prefix}/~{workflow_name}"
+	String staging_data_path = "~{staging_data_path_prefix}/~{workflow_name}"
 
 	scatter (sample_object in samples) {
 		String cellranger_count_output = "~{raw_data_path}/cellranger/~{cellranger_task_version}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
@@ -101,7 +101,7 @@ workflow preprocess {
 		File seurat_object_output = select_first([counts_to_seurat.preprocessed_seurat_object, preprocessed_seurat_object]) #!FileCoercion
 	}
 
-	String preprocessing_manifest = "~{curated_data_path}/MANIFEST.tsv"
+	String preprocessing_manifest = "~{staging_data_path}/MANIFEST.tsv"
 	Array[String] new_preprocessing_final_outputs = select_all(flatten([
 		cellranger_count.raw_counts,
 		cellranger_count.filtered_counts,
@@ -118,7 +118,20 @@ workflow preprocess {
 				workflow_name = workflow_name,
 				workflow_version = workflow_version,
 				run_timestamp = run_timestamp,
-				curated_data_path = curated_data_path,
+				staging_data_path = staging_data_path,
+				billing_project = billing_project,
+				container_registry = container_registry
+		}
+	}
+
+	if (length(new_preprocessing_final_outputs) == 0) {
+		call UploadFinalOutputs.sync_buckets {
+			input:
+				source_buckets = [
+					"~{raw_data_path}/cellranger/~{cellranger_task_version}",
+					"~{raw_data_path}/counts_to_seurat/~{counts_to_seurat_task_version}"
+				],
+				target_bucket = staging_data_path,
 				billing_project = billing_project,
 				container_registry = container_registry
 		}
