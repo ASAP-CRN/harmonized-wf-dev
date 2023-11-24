@@ -24,9 +24,11 @@ pal <- wesanderson::wes_palette('Zissou1', type='discrete')[c(1, 3, 5)]
 
 g <- metadata %>% ggplot(aes(x=UMAP_1, y=UMAP_2)) +
 
-        geom_point(color=ifelse(metadata[, get(feature)] > 0, metadata[, get(feature)], 'gray0'), size=0.5, alpha=0.8) +
+        geom_point( aes(colour = metadata[, get(feature)]), size=0.1, alpha=0.8 ) +
+        # geom_point(color=ifelse(metadata[, get(feature)] > 0, metadata[, get(feature)], 'gray0'), size=0.5, alpha=0.8) +
         scale_color_gradient2(low=pal[1], mid=pal[2], high=pal[3], midpoint=middle) +
-        labs(color=metadata[, get(feature)]) + theme_classic() + ggtitle('')
+        labs(color=feature) + theme_classic() + ggtitle('')
+        # labs(color=metadata[, get(feature)]) + theme_classic() + ggtitle('')
 
 # Save plot as PDF
 ggsave(plot=g, width=13, height=9, device="pdf", filename=paste0(output_feature_umap_plot_prefix, ".pdf"))
