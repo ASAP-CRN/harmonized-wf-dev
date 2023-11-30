@@ -26,7 +26,7 @@ workflow preprocess {
 
 	String workflow_name = "preprocess"
 
-	String cellranger_task_version = "1.0.0"
+	String cellranger_task_version = "1.1.0"
 	String counts_to_seurat_task_version = "1.0.0"
 
 	# Used in the manifest; doesn't influence output locations or whether the task needs to be rerun
@@ -65,10 +65,10 @@ workflow preprocess {
 			call cellranger_count {
 				input:
 					sample_id = sample.sample_id,
-					fastq_R1 = sample.fastq_R1,
-					fastq_R2 = sample.fastq_R2,
-					fastq_I1 = sample.fastq_I1,
-					fastq_I2 = sample.fastq_I2,
+					fastq_R1s = sample.fastq_R1s,
+					fastq_R2s = sample.fastq_R2s,
+					fastq_I1s = sample.fastq_I1s,
+					fastq_I2s = sample.fastq_I2s,
 					cellranger_reference_data = cellranger_reference_data,
 					raw_data_path = "~{raw_data_path}/cellranger/~{cellranger_task_version}",
 					billing_project = billing_project,
@@ -169,15 +169,17 @@ task check_output_files_exist {
 			counts_file=$(echo "${output_files}" | cut -f 1)
 			seurat_object=$(echo "${output_files}" | cut -f 2)
 
-			if gsutil -u ~{billing_project} ls "${seurat_object}"; then
-				# If the seurat object exists, assume that the counts file does as well
-				echo -e "true\ttrue" >> sample_preprocessing_complete.tsv
-			else
-				if gsutil -u ~{billing_project} ls "${counts_file}"; then
-					echo -e "true\tfalse" >> sample_preprocessing_complete.tsv
+			if gsutil -u ~{billing_project} ls "${counts_file}"; then
+				if gsutil -u ~{billing_project} ls "${seurat_object}"; then
+					# If we find both the cellranger and seurat outputs, don't rerun anything
+					echo -e "true\ttrue" >> sample_preprocessing_complete.tsv
 				else
-					echo -e "false\tfalse" >> sample_preprocessing_complete.tsv
+					# If we find the counts file but not the seurat object, just rerun seurat object generation
+					echo -e "true\tfalse" >> sample_preprocessing_complete.tsv
 				fi
+			else
+				# If we don't find cellranger output, we must also need to run (or rerun) preprocessing
+				echo -e "false\tfalse" >> sample_preprocessing_complete.tsv
 			fi
 		done < <(paste ~{write_lines(cellranger_count_output_files)} ~{write_lines(counts_to_seurat_output_files)})
 	>>>
@@ -199,10 +201,10 @@ task cellranger_count {
 	input {
 		String sample_id
 
-		File fastq_R1
-		File fastq_R2
-		File? fastq_I1
-		File? fastq_I2
+		Array[File] fastq_R1s
+		Array[File] fastq_R2s
+		Array[File] fastq_I1s
+		Array[File] fastq_I2s
 
 		File cellranger_reference_data
 
@@ -212,7 +214,7 @@ task cellranger_count {
 	}
 
 	Int threads = 16
-	Int disk_size = ceil(size([fastq_R1, fastq_R2, cellranger_reference_data], "GB") * 4 + 50)
+	Int disk_size = ceil((size(fastq_R1s, "GB") + size(fastq_R2s, "GB") + size(fastq_I1s, "GB") + size(fastq_I2s, "GB") + size(cellranger_reference_data, "GB")) * 4 + 50)
 	Int mem_gb = 24
 
 	command <<<
@@ -227,7 +229,13 @@ task cellranger_count {
 
 		# Ensure fastqs are in the same directory
 		mkdir fastqs
-		ln -s ~{fastq_R1} ~{fastq_R2} ~{fastq_I1} ~{fastq_I2} fastqs/
+		while read -r fastq || [[ -n "${fastq}" ]]; do
+			ln -s "${fastq}" fastqs/
+		done < <(cat \
+			~{write_lines(fastq_R1s)} \
+			~{write_lines(fastq_R2s)} \
+			~{write_lines(fastq_I1s)} \
+			~{write_lines(fastq_I2s)})
 
 		cellranger --version
 
