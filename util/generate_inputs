@@ -16,7 +16,7 @@ def main(args):
         for index, row in project_df.iterrows():
             project_id = row.project_id
             sample_id = row.ASAP_sample_id
-            batch = row.batch
+            batch = str(row.batch)
             fastq_R1s = literal_eval(row.fastq_R1s)
             fastq_R2s = literal_eval(row.fastq_R2s)
             fastq_I1s = literal_eval(row.fastq_I1s)
@@ -39,7 +39,7 @@ def main(args):
                     "samples": [sample],
                     "run_project_cohort_analysis": run_project_cohort_analysis,
                     "raw_data_bucket": f"gs://asap-raw-data-{project_id}",
-                    "staging_data_output_bucket": f"gs://asap-staging-data-{project_id}",
+                    "staging_data_bucket": f"gs://asap-staging-data-{project_id}",
                 }
             else:
                 projects[project_id]["samples"].append(sample)
