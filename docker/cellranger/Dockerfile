@@ -11,7 +11,8 @@ ARG CONDA_ENVIRONMENT "${CONDA_ENVIRONMENT}"
 RUN apt-get -qq update \
 	&& apt-get -qq install \
 		wget \
-		time
+		time \
+		python3-dev
 
 ARG CELLRANGER_VERSION
 # N.B. this must be passed as a build arg (using the utility script: -b CELLRANGER_DOWNLOAD_QUERY_STRING='xxyy')
@@ -32,3 +33,6 @@ RUN wget "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-clou
 	&& rm "google-cloud-cli-${GCLOUD_CLI_VERSION}-linux-x86_64.tar.gz"
 
 ENV PATH "${PATH}:/opt/google-cloud-sdk/bin"
+
+COPY ./scripts /opt/scripts
+ENV PATH "${PATH}:/opt/scripts"

@@ -231,7 +231,13 @@ task cellranger_count {
 		mkdir fastqs
 		while read -r fastq || [[ -n "${fastq}" ]]; do
 			if [[ -n "${fastq}" ]]; then
-				ln -s "${fastq}" fastqs/
+				validated_fastq_name=$(fix_fastq_names --fastq "${fastq}" --sample-id "~{sample_id}")
+				if [[ -e "fastqs/${validated_fastq_name}" ]]; then
+					echo "[ERROR] Something's gone wrong with fastq renaming; trying to create fastq [${validated_fastq_name}] but it already exists. Exiting."
+					exit 1
+				else
+					ln -s "${fastq}" "fastqs/${validated_fastq_name}"
+				fi
 			fi
 		done < <(cat \
 			~{write_lines(fastq_R1s)} \
