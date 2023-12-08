@@ -230,7 +230,9 @@ task cellranger_count {
 		# Ensure fastqs are in the same directory
 		mkdir fastqs
 		while read -r fastq || [[ -n "${fastq}" ]]; do
-			ln -s "${fastq}" fastqs/
+			if [[ -n "${fastq}" ]]; then
+				ln -s "${fastq}" fastqs/
+			fi
 		done < <(cat \
 			~{write_lines(fastq_R1s)} \
 			~{write_lines(fastq_R2s)} \
