@@ -12,6 +12,7 @@ workflow run_quality_control {
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	call identify_doublets {
@@ -22,7 +23,8 @@ workflow run_quality_control {
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	call plot_qc_metrics {
@@ -33,7 +35,8 @@ workflow run_quality_control {
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	output {
@@ -55,6 +58,7 @@ task identify_doublets {
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	Int threads = 2
@@ -90,6 +94,7 @@ task identify_doublets {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
 	}
 }
 
@@ -103,6 +108,7 @@ task plot_qc_metrics {
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	Int threads = 2
@@ -149,5 +155,6 @@ task plot_qc_metrics {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
 	}
 }

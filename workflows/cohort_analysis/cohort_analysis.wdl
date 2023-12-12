@@ -27,6 +27,7 @@ workflow cohort_analysis {
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	String workflow_name = "cohort_analysis"
@@ -42,7 +43,8 @@ workflow cohort_analysis {
 			cohort_id = cohort_id,
 			project_sample_ids = project_sample_ids,
 			billing_project = billing_project,
-			raw_data_path = raw_data_path
+			raw_data_path = raw_data_path,
+			zones = zones
 	}
 
 	call RunQualityControl.run_quality_control {
@@ -53,7 +55,8 @@ workflow cohort_analysis {
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	scatter (preprocessed_seurat_object in preprocessed_seurat_objects) {
@@ -66,7 +69,8 @@ workflow cohort_analysis {
 				raw_data_path = raw_data_path,
 				billing_project = billing_project,
 				container_registry = container_registry,
-				multiome_container_revision = multiome_container_revision
+				multiome_container_revision = multiome_container_revision,
+				zones = zones
 		}
 	}
 
@@ -82,7 +86,8 @@ workflow cohort_analysis {
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	call plot_groups_and_features {
@@ -94,7 +99,8 @@ workflow cohort_analysis {
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	Array[String] cohort_analysis_intermediate_outputs = flatten([
@@ -120,7 +126,8 @@ workflow cohort_analysis {
 			run_timestamp = run_timestamp,
 			staging_data_path = "~{staging_data_path_prefix}/preprocess",
 			billing_project = billing_project,
-			container_registry = container_registry
+			container_registry = container_registry,
+			zones = zones
 	}
 
 	Array[String] cohort_analysis_final_outputs = flatten([
@@ -147,7 +154,8 @@ workflow cohort_analysis {
 			run_timestamp = run_timestamp,
 			staging_data_path = staging_data_path,
 			billing_project = billing_project,
-			container_registry = container_registry
+			container_registry = container_registry,
+			zones = zones
 	}
 
 	output {
@@ -185,6 +193,7 @@ task write_cohort_sample_list {
 
 		String raw_data_path
 		String billing_project
+		String zones
 	}
 
 	command <<<
@@ -209,6 +218,7 @@ task write_cohort_sample_list {
 		memory: "1 GB"
 		disks: "local-disk 10 HDD"
 		preemptible: 3
+		zones: zones
 	}
 }
 
@@ -221,6 +231,7 @@ task filter_and_normalize {
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 
 		# Purposefully unset
 		String? my_none
@@ -277,6 +288,7 @@ task filter_and_normalize {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
 	}
 }
 
@@ -292,6 +304,7 @@ task plot_groups_and_features {
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	Int disk_size = ceil(size(metadata, "GB") * 4 + 20)
@@ -370,5 +383,6 @@ task plot_groups_and_features {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
 	}
 }

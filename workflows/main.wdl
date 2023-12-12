@@ -29,13 +29,17 @@ workflow harmonized_pmdbs_analysis {
 		Array[String] features = ["doublet_scores", "nCount_RNA", "nFeature_RNA", "percent.mt", "percent.rb"]
 
 		String container_registry
+		String zones = "us-central1-c"
 	}
 
 	Int multiome_container_revision = 12
 
 	String workflow_execution_path = "workflow_execution"
 
-	call get_workflow_metadata
+	call get_workflow_metadata {
+		input:
+			zones = zones
+	}
 
 	scatter (project in projects) {
 		String project_raw_data_path_prefix = "~{project.raw_data_bucket}/~{workflow_execution_path}"
@@ -53,7 +57,8 @@ workflow harmonized_pmdbs_analysis {
 				staging_data_path_prefix = project_staging_data_path_prefix,
 				billing_project = get_workflow_metadata.billing_project,
 				container_registry = container_registry,
-				multiome_container_revision = multiome_container_revision
+				multiome_container_revision = multiome_container_revision,
+				zones = zones
 		}
 
 		if (project.run_project_cohort_analysis) {
@@ -73,7 +78,8 @@ workflow harmonized_pmdbs_analysis {
 					staging_data_path_prefix = project_staging_data_path_prefix,
 					billing_project = get_workflow_metadata.billing_project,
 					container_registry = container_registry,
-					multiome_container_revision = multiome_container_revision
+					multiome_container_revision = multiome_container_revision,
+					zones = zones
 			}
 		}
 	}
@@ -98,7 +104,8 @@ workflow harmonized_pmdbs_analysis {
 				staging_data_path_prefix = cohort_staging_data_path_prefix,
 				billing_project = get_workflow_metadata.billing_project,
 				container_registry = container_registry,
-				multiome_container_revision = multiome_container_revision
+				multiome_container_revision = multiome_container_revision,
+				zones = zones
 		}
 	}
 
@@ -186,7 +193,9 @@ workflow harmonized_pmdbs_analysis {
 }
 
 task get_workflow_metadata {
-	input {}
+	input {
+		String zones
+	}
 
 	command <<<
 		set -euo pipefail
@@ -211,5 +220,6 @@ task get_workflow_metadata {
 		memory: "4 GB"
 		disks: "local-disk 10 HDD"
 		preemptible: 3
+		zones: zones
 	}
 }

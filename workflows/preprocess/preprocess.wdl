@@ -22,6 +22,7 @@ workflow preprocess {
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	String workflow_name = "preprocess"
@@ -45,7 +46,8 @@ workflow preprocess {
 		input:
 			cellranger_count_output_files = cellranger_count_output,
 			counts_to_seurat_output_files = counts_to_seurat_output,
-			billing_project = billing_project
+			billing_project = billing_project,
+			zones = zones
 	}
 
 	scatter (index in range(length(samples))) {
@@ -72,7 +74,8 @@ workflow preprocess {
 					cellranger_reference_data = cellranger_reference_data,
 					raw_data_path = "~{raw_data_path}/cellranger/~{cellranger_task_version}",
 					billing_project = billing_project,
-					container_registry = container_registry
+					container_registry = container_registry,
+					zones = zones
 			}
 		}
 
@@ -94,7 +97,8 @@ workflow preprocess {
 					raw_data_path = "~{raw_data_path}/counts_to_seurat/~{counts_to_seurat_task_version}",
 					billing_project = billing_project,
 					container_registry = container_registry,
-					multiome_container_revision = multiome_container_revision
+					multiome_container_revision = multiome_container_revision,
+					zones = zones
 			}
 		}
 
@@ -120,7 +124,8 @@ workflow preprocess {
 				run_timestamp = run_timestamp,
 				staging_data_path = staging_data_path,
 				billing_project = billing_project,
-				container_registry = container_registry
+				container_registry = container_registry,
+				zones = zones
 		}
 	}
 
@@ -133,7 +138,8 @@ workflow preprocess {
 				],
 				target_bucket = staging_data_path,
 				billing_project = billing_project,
-				container_registry = container_registry
+				container_registry = container_registry,
+				zones = zones
 		}
 	}
 
@@ -160,6 +166,7 @@ task check_output_files_exist {
 		Array[String] counts_to_seurat_output_files
 
 		String billing_project
+		String zones
 	}
 
 	command <<<
@@ -194,6 +201,7 @@ task check_output_files_exist {
 		memory: "4 GB"
 		disks: "local-disk 20 HDD"
 		preemptible: 3
+		zones: zones
 	}
 }
 
@@ -211,6 +219,7 @@ task cellranger_count {
 		String raw_data_path
 		String billing_project
 		String container_registry
+		String zones
 	}
 
 	Int threads = 16
@@ -283,6 +292,7 @@ task cellranger_count {
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
+		zones: zones
 	}
 }
 
@@ -301,6 +311,7 @@ task counts_to_seurat {
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	Int disk_size = ceil(size([raw_counts, filtered_counts], "GB") * 2 + 20)
@@ -339,5 +350,6 @@ task counts_to_seurat {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
 	}
 }
