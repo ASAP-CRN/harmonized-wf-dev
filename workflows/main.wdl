@@ -189,6 +189,7 @@ workflow harmonized_pmdbs_analysis {
 		groups: {help: "Groups to produce umap plots for. ['sample', 'batch', 'seurat_clusters']"}
 		features: {help: "Features to produce umap plots for. ['doublet_scores', 'nCount_RNA', 'nFeature_RNA', 'percent.mt', 'percent.rb']"}
 		container_registry: {help: "Container registry where workflow Docker images are hosted."}
+		zones: {help: "Space-delimited set of GCP zones to spin up compute in."}
 	}
 }
 
