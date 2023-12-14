@@ -287,7 +287,7 @@ task filter_and_normalize {
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
 		cpu: threads
-		memory: "8 GB"
+		memory: "12 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
