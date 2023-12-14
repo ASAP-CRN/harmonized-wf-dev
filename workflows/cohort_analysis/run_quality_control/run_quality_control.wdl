@@ -63,7 +63,7 @@ task identify_doublets {
 
 	Int threads = 2
 	Int disk_size = ceil(size(preprocessed_seurat_objects[0], "GB") * length(preprocessed_seurat_objects) * 2 + 30)
-	Int mem_gb = ceil(0.2 * n_samples + threads * 4)
+	Int mem_gb = ceil(0.5 * n_samples + threads * 4 + 20)
 
 	command <<<
 		set -euo pipefail
@@ -113,7 +113,7 @@ task plot_qc_metrics {
 
 	Int threads = 2
 	Int disk_size = ceil(size(unfiltered_metadata, "GB") * 2 + 20)
-	Int mem_gb = ceil(0.02 * n_samples + threads * 2)
+	Int mem_gb = ceil(0.02 * n_samples + threads * 2 + 20)
 
 	command <<<
 		set -euo pipefail
