@@ -18,6 +18,7 @@ workflow cluster_data {
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	call integrate_sample_data {
@@ -29,7 +30,8 @@ workflow cluster_data {
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	# Find neighbors, run umap, and cluster cells
@@ -44,7 +46,8 @@ workflow cluster_data {
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	call annotate_clusters {
@@ -56,7 +59,8 @@ workflow cluster_data {
 			raw_data_path = raw_data_path,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	output {
@@ -82,6 +86,7 @@ task integrate_sample_data {
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	Int threads = 8
@@ -117,6 +122,7 @@ task integrate_sample_data {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
 	}
 }
 
@@ -134,6 +140,7 @@ task cluster_cells {
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	String integrated_seurat_object_basename = basename(integrated_seurat_object, "_04.rds")
@@ -198,6 +205,7 @@ task cluster_cells {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
 	}
 }
 
@@ -213,6 +221,7 @@ task annotate_clusters {
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	Int threads = 2
@@ -248,5 +257,6 @@ task annotate_clusters {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
 	}
 }

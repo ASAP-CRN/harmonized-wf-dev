@@ -4,102 +4,34 @@ from argparse import ArgumentParser
 import pandas as pd
 import re
 import json
-
-
-def load_fastq_locs(fastq_locs_txt_list):
-    fastq_locs = []
-    for fastq_locs_txt in fastq_locs_txt_list:
-        with open(fastq_locs_txt, "r") as f:
-            for line in f:
-                fastq_locs.append(line.strip())
-
-    # Ensure fastq locs are sorted alphabetically, so that *_R1 will always show up before *_R2
-    fastq_locs.sort()
-
-    return fastq_locs
-
-
-def get_fastq_locs(fastq_path, sample_id, fastq_locs):
-    sample_fastqs = [
-        fastq_loc
-        for fastq_loc in fastq_locs
-        if re.search(rf"{fastq_path}/{sample_id}", fastq_loc)
-    ]
-
-    fastq_R1s = [
-        fastq_loc
-        for fastq_loc in sample_fastqs
-        if re.search(rf"{fastq_path}/{sample_id}.*R1.*", fastq_loc)
-    ]
-    fastq_R2s = [
-        fastq_loc
-        for fastq_loc in sample_fastqs
-        if re.search(rf"{fastq_path}/{sample_id}.*R2.*", fastq_loc)
-    ]
-    fastq_I1s = [
-        fastq_loc
-        for fastq_loc in sample_fastqs
-        if re.search(rf"{fastq_path}/{sample_id}.*I1.*", fastq_loc)
-    ]
-    fastq_I2s = [
-        fastq_loc
-        for fastq_loc in sample_fastqs
-        if re.search(rf"{fastq_path}/{sample_id}.*I2.*", fastq_loc)
-    ]
-
-    if len(fastq_R1s) != 1 or len(fastq_R2s) != 1:
-        raise SystemExit(
-            f"Expected to find 'R1' in read 1 and 'R2' in read 2, but didn't for sample {sample_id}\nR1s: {fastq_R1s}\nR2s: {fastq_R2s}"
-        )
-    elif any(
-        [
-            len(fastq_set) > 1
-            for fastq_set in [fastq_R1s, fastq_R2s, fastq_I1s, fastq_I2s]
-        ]
-    ):
-        raise SystemExit(
-            f"Unexpected number of FASTQS found for sample {sample_id}\nR1s: {fastqs_R1s}\nR2s: {fastq_R2s}\nI1s: {fastq_I1s}\nI2s: {fastq_I2s}"
-        )
-    else:
-        fastq_R1 = fastq_R1s[0]
-        fastq_R2 = fastq_R2s[0]
-        fastq_I1 = fastq_I1s[0] if len(fastq_I1s) > 0 else None
-        fastq_I2 = fastq_I2s[0] if len(fastq_I2s) > 0 else None
-
-    return fastq_R1, fastq_R2, fastq_I1, fastq_I2
+from ast import literal_eval
 
 
 def main(args):
     run_project_cohort_analysis = args.run_project_cohort_analysis
-
-    fastq_locs = load_fastq_locs(args.fastq_locs_txt)
 
     projects = dict()
     for project_tsv in args.project_tsvs:
         project_df = pd.read_csv(project_tsv, delimiter="\t")
         for index, row in project_df.iterrows():
             project_id = row.project_id
-            sample_id = row.sample_id
-            batch = row.batch
-            fastq_path = row.fastq_path
+            sample_id = row.ASAP_sample_id
+            batch = str(row.batch)
+            fastq_R1s = literal_eval(row.fastq_R1s)
+            fastq_R2s = literal_eval(row.fastq_R2s)
+            fastq_I1s = literal_eval(row.fastq_I1s)
+            fastq_I2s = literal_eval(row.fastq_I2s)
 
-            fastq_R1, fastq_R2, fastq_I1, fastq_I2 = get_fastq_locs(
-                fastq_path, sample_id, fastq_locs
-            )
             sample = {
                 "sample_id": sample_id,
-                "fastq_R1": fastq_R1,
-                "fastq_R2": fastq_R2,
+                "fastq_R1s": fastq_R1s,
+                "fastq_R2s": fastq_R2s,
+                "fastq_I1s": fastq_I1s,
+                "fastq_I2s": fastq_I2s,
             }
 
             if not pd.isna(batch):
                 sample["batch"] = batch
-
-            if fastq_I1:
-                sample["fastq_I1"] = fastq_I1
-
-            if fastq_I2:
-                sample["fastq_I2"] = fastq_I2
 
             if project_id not in projects:
                 projects[project_id] = {
@@ -107,7 +39,7 @@ def main(args):
                     "samples": [sample],
                     "run_project_cohort_analysis": run_project_cohort_analysis,
                     "raw_data_bucket": f"gs://asap-raw-data-{project_id}",
-                    "staging_data_output_bucket": f"gs://asap-staging-data-{project_id}",
+                    "staging_data_bucket": f"gs://asap-uat-data-{project_id}",
                 }
             else:
                 projects[project_id]["samples"].append(sample)
@@ -148,15 +80,6 @@ if __name__ == "__main__":
         action="append",
         required=True,
         help="Project TSV including information for samples present in the project; columns project_id, sample_id, batch, fastq_path. Can provide one per project, or include all samples in a single TSV.",
-    )
-    parser.add_argument(
-        "-f",
-        "--fastq-locs-txt",
-        dest="fastq_locs_txt",
-        type=str,
-        action="append",
-        required=True,
-        help="File containing the location of all fastqs associated with samples; used to determine the path to the R1 and R2 files for each sample. Can provide one per project, or include all fastq locs in a single file.",
     )
     parser.add_argument(
         "-i",

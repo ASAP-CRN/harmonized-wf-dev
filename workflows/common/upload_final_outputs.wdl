@@ -12,6 +12,7 @@ task upload_final_outputs {
 		String staging_data_path
 		String billing_project
 		String container_registry
+		String zones
 	}
 
 	command <<<
@@ -53,6 +54,7 @@ task upload_final_outputs {
 		memory: "4 GB"
 		disks: "local-disk 20 HDD"
 		preemptible: 3
+		zones: zones
 	}
 }
 
@@ -63,6 +65,7 @@ task sync_buckets {
 
 		String billing_project
 		String container_registry
+		String zones
 	}
 
 	command <<<
@@ -85,5 +88,6 @@ task sync_buckets {
 		memory: "4 GB"
 		disks: "local-disk 20 HDD"
 		preemptible: 3
+		zones: zones
 	}
 }
