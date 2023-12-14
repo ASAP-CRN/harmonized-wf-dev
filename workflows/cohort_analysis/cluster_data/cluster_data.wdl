@@ -15,6 +15,7 @@ workflow cluster_data {
 		File cell_type_markers_list
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
@@ -28,6 +29,7 @@ workflow cluster_data {
 			n_samples = n_samples,
 			group_by_vars = group_by_vars,
 			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
 			multiome_container_revision = multiome_container_revision,
@@ -44,6 +46,7 @@ workflow cluster_data {
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
 			multiome_container_revision = multiome_container_revision,
@@ -57,6 +60,7 @@ workflow cluster_data {
 			n_samples = n_samples,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
 			multiome_container_revision = multiome_container_revision,
@@ -83,6 +87,7 @@ task integrate_sample_data {
 		Array[String] group_by_vars
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
@@ -91,7 +96,7 @@ task integrate_sample_data {
 
 	Int threads = 8
 	Int disk_size = ceil(size(normalized_seurat_objects[0], "GB") * length(normalized_seurat_objects) * 2 + 30)
-	Int mem_gb = ceil(0.6 * n_samples + 15)
+	Int mem_gb = ceil(n_samples + 20)
 
 	command <<<
 		set -euo pipefail
@@ -105,10 +110,11 @@ task integrate_sample_data {
 			--seurat-objects-fofn ~{write_lines(normalized_seurat_objects)} \
 			--output-seurat-object ~{cohort_id}.seurat_object.harmony_integrated_04.rds
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{cohort_id}.seurat_object.harmony_integrated_04.rds \
-			~{raw_data_path}/
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{cohort_id}.seurat_object.harmony_integrated_04.rds"
 	>>>
 
 	output {
@@ -137,6 +143,7 @@ task cluster_cells {
 		File cell_type_markers_list
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
@@ -180,14 +187,15 @@ task cluster_cells {
 			--output-cell-type-plot-prefix ~{cohort_id}.major_type_module_umap \
 			--output-seurat-object ~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{integrated_seurat_object_basename}_neighbors_05.rds \
-			~{integrated_seurat_object_basename}_neighbors_umap_06.rds \
-			~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds \
-			~{cohort_id}.major_type_module_umap.pdf \
-			~{cohort_id}.major_type_module_umap.png \
-			~{raw_data_path}/
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{integrated_seurat_object_basename}_neighbors_05.rds" \
+			-o "~{integrated_seurat_object_basename}_neighbors_umap_06.rds" \
+			-o "~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds" \
+			-o "~{cohort_id}.major_type_module_umap.pdf" \
+			-o "~{cohort_id}.major_type_module_umap.png"
 	>>>
 
 	output {
@@ -218,6 +226,7 @@ task annotate_clusters {
 		File cell_type_markers_list
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
@@ -240,10 +249,11 @@ task annotate_clusters {
 			--cell-type-markers-list ~{cell_type_markers_list} \
 			--output-metadata-file ~{cohort_id}.final_metadata.csv
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{cohort_id}.final_metadata.csv \
-			~{raw_data_path}/
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{cohort_id}.final_metadata.csv"
 	>>>
 
 	output {

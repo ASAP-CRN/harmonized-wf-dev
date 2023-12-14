@@ -16,6 +16,7 @@ RUN git clone https://github.com/shahrozeabbas/Harmony-RNA-Workflow.git
 RUN cd /opt/Harmony-RNA-Workflow \
 	&& git checkout "${SCRIPTS_REPO_HASH}"
 
+FROM util:1.1.0 as scripts
 
 FROM continuumio/miniconda3:23.5.2-0
 
@@ -58,3 +59,6 @@ RUN wget "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-clou
 	&& rm "google-cloud-cli-${GCLOUD_CLI_VERSION}-linux-x86_64.tar.gz"
 
 ENV PATH "${PATH}:/opt/google-cloud-sdk/bin"
+
+COPY --from=scripts /opt/scripts /opt/scripts
+ENV PATH "${PATH}:/opt/scripts"
