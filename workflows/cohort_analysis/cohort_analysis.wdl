@@ -31,7 +31,7 @@ workflow cohort_analysis {
 	}
 
 	String workflow_name = "cohort_analysis"
-	String workflow_version = "1.0.0"
+	String workflow_version = "2.0.0"
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
 	String staging_data_path = "~{staging_data_path_prefix}/~{workflow_name}"
