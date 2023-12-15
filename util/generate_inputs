@@ -9,10 +9,22 @@ from ast import literal_eval
 
 def main(args):
     run_project_cohort_analysis = args.run_project_cohort_analysis
+    cohort_staging_bucket_type = "uat"
 
     projects = dict()
     for project_tsv in args.project_tsvs:
         project_df = pd.read_csv(project_tsv, delimiter="\t")
+        # Currently all samples for a team share an embargo status
+        project_embargo_status = list(set(project_df.embargoed))
+        if len(project_embargo_status) > 1:
+            raise SystemExit(
+                f"More than one embargo status found for samples in {project_tsv}; don't know how to handle this."
+            )
+        else:
+            staging_bucket_type = "embargo" if project_embargo_status[0] else "uat"
+            # If any of the teams' datasets are embargoed, we'll set the cohort bucket to embargoed also
+            if project_embargo_status[0] is True:
+                cohort_staging_bucket_type = "embargo"
         for index, row in project_df.iterrows():
             project_id = row.project_id
             sample_id = row.ASAP_sample_id
@@ -39,7 +51,7 @@ def main(args):
                     "samples": [sample],
                     "run_project_cohort_analysis": run_project_cohort_analysis,
                     "raw_data_bucket": f"gs://asap-raw-data-{project_id}",
-                    "staging_data_bucket": f"gs://asap-uat-data-{project_id}",
+                    "staging_data_bucket": f"gs://asap-{staging_bucket_type}-data-{project_id}",
                 }
             else:
                 projects[project_id]["samples"].append(sample)
@@ -62,9 +74,15 @@ def main(args):
 
         inputs_json[projects_key] = projects
 
-    with open(args.output_file, "w") as f:
+    cohort_staging_data_bucket = f"gs://asap-{cohort_staging_bucket_type}-data-cohort"
+    inputs_json[
+        "harmonized_pmdbs_analysis.cohort_staging_data_bucket"
+    ] = cohort_staging_data_bucket
+
+    output_file = f"{args.output_file_prefix}.{cohort_staging_bucket_type}.json"
+    with open(output_file, "w") as f:
         json.dump(inputs_json, f)
-    print(f"Wrote input JSON file: {args.output_file}")
+    print(f"Wrote input JSON file: {output_file}")
 
 
 if __name__ == "__main__":
@@ -84,7 +102,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "-i",
         "--inputs-template",
-        dest="inputs_template",
         type=str,
         required=True,
         help="Template JSON file to add project information to (projects will be added at the *.projects key).",
@@ -92,19 +109,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "-c",
         "--run-project-cohort-analysis",
-        dest="run_project_cohort_analysis",
         action="store_true",
         required=False,
         help="Run project-level cohort analysis. This will be set for all projects included in the cohort.",
     )
     parser.add_argument(
         "-o",
-        "--output-file",
-        dest="output_file",
+        "--output-file-prefix",
         required=False,
         default="inputs.json",
-        help="Output JSON file to write workflow inputs to.",
+        help="Prefix for output JSON file to write workflow inputs to.",
     )
 
     args = parser.parse_args()
+
     main(args)
