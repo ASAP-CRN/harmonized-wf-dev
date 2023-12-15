@@ -6,7 +6,6 @@ task upload_final_outputs {
 
 		String staging_data_path
 		String billing_project
-		String container_registry
 		String zones
 	}
 

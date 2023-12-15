@@ -130,7 +130,6 @@ workflow cohort_analysis {
 			output_file_paths = flatten([preprocessing_output_file_paths, cohort_analysis_intermediate_output_paths]),
 			staging_data_path = "~{staging_data_path_prefix}/preprocess",
 			billing_project = billing_project,
-			container_registry = container_registry,
 			zones = zones
 	}
 
@@ -153,7 +152,6 @@ workflow cohort_analysis {
 			output_file_paths = cohort_analysis_final_output_paths,
 			staging_data_path = "~{staging_data_path_prefix}/~{workflow_name}",
 			billing_project = billing_project,
-			container_registry = container_registry,
 			zones = zones
 	}
 
