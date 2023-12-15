@@ -49,6 +49,7 @@ workflow cohort_analysis {
 			billing_project = billing_project,
 			workflow_info = workflow_info,
 			raw_data_path = raw_data_path,
+			container_registry = container_registry,
 			zones = zones
 	}
 
@@ -191,6 +192,7 @@ task write_cohort_sample_list {
 		String raw_data_path
 		Array[Array[String]] workflow_info
 		String billing_project
+		String container_registry
 		String zones
 	}
 
@@ -212,7 +214,7 @@ task write_cohort_sample_list {
 	}
 
 	runtime {
-		docker: "gcr.io/google.com/cloudsdktool/google-cloud-cli:444.0.0-slim"
+		docker: "~{container_registry}/util:1.1.0"
 		cpu: 1
 		memory: "1 GB"
 		disks: "local-disk 10 HDD"
