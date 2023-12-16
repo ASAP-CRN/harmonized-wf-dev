@@ -12,10 +12,12 @@ task upload_final_outputs {
 	command <<<
 		set -euo pipefail
 
-		# Remove files currently existing at the target path
-		gsutil -u ~{billing_project} \
-			-m rm \
-			~{staging_data_path}/**
+		# Remove files currently existing at the target path, if they exist
+		if gsutil -u ~{billing_project} ls ~{staging_data_path}/**; then
+			gsutil -u ~{billing_project} \
+				-m rm \
+				~{staging_data_path}/**
+		fi
 
 		# Write the file manifest
 		sed 's~$~.meta.tsv~' ~{write_lines(output_file_paths)} > metadata_paths.txt
