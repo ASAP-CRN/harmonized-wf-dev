@@ -23,11 +23,12 @@ task upload_final_outputs {
 		sed 's~$~.meta.tsv~' ~{write_lines(output_file_paths)} > metadata_paths.txt
 
 		echo -e "filename\tworkflow\tworkflow_version\ttimestamp" > MANIFEST.tsv
-		while read -r metadata_file || [[ -n "${metadata_file}" ]]; do
-			gsutil -u ~{billing_project} \
-				cat "${metadata_file}" \
-			>> MANIFEST.tsv
-		done < metadata_paths.txt
+		mkdir metadata
+		gsutil -m cp -I ./metadata/ \
+		< metadata_paths.txt
+
+		find metadata -type f -exec cat {} \; \
+		>> MANIFEST.tsv
 
 		# Copy files to the staging data path
 		gsutil -u ~{billing_project} -m cp \
