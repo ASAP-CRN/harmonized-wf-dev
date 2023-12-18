@@ -330,11 +330,13 @@ task plot_groups_and_features {
 			group_plots_png+=("~{cohort_id}.${group}_group_umap.png")
 		done < ~{write_lines(groups)}
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			"${group_plots_pdf[@]}" \
-			"${group_plots_png[@]}" \
-			~{raw_data_path}/
+		# shellcheck disable=SC2068
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			${group_plots_pdf[@]/#/-o } \
+			${group_plots_png[@]/#/-o }
 
 		echo "${group_plots_pdf[@]/#/~{raw_data_path}/}" \
 		| tr ' ' '\n' \
