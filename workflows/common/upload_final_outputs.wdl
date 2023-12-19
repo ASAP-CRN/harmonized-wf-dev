@@ -24,7 +24,7 @@ task upload_final_outputs {
 
 		echo -e "filename\tworkflow\tworkflow_version\ttimestamp" > MANIFEST.tsv
 		mkdir metadata
-		gsutil -m cp -I ./metadata/ \
+		gsutil -u ~{billing_project} -m cp -I ./metadata/ \
 		< metadata_paths.txt
 
 		find metadata -type f -exec cat {} \; \
