@@ -66,7 +66,8 @@ task identify_doublets {
 	}
 
 	Int threads = 2
-	Int disk_size = ceil(size(preprocessed_seurat_objects[0], "GB") * length(preprocessed_seurat_objects) * 2 + 30)
+	# Assume Seurat objects are 500 MB each
+	Int disk_size = ceil(0.5 * length(preprocessed_seurat_objects) * 2 + 50)
 	Int mem_gb = ceil(0.7 * n_samples + threads * 4 + 25)
 
 	command <<<
