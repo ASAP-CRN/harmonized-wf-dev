@@ -1,5 +1,6 @@
 # Parse command-line arguments
 library('argparse')
+library('pryr')
 parser <- ArgumentParser(description='Run harmony analysis')
 parser$add_argument('--working-dir', dest='working_dir', type='character', help='Working directory', default='/data/CARD_singlecell/harmony-rna/')
 parser$add_argument('--script-dir', dest='script_dir', type='character', help='Directory containing workflow scripts', default='scripts')
@@ -34,21 +35,31 @@ output_seurat_object <- if (length(args$positional_arguments) > 0) tail(args$pos
 # future::plan('multicore', workers=threads)
 # options(future.globals.maxSize=ngbs * 1000 * 1024^2)
 
-object.list <- future.apply::future_lapply(seurat_objects, readRDS)
+message("Loading object list")
+print(mem_change(object.list <- future.apply::future_lapply(seurat_objects, readRDS)))
+message("Total mem used: ", utils:::format.object_size(mem_used(), "auto"))
 
 top.genes <- object.list %>% SelectIntegrationFeatures(nfeatures=5000)
 
-message('merging samples...')
-object <- merge(x=object.list[[1]], y=object.list[-1])
-message('Done.')
+message('Merging samples')
+print(mem_change(object <- merge(x=object.list[[1]], y=object.list[-1])))
+message("Total mem used: ", utils:::format.object_size(mem_used(), "auto"))
+
+message("Deleting object list")
+print(mem_change(rm(object.list)))
+message("Total mem used: ", utils:::format.object_size(mem_used(), "auto"))
 
 noise <- c('percent.mt', 'percent.rb', 'nFeature_RNA', 'nCount_RNA', 'doublet_scores', 'G2M.Score', 'S.Score')
 
-object <- object %>%
+message("Running data scaling, PCA, and harmony")
+print(mem_change(
+    object <- object %>%
 
-    ScaleData(vars.to.regress=noise, features=top.genes, verbose=FALSE) %>%
-    RunPCA(features=top.genes, npcs=50, verbose=FALSE) %>%
+        ScaleData(vars.to.regress=noise, features=top.genes, verbose=FALSE) %>%
+        RunPCA(features=top.genes, npcs=50, verbose=FALSE) %>%
 
-    harmony::RunHarmony(reduction='pca', group.by.vars=group_by_vars, max.iter.harmony=50, reduction.save='harmony')
+        harmony::RunHarmony(reduction='pca', group.by.vars=group_by_vars, max.iter=50, reduction.save='harmony')
+))
+message("Total mem used: ", utils:::format.object_size(mem_used(), "auto"))
 
 saveRDS(object, output_seurat_object)

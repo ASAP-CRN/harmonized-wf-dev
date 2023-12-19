@@ -43,6 +43,9 @@ RUN Rscript -e 'install.packages("argparse", repos="http://cran.us.r-project.org
 # Install harmony
 RUN Rscript -e 'install.packages("harmony", repos="http://cran.us.r-project.org")'
 
+# Install pryr to track memory usage
+RUN Rscript -e 'install.packages("pryr", repos="http://cran.us.r-project.org")'
+
 # Add scripts
 COPY --from=builder /opt/Harmony-RNA-Workflow/scripts /opt/scripts
 

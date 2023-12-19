@@ -32,7 +32,7 @@ workflow harmonized_pmdbs_analysis {
 		String zones = "us-central1-c"
 	}
 
-	Int multiome_container_revision = 13
+	Int multiome_container_revision = 14
 
 	String workflow_execution_path = "workflow_execution"
 
