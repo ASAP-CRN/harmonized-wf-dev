@@ -86,7 +86,6 @@ workflow cohort_analysis {
 		input:
 			cohort_id = cohort_id,
 			normalized_seurat_objects = select_all(filter_and_normalize.normalized_seurat_object), #!FileCoercion
-			n_samples = n_samples,
 			group_by_vars = group_by_vars,
 			clustering_algorithm = clustering_algorithm,
 			clustering_resolution = clustering_resolution,

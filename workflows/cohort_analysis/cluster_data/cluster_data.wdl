@@ -6,7 +6,6 @@ workflow cluster_data {
 	input {
 		String cohort_id
 		Array[File] normalized_seurat_objects
-		Int n_samples
 
 		Array[String] group_by_vars
 
@@ -21,6 +20,8 @@ workflow cluster_data {
 		Int multiome_container_revision
 		String zones
 	}
+
+	Int n_samples = length(normalized_seurat_objects)
 
 	call integrate_sample_data {
 		input:
