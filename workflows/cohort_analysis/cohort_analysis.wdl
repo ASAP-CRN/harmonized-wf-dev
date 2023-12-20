@@ -12,6 +12,9 @@ workflow cohort_analysis {
 		Array[Array[String]] project_sample_ids
 		Array[File] preprocessed_seurat_objects
 
+		# If provided, these files will be uploaded to the staging bucket alongside other intermediate files made by this workflow
+		Array[String] preprocessing_output_file_paths = []
+
 		Array[String] group_by_vars
 
 		Int clustering_algorithm
@@ -33,8 +36,9 @@ workflow cohort_analysis {
 	String workflow_name = "cohort_analysis"
 	String workflow_version = "2.0.0"
 
+	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version]]
+
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
-	String staging_data_path = "~{staging_data_path_prefix}/~{workflow_name}"
 
 	Int n_samples = length(preprocessed_seurat_objects)
 
@@ -43,7 +47,9 @@ workflow cohort_analysis {
 			cohort_id = cohort_id,
 			project_sample_ids = project_sample_ids,
 			billing_project = billing_project,
+			workflow_info = workflow_info,
 			raw_data_path = raw_data_path,
+			container_registry = container_registry,
 			zones = zones
 	}
 
@@ -53,6 +59,7 @@ workflow cohort_analysis {
 			preprocessed_seurat_objects = preprocessed_seurat_objects,
 			n_samples = n_samples,
 			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
 			multiome_container_revision = multiome_container_revision,
@@ -67,6 +74,7 @@ workflow cohort_analysis {
 				preprocessed_seurat_object = preprocessed_seurat_object,
 				unfiltered_metadata = run_quality_control.unfiltered_metadata,
 				raw_data_path = raw_data_path,
+				workflow_info = workflow_info,
 				billing_project = billing_project,
 				container_registry = container_registry,
 				multiome_container_revision = multiome_container_revision,
@@ -78,12 +86,12 @@ workflow cohort_analysis {
 		input:
 			cohort_id = cohort_id,
 			normalized_seurat_objects = select_all(filter_and_normalize.normalized_seurat_object), #!FileCoercion
-			n_samples = n_samples,
 			group_by_vars = group_by_vars,
 			clustering_algorithm = clustering_algorithm,
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
 			multiome_container_revision = multiome_container_revision,
@@ -97,13 +105,14 @@ workflow cohort_analysis {
 			groups = groups,
 			features = features,
 			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
 			multiome_container_revision = multiome_container_revision,
 			zones = zones
 	}
 
-	Array[String] cohort_analysis_intermediate_outputs = flatten([
+	Array[String] cohort_analysis_intermediate_output_paths = flatten([
 		[
 			run_quality_control.unfiltered_metadata
 		],
@@ -116,21 +125,15 @@ workflow cohort_analysis {
 		]
 	]) #!StringCoercion
 
-	String preprocess_manifest = "~{staging_data_path_prefix}/preprocess/MANIFEST.tsv"
-	call UploadFinalOutputs.upload_final_outputs as upload_intermediate_cohort_analysis_outputs {
+	call UploadFinalOutputs.upload_final_outputs as upload_preprocess_files {
 		input:
-			manifest_path = preprocess_manifest,
-			output_file_paths = cohort_analysis_intermediate_outputs,
-			workflow_name = workflow_name,
-			workflow_version = workflow_version,
-			run_timestamp = run_timestamp,
+			output_file_paths = flatten([preprocessing_output_file_paths, cohort_analysis_intermediate_output_paths]),
 			staging_data_path = "~{staging_data_path_prefix}/preprocess",
 			billing_project = billing_project,
-			container_registry = container_registry,
 			zones = zones
 	}
 
-	Array[String] cohort_analysis_final_outputs = flatten([
+	Array[String] cohort_analysis_final_output_paths = flatten([
 		[
 			write_cohort_sample_list.cohort_sample_list,
 		],
@@ -144,17 +147,11 @@ workflow cohort_analysis {
 		plot_groups_and_features.feature_umap_plots_png
 	]) #!StringCoercion
 
-	String cohort_analysis_manifest = "~{staging_data_path}/MANIFEST.tsv"
-	call UploadFinalOutputs.upload_final_outputs as upload_final_cohort_analysis_outputs {
+	call UploadFinalOutputs.upload_final_outputs as upload_cohort_analysis_files {
 		input:
-			manifest_path = cohort_analysis_manifest,
-			output_file_paths = cohort_analysis_final_outputs,
-			workflow_name = workflow_name,
-			workflow_version = workflow_version,
-			run_timestamp = run_timestamp,
-			staging_data_path = staging_data_path,
+			output_file_paths = cohort_analysis_final_output_paths,
+			staging_data_path = "~{staging_data_path_prefix}/~{workflow_name}",
 			billing_project = billing_project,
-			container_registry = container_registry,
 			zones = zones
 	}
 
@@ -180,8 +177,8 @@ workflow cohort_analysis {
 		Array[File] feature_umap_plots_pdf = plot_groups_and_features.feature_umap_plots_pdf #!FileCoercion
 		Array[File] feature_umap_plots_png = plot_groups_and_features.feature_umap_plots_png #!FileCoercion
 
-		File preprocess_manifest_tsv = upload_intermediate_cohort_analysis_outputs.updated_manifest #!FileCoercion
-		File cohort_analysis_manifest_tsv = upload_final_cohort_analysis_outputs.updated_manifest #!FileCoercion
+		File preprocess_manifest_tsv = upload_preprocess_files.manifest #!FileCoercion
+		File cohort_analysis_manifest_tsv = upload_cohort_analysis_files.manifest #!FileCoercion
 	}
 }
 
@@ -192,7 +189,9 @@ task write_cohort_sample_list {
 		Array[Array[String]] project_sample_ids
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
+		String container_registry
 		String zones
 	}
 
@@ -202,10 +201,11 @@ task write_cohort_sample_list {
 		echo -e "project_id\tsample_id" > ~{cohort_id}.sample_list.tsv
 		cat ~{write_tsv(project_sample_ids)} >> ~{cohort_id}.sample_list.tsv
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{cohort_id}.sample_list.tsv \
-			~{raw_data_path}/~{cohort_id}.sample_list.tsv
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{cohort_id}.sample_list.tsv"
 	>>>
 
 	output {
@@ -213,7 +213,7 @@ task write_cohort_sample_list {
 	}
 
 	runtime {
-		docker: "gcr.io/google.com/cloudsdktool/google-cloud-cli:444.0.0-slim"
+		docker: "~{container_registry}/util:1.1.0"
 		cpu: 1
 		memory: "1 GB"
 		disks: "local-disk 10 HDD"
@@ -228,6 +228,7 @@ task filter_and_normalize {
 		File unfiltered_metadata
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
@@ -264,11 +265,12 @@ task filter_and_normalize {
 				--seurat-object ~{seurat_object_basename}_filtered_02.rds \
 				--output-seurat-object ~{seurat_object_basename}_filtered_normalized_03.rds
 
-			# Upload outputs
-			gsutil -u ~{billing_project} -m cp \
-				~{seurat_object_basename}_filtered_02.rds \
-				~{seurat_object_basename}_filtered_normalized_03.rds \
-				~{raw_data_path}/
+			upload_outputs \
+				-b ~{billing_project} \
+				-d ~{raw_data_path} \
+				-i ~{write_tsv(workflow_info)} \
+				-o "~{seurat_object_basename}_filtered_02.rds" \
+				-o "~{seurat_object_basename}_filtered_normalized_03.rds"
 
 			echo true > cells_remaining_post_filter.txt
 		else
@@ -284,7 +286,7 @@ task filter_and_normalize {
 	runtime {
 		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
 		cpu: threads
-		memory: "8 GB"
+		memory: "12 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
@@ -301,6 +303,7 @@ task plot_groups_and_features {
 		Array[String] features
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
@@ -326,11 +329,13 @@ task plot_groups_and_features {
 			group_plots_png+=("~{cohort_id}.${group}_group_umap.png")
 		done < ~{write_lines(groups)}
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			"${group_plots_pdf[@]}" \
-			"${group_plots_png[@]}" \
-			~{raw_data_path}/
+		# shellcheck disable=SC2068
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			${group_plots_pdf[@]/#/-o } \
+			${group_plots_png[@]/#/-o }
 
 		echo "${group_plots_pdf[@]/#/~{raw_data_path}/}" \
 		| tr ' ' '\n' \
@@ -354,11 +359,13 @@ task plot_groups_and_features {
 			feature_plots_png+=("~{cohort_id}.${feature}_feature_umap.png")
 		done < ~{write_lines(features)}
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			"${feature_plots_pdf[@]}" \
-			"${feature_plots_png[@]}" \
-			~{raw_data_path}/
+		# shellcheck disable=SC2068
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			${feature_plots_pdf[@]/#/-o } \
+			${feature_plots_png[@]/#/-o }
 
 		echo "${feature_plots_pdf[@]/#/~{raw_data_path}/}" \
 		| tr ' ' '\n' \

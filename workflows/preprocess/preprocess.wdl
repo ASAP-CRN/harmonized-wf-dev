@@ -3,7 +3,6 @@ version 1.0
 # Get read counts and generate a preprocessed Seurat object
 
 import "../structs.wdl"
-import "../common/upload_final_outputs.wdl" as UploadFinalOutputs
 
 workflow preprocess {
 	input {
@@ -18,7 +17,6 @@ workflow preprocess {
 
 		String run_timestamp
 		String raw_data_path_prefix
-		String staging_data_path_prefix
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
@@ -33,8 +31,9 @@ workflow preprocess {
 	# Used in the manifest; doesn't influence output locations or whether the task needs to be rerun
 	String workflow_version = "~{cellranger_task_version}_~{counts_to_seurat_task_version}"
 
+	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version]]
+
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}"
-	String staging_data_path = "~{staging_data_path_prefix}/~{workflow_name}"
 
 	scatter (sample_object in samples) {
 		String cellranger_count_output = "~{raw_data_path}/cellranger/~{cellranger_task_version}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
@@ -73,6 +72,7 @@ workflow preprocess {
 					fastq_I2s = sample.fastq_I2s,
 					cellranger_reference_data = cellranger_reference_data,
 					raw_data_path = "~{raw_data_path}/cellranger/~{cellranger_task_version}",
+					workflow_info = workflow_info,
 					billing_project = billing_project,
 					container_registry = container_registry,
 					zones = zones
@@ -95,6 +95,7 @@ workflow preprocess {
 					filtered_counts = filtered_counts_output, # !FileCoercion
 					soup_rate = soup_rate,
 					raw_data_path = "~{raw_data_path}/counts_to_seurat/~{counts_to_seurat_task_version}",
+					workflow_info = workflow_info,
 					billing_project = billing_project,
 					container_registry = container_registry,
 					multiome_container_revision = multiome_container_revision,
@@ -103,44 +104,6 @@ workflow preprocess {
 		}
 
 		File seurat_object_output = select_first([counts_to_seurat.preprocessed_seurat_object, preprocessed_seurat_object]) #!FileCoercion
-	}
-
-	String preprocessing_manifest = "~{staging_data_path}/MANIFEST.tsv"
-	Array[String] new_preprocessing_final_outputs = select_all(flatten([
-		cellranger_count.raw_counts,
-		cellranger_count.filtered_counts,
-		cellranger_count.molecule_info,
-		cellranger_count.metrics_csv,
-		counts_to_seurat.preprocessed_seurat_object
-	]))
-
-	if (length(new_preprocessing_final_outputs) > 0) {
-		call UploadFinalOutputs.upload_final_outputs {
-			input:
-				manifest_path = preprocessing_manifest,
-				output_file_paths = new_preprocessing_final_outputs,
-				workflow_name = workflow_name,
-				workflow_version = workflow_version,
-				run_timestamp = run_timestamp,
-				staging_data_path = staging_data_path,
-				billing_project = billing_project,
-				container_registry = container_registry,
-				zones = zones
-		}
-	}
-
-	if (length(new_preprocessing_final_outputs) == 0) {
-		call UploadFinalOutputs.sync_buckets {
-			input:
-				source_buckets = [
-					"~{raw_data_path}/cellranger/~{cellranger_task_version}",
-					"~{raw_data_path}/counts_to_seurat/~{counts_to_seurat_task_version}"
-				],
-				target_bucket = staging_data_path,
-				billing_project = billing_project,
-				container_registry = container_registry,
-				zones = zones
-		}
 	}
 
 	output {
@@ -156,7 +119,13 @@ workflow preprocess {
 		# Seurat counts
 		Array[File] seurat_object = seurat_object_output
 
-		File preprocessing_manifest_tsv = select_first([upload_final_outputs.updated_manifest, preprocessing_manifest]) #!FileCoercion
+		Array[String] preprocessing_output_file_paths = flatten([
+			raw_counts_output,
+			filtered_counts_output,
+			molecule_info_output,
+			metrics_csv_output,
+			seurat_object_output
+		]) #!StringCoercion
 	}
 }
 
@@ -217,6 +186,7 @@ task cellranger_count {
 		File cellranger_reference_data
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		String zones
@@ -270,13 +240,14 @@ task cellranger_count {
 		mv ~{sample_id}/outs/molecule_info.h5 ~{sample_id}.molecule_info.h5
 		mv ~{sample_id}/outs/metrics_summary.csv ~{sample_id}.metrics_summary.csv
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{sample_id}.raw_feature_bc_matrix.h5 \
-			~{sample_id}.filtered_feature_bc_matrix.h5 \
-			~{sample_id}.molecule_info.h5 \
-			~{sample_id}.metrics_summary.csv \
-			~{raw_data_path}/
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{sample_id}.raw_feature_bc_matrix.h5" \
+			-o "~{sample_id}.filtered_feature_bc_matrix.h5" \
+			-o "~{sample_id}.molecule_info.h5" \
+			-o "~{sample_id}.metrics_summary.csv"
 	>>>
 
 	output {
@@ -308,6 +279,7 @@ task counts_to_seurat {
 		Float soup_rate
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
@@ -333,10 +305,11 @@ task counts_to_seurat {
 			--soup-rate ~{soup_rate} \
 			--output-seurat-object ~{sample_id}.seurat_object.preprocessed_01.rds
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{sample_id}.seurat_object.preprocessed_01.rds \
-			~{raw_data_path}/
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{sample_id}.seurat_object.preprocessed_01.rds"
 	>>>
 
 	output {

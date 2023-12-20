@@ -1,3 +1,5 @@
+FROM util:1.1.0 as scripts
+
 FROM ubuntu:jammy
 
 MAINTAINER Heather Ward <heather@dnastack.com>
@@ -36,3 +38,5 @@ ENV PATH "${PATH}:/opt/google-cloud-sdk/bin"
 
 COPY ./scripts /opt/scripts
 ENV PATH "${PATH}:/opt/scripts"
+
+COPY --from=scripts /opt/scripts /opt/scripts

@@ -32,7 +32,7 @@ workflow harmonized_pmdbs_analysis {
 		String zones = "us-central1-c"
 	}
 
-	Int multiome_container_revision = 12
+	Int multiome_container_revision = 14
 
 	String workflow_execution_path = "workflow_execution"
 
@@ -54,7 +54,6 @@ workflow harmonized_pmdbs_analysis {
 				regenerate_preprocessed_seurat_objects = regenerate_preprocessed_seurat_objects,
 				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = project_raw_data_path_prefix,
-				staging_data_path_prefix = project_staging_data_path_prefix,
 				billing_project = get_workflow_metadata.billing_project,
 				container_registry = container_registry,
 				multiome_container_revision = multiome_container_revision,
@@ -67,6 +66,7 @@ workflow harmonized_pmdbs_analysis {
 					cohort_id = project.project_id,
 					project_sample_ids = preprocess.project_sample_ids,
 					preprocessed_seurat_objects = preprocess.seurat_object, # !FileCoercion
+					preprocessing_output_file_paths = preprocess.preprocessing_output_file_paths,
 					group_by_vars = ["batch"],
 					clustering_algorithm = clustering_algorithm,
 					clustering_resolution = clustering_resolution,
@@ -117,8 +117,6 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]] molecule_info = preprocess.molecule_info
 		Array[Array[File]] cellranger_metrics_csvs = preprocess.metrics_csv
 
-		Array[File] preprocessing_manifest = preprocess.preprocessing_manifest_tsv
-
 		# Project cohort analysis outputs
 		## List of samples included in the cohort
 		Array[File?] project_cohort_sample_list = project_cohort_analysis.cohort_sample_list
@@ -142,6 +140,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]?] project_feature_umap_plots_pdf = project_cohort_analysis.feature_umap_plots_pdf
 		Array[Array[File]?] project_feature_umap_plots_png = project_cohort_analysis.feature_umap_plots_png
 
+		Array[File?] preprocess_manifest = project_cohort_analysis.preprocess_manifest_tsv
 		Array[File?] project_manifest = project_cohort_analysis.cohort_analysis_manifest_tsv
 
 		# Cross-team cohort analysis outputs
