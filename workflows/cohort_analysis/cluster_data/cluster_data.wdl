@@ -95,10 +95,13 @@ task integrate_sample_data {
 		String zones
 	}
 
-	Int threads = 8
 	# Assume input objects are ~500 MB
-	Int disk_size = ceil(0.5 * length(normalized_seurat_objects) * 2 + 30)
-	Int mem_gb = ceil(n_samples * 1.6 + 50)
+	Int disk_size = ceil(length(normalized_seurat_objects) * 3 + 50)
+
+	# Ensure we don't go over the max possible machine size when running many samples
+	Int mem_gb_by_sample_count = ceil(n_samples * 1.6 + 50)
+	Int mem_gb = if (mem_gb_by_sample_count > 640) then 640 else mem_gb_by_sample_count
+	Int threads = 8
 
 	command <<<
 		set -euo pipefail
@@ -155,7 +158,7 @@ task cluster_cells {
 	String integrated_seurat_object_basename = basename(integrated_seurat_object, "_04.rds")
 	Int threads = 2
 	Int disk_size = ceil(size(integrated_seurat_object, "GB") * 6 + 50)
-	Int mem_gb = ceil(0.3 * n_samples + 15)
+	Int mem_gb = ceil(0.5 * n_samples + 25)
 
 	command <<<
 		set -euo pipefail
