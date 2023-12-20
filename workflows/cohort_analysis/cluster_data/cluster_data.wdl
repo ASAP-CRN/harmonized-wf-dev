@@ -95,10 +95,13 @@ task integrate_sample_data {
 		String zones
 	}
 
-	Int threads = 8
 	# Assume input objects are ~500 MB
 	Int disk_size = ceil(length(normalized_seurat_objects) * 3 + 50)
-	Int mem_gb = ceil(n_samples * 1.6 + 50)
+
+	# Ensure we don't go over the max possible machine size when running many samples
+	Int mem_gb_by_sample_count = ceil(n_samples * 1.6 + 50)
+	Int mem_gb = if (mem_gb_by_sample_count > 640) then 640 else mem_gb_by_sample_count
+	Int threads = if (mem_gb == 640) then 80 else 8
 
 	command <<<
 		set -euo pipefail
