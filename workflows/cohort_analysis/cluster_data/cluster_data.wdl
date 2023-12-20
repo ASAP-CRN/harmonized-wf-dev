@@ -101,7 +101,7 @@ task integrate_sample_data {
 	# Ensure we don't go over the max possible machine size when running many samples
 	Int mem_gb_by_sample_count = ceil(n_samples * 1.6 + 50)
 	Int mem_gb = if (mem_gb_by_sample_count > 640) then 640 else mem_gb_by_sample_count
-	Int threads = if (mem_gb == 640) then 80 else 8
+	Int threads = 8
 
 	command <<<
 		set -euo pipefail
