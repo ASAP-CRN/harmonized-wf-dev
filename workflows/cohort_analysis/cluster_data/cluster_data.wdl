@@ -97,7 +97,7 @@ task integrate_sample_data {
 
 	Int threads = 8
 	# Assume input objects are ~500 MB
-	Int disk_size = ceil(0.5 * length(normalized_seurat_objects) * 2 + 30)
+	Int disk_size = ceil(length(normalized_seurat_objects) * 3 + 50)
 	Int mem_gb = ceil(n_samples * 1.6 + 50)
 
 	command <<<
