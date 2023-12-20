@@ -26,7 +26,7 @@ workflow cohort_analysis {
 
 		String run_timestamp
 		String raw_data_path_prefix
-		String staging_data_path_prefix
+		Array[String] staging_data_buckets
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
@@ -128,7 +128,8 @@ workflow cohort_analysis {
 	call UploadFinalOutputs.upload_final_outputs as upload_preprocess_files {
 		input:
 			output_file_paths = flatten([preprocessing_output_file_paths, cohort_analysis_intermediate_output_paths]),
-			staging_data_path = "~{staging_data_path_prefix}/preprocess",
+			staging_data_buckets = staging_data_buckets,
+			staging_data_path = "preprocess",
 			billing_project = billing_project,
 			zones = zones
 	}
@@ -150,7 +151,8 @@ workflow cohort_analysis {
 	call UploadFinalOutputs.upload_final_outputs as upload_cohort_analysis_files {
 		input:
 			output_file_paths = cohort_analysis_final_output_paths,
-			staging_data_path = "~{staging_data_path_prefix}/~{workflow_name}",
+			staging_data_buckets = staging_data_buckets,
+			staging_data_path = workflow_name,
 			billing_project = billing_project,
 			zones = zones
 	}
@@ -177,8 +179,8 @@ workflow cohort_analysis {
 		Array[File] feature_umap_plots_pdf = plot_groups_and_features.feature_umap_plots_pdf #!FileCoercion
 		Array[File] feature_umap_plots_png = plot_groups_and_features.feature_umap_plots_png #!FileCoercion
 
-		File preprocess_manifest_tsv = upload_preprocess_files.manifest #!FileCoercion
-		File cohort_analysis_manifest_tsv = upload_cohort_analysis_files.manifest #!FileCoercion
+		Array[File] preprocess_manifest_tsvs = upload_preprocess_files.manifests #!FileCoercion
+		Array[File] cohort_analysis_manifest_tsvs = upload_cohort_analysis_files.manifests #!FileCoercion
 	}
 }
 

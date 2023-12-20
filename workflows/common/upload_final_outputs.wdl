@@ -4,6 +4,7 @@ task upload_final_outputs {
 	input {
 		Array[String] output_file_paths
 
+		Array[String] staging_data_buckets
 		String staging_data_path
 		String billing_project
 		String zones
@@ -11,13 +12,6 @@ task upload_final_outputs {
 
 	command <<<
 		set -euo pipefail
-
-		# Remove files currently existing at the target path, if they exist
-		if gsutil -u ~{billing_project} ls ~{staging_data_path}/**; then
-			gsutil -u ~{billing_project} \
-				-m rm \
-				~{staging_data_path}/**
-		fi
 
 		# Write the file manifest
 		sed 's~$~.meta.tsv~' ~{write_lines(output_file_paths)} > metadata_paths.txt
@@ -30,20 +24,32 @@ task upload_final_outputs {
 		find metadata -type f -exec cat {} \; \
 		>> MANIFEST.tsv
 
-		# Copy files to the staging data path
-		gsutil -u ~{billing_project} -m cp \
-			-I \
-			~{staging_data_path}/ \
-		< ~{write_lines(output_file_paths)}
+		while read -r staging_data_bucket || [[ -n "${staging_data_bucket}" ]]; do
+			# Remove files currently existing at the target path, if they exist
+			if gsutil -u ~{billing_project} ls "${staging_data_bucket}/~{staging_data_path}/**"; then
+				gsutil -u ~{billing_project} \
+					-m rm \
+					"${staging_data_bucket}/~{staging_data_path}/**"
+			fi
 
-		# Upload the manifest to the staging data path
-		gsutil -u ~{billing_project} -m cp \
-			MANIFEST.tsv \
-			~{staging_data_path}/
+			# Copy files to the staging data path
+			gsutil -u ~{billing_project} -m cp \
+				-I \
+				"${staging_data_bucket}/~{staging_data_path}/" \
+			< ~{write_lines(output_file_paths)}
+
+			# Upload the manifest to the staging data path
+			gsutil -u ~{billing_project} -m cp \
+				MANIFEST.tsv \
+				"${staging_data_bucket}/~{staging_data_path}/"
+
+			echo "${staging_data_bucket}/~{staging_data_path}/MANIFEST.tsv" \
+			>> manifest_locs.txt
+		done < ~{write_lines(staging_data_buckets)}
 	>>>
 
 	output {
-		String manifest = "~{staging_data_path}/MANIFEST.tsv"
+		Array[String] manifests = read_lines("manifest_locs.txt")
 	}
 
 	runtime {

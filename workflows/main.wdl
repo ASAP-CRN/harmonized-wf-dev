@@ -19,7 +19,7 @@ workflow harmonized_pmdbs_analysis {
 
 		Boolean run_cross_team_cohort_analysis = false
 		String cohort_raw_data_bucket
-		String cohort_staging_data_bucket
+		Array[String] cohort_staging_data_buckets
 
 		Int clustering_algorithm = 3
 		Float clustering_resolution = 0.3
@@ -43,7 +43,6 @@ workflow harmonized_pmdbs_analysis {
 
 	scatter (project in projects) {
 		String project_raw_data_path_prefix = "~{project.raw_data_bucket}/~{workflow_execution_path}"
-		String project_staging_data_path_prefix = project.staging_data_bucket
 
 		call Preprocess.preprocess {
 			input:
@@ -75,7 +74,7 @@ workflow harmonized_pmdbs_analysis {
 					features = features,
 					run_timestamp = get_workflow_metadata.timestamp,
 					raw_data_path_prefix = project_raw_data_path_prefix,
-					staging_data_path_prefix = project_staging_data_path_prefix,
+					staging_data_buckets = project.staging_data_buckets,
 					billing_project = get_workflow_metadata.billing_project,
 					container_registry = container_registry,
 					multiome_container_revision = multiome_container_revision,
@@ -86,7 +85,6 @@ workflow harmonized_pmdbs_analysis {
 
 	if (run_cross_team_cohort_analysis) {
 		String cohort_raw_data_path_prefix = "~{cohort_raw_data_bucket}/~{workflow_execution_path}"
-		String cohort_staging_data_path_prefix = cohort_staging_data_bucket
 
 		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
 			input:
@@ -101,7 +99,7 @@ workflow harmonized_pmdbs_analysis {
 				features = features,
 				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = cohort_raw_data_path_prefix,
-				staging_data_path_prefix = cohort_staging_data_path_prefix,
+				staging_data_buckets = cohort_staging_data_buckets,
 				billing_project = get_workflow_metadata.billing_project,
 				container_registry = container_registry,
 				multiome_container_revision = multiome_container_revision,
@@ -140,8 +138,8 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]?] project_feature_umap_plots_pdf = project_cohort_analysis.feature_umap_plots_pdf
 		Array[Array[File]?] project_feature_umap_plots_png = project_cohort_analysis.feature_umap_plots_png
 
-		Array[File?] preprocess_manifest = project_cohort_analysis.preprocess_manifest_tsv
-		Array[File?] project_manifest = project_cohort_analysis.cohort_analysis_manifest_tsv
+		Array[Array[File]?] preprocess_manifests = project_cohort_analysis.preprocess_manifest_tsvs
+		Array[Array[File]?] project_manifests = project_cohort_analysis.cohort_analysis_manifest_tsvs
 
 		# Cross-team cohort analysis outputs
 		## List of samples included in the cohort
@@ -166,7 +164,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[File]? cohort_feature_umap_plots_pdf = cross_team_cohort_analysis.feature_umap_plots_pdf
 		Array[File]? cohort_feature_umap_plots_png = cross_team_cohort_analysis.feature_umap_plots_png
 
-		File? cohort_manifest = cross_team_cohort_analysis.cohort_analysis_manifest_tsv
+		Array[File]? cohort_manifests = cross_team_cohort_analysis.cohort_analysis_manifest_tsvs
 	}
 
 	meta {
