@@ -29,7 +29,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[String] features = ["doublet_scores", "nCount_RNA", "nFeature_RNA", "percent.mt", "percent.rb"]
 
 		String container_registry
-		String zones = "us-central1-c"
+		String zones = "us-central1-c us-central1-f"
 	}
 
 	Int multiome_container_revision = 14
