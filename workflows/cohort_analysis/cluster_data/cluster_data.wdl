@@ -134,6 +134,7 @@ task integrate_sample_data {
 		preemptible: 3
 		bootDiskSizeGb: 20
 		zones: zones
+		cpuPlatform: "Intel Cascade Lake"
 	}
 }
 
@@ -219,6 +220,7 @@ task cluster_cells {
 		preemptible: 3
 		bootDiskSizeGb: 20
 		zones: zones
+		cpuPlatform: "Intel Cascade Lake"
 	}
 }
 
