@@ -21,10 +21,12 @@ def main(args):
                 f"More than one embargo status found for samples in {project_tsv}; don't know how to handle this."
             )
         else:
-            staging_bucket_type = "embargo" if project_embargo_status[0] else "uat"
+            staging_bucket_types = (
+                ["dev"] if project_embargo_status[0] is True else ["dev", "uat"]
+            )
             # If any of the teams' datasets are embargoed, we'll set the cohort bucket to embargoed also
             if project_embargo_status[0] is True:
-                cohort_staging_bucket_type = "embargo"
+                cohort_staging_bucket_type = "dev"
         for index, row in project_df.iterrows():
             project_id = row.project_id
             sample_id = row.ASAP_sample_id
@@ -46,12 +48,17 @@ def main(args):
                 sample["batch"] = batch
 
             if project_id not in projects:
+                staging_data_buckets = [
+                    f"gs://asap-{staging_bucket_type}-data-{project_id}"
+                    for staging_bucket_type in staging_bucket_types
+                ]
+
                 projects[project_id] = {
                     "project_id": project_id,
                     "samples": [sample],
                     "run_project_cohort_analysis": run_project_cohort_analysis,
                     "raw_data_bucket": f"gs://asap-raw-data-{project_id}",
-                    "staging_data_bucket": f"gs://asap-{staging_bucket_type}-data-{project_id}",
+                    "staging_data_buckets": staging_data_buckets,
                 }
             else:
                 projects[project_id]["samples"].append(sample)
@@ -74,10 +81,12 @@ def main(args):
 
         inputs_json[projects_key] = projects
 
-    cohort_staging_data_bucket = f"gs://asap-{cohort_staging_bucket_type}-data-cohort"
+    cohort_staging_data_buckets = [
+        f"gs://asap-{cohort_staging_bucket_type}-data-cohort"
+    ]
     inputs_json[
-        "harmonized_pmdbs_analysis.cohort_staging_data_bucket"
-    ] = cohort_staging_data_bucket
+        "harmonized_pmdbs_analysis.cohort_staging_data_buckets"
+    ] = cohort_staging_data_buckets
 
     output_file = f"{args.output_file_prefix}.{cohort_staging_bucket_type}.json"
     with open(output_file, "w") as f:
