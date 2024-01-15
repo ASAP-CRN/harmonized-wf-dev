@@ -1,7 +1,7 @@
 import muon
 import scanpy
 
-
+# backed adata hack https://discourse.scverse.org/t/concat-anndata-objects-on-disk/400/2
 adata = scanpy.read_h5ad(snakemake.input.anndata) # type: ignore
 
 
