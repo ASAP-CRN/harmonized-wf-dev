@@ -3,8 +3,6 @@ version 1.0
 # Harmonized workflow entrypoint
 
 import "structs.wdl"
-import "preprocess/preprocess.wdl" as Preprocess
-import "cohort_analysis/cohort_analysis.wdl" as CohortAnalysis
 
 workflow harmonized_pmdbs_analysis {
 	input {
@@ -13,28 +11,16 @@ workflow harmonized_pmdbs_analysis {
 
 		File cellranger_reference_data
 
-		Float soup_rate = 0.20
-
-		Boolean regenerate_preprocessed_seurat_objects = false
-
 		Boolean run_cross_team_cohort_analysis = false
 		String cohort_raw_data_bucket
 		Array[String] cohort_staging_data_buckets
-
-		Int clustering_algorithm = 3
-		Float clustering_resolution = 0.3
-		File cell_type_markers_list
-
-		Array[String] groups = ["sample", "batch", "seurat_clusters"]
-		Array[String] features = ["doublet_scores", "nCount_RNA", "nFeature_RNA", "percent.mt", "percent.rb"]
 
 		String container_registry
 		String zones = "us-central1-c us-central1-f"
 	}
 
-	Int multiome_container_revision = 14
-
-	String workflow_execution_path = "workflow_execution"
+	# Task and subworkflow versions
+	String cellranger_task_version = "v1.1.0"
 
 	call get_workflow_metadata {
 		input:
@@ -42,129 +28,29 @@ workflow harmonized_pmdbs_analysis {
 	}
 
 	scatter (project in projects) {
-		String project_raw_data_path_prefix = "~{project.raw_data_bucket}/~{workflow_execution_path}"
-
-		call Preprocess.preprocess {
-			input:
-				project_id = project.project_id,
-				samples = project.samples,
-				cellranger_reference_data = cellranger_reference_data,
-				soup_rate = soup_rate,
-				regenerate_preprocessed_seurat_objects = regenerate_preprocessed_seurat_objects,
-				run_timestamp = get_workflow_metadata.timestamp,
-				raw_data_path_prefix = project_raw_data_path_prefix,
-				billing_project = get_workflow_metadata.billing_project,
-				container_registry = container_registry,
-				multiome_container_revision = multiome_container_revision,
-				zones = zones
-		}
-
-		if (project.run_project_cohort_analysis) {
-			call CohortAnalysis.cohort_analysis as project_cohort_analysis {
+		scatter (sample in project.samples) {
+			call cellranger_count {
 				input:
-					cohort_id = project.project_id,
-					project_sample_ids = preprocess.project_sample_ids,
-					preprocessed_seurat_objects = preprocess.seurat_object, # !FileCoercion
-					preprocessing_output_file_paths = preprocess.preprocessing_output_file_paths,
-					group_by_vars = ["batch"],
-					clustering_algorithm = clustering_algorithm,
-					clustering_resolution = clustering_resolution,
-					cell_type_markers_list = cell_type_markers_list,
-					groups = groups,
-					features = features,
-					run_timestamp = get_workflow_metadata.timestamp,
-					raw_data_path_prefix = project_raw_data_path_prefix,
-					staging_data_buckets = project.staging_data_buckets,
+					sample_id = sample.sample_id,
+					fastq_R1s = sample.fastq_R1s,
+					fastq_R2s = sample.fastq_R2s,
+					fastq_I1s = sample.fastq_I1s,
+					fastq_I2s = sample.fastq_I2s,
+					cellranger_reference_data = cellranger_reference_data,
+					raw_data_path = "~{project.raw_data_bucket}/workflow_execution/cellranger/~{cellranger_task_version}",
+					workflow_info = [[get_workflow_metadata.timestamp, "cellranger", cellranger_task_version]],
 					billing_project = get_workflow_metadata.billing_project,
 					container_registry = container_registry,
-					multiome_container_revision = multiome_container_revision,
 					zones = zones
 			}
 		}
 	}
 
-	if (run_cross_team_cohort_analysis) {
-		String cohort_raw_data_path_prefix = "~{cohort_raw_data_bucket}/~{workflow_execution_path}"
-
-		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
-			input:
-				cohort_id = cohort_id,
-				project_sample_ids = flatten(preprocess.project_sample_ids),
-				preprocessed_seurat_objects = flatten(preprocess.seurat_object), # !FileCoercion
-				group_by_vars = ["batch_id"],
-				clustering_algorithm = clustering_algorithm,
-				clustering_resolution = clustering_resolution,
-				cell_type_markers_list = cell_type_markers_list,
-				groups = groups,
-				features = features,
-				run_timestamp = get_workflow_metadata.timestamp,
-				raw_data_path_prefix = cohort_raw_data_path_prefix,
-				staging_data_buckets = cohort_staging_data_buckets,
-				billing_project = get_workflow_metadata.billing_project,
-				container_registry = container_registry,
-				multiome_container_revision = multiome_container_revision,
-				zones = zones
-		}
-	}
-
 	output {
-		# Sample-level outputs
-		## Cellranger
-		Array[Array[File]] raw_counts = preprocess.raw_counts
-		Array[Array[File]] filtered_counts = preprocess.filtered_counts
-		Array[Array[File]] molecule_info = preprocess.molecule_info
-		Array[Array[File]] cellranger_metrics_csvs = preprocess.metrics_csv
-
-		# Project cohort analysis outputs
-		## List of samples included in the cohort
-		Array[File?] project_cohort_sample_list = project_cohort_analysis.cohort_sample_list
-
-		## QC plots
-		Array[Array[File]?] project_qc_plots_pdf = project_cohort_analysis.qc_plots_pdf
-		Array[Array[File]?] project_qc_plots_png = project_cohort_analysis.qc_plots_png
-
-		## Clustering and sctyping output
-		Array[File?] project_integrated_seurat_object = project_cohort_analysis.integrated_seurat_object
-		Array[File?] project_neighbors_seurat_object = project_cohort_analysis.neighbors_seurat_object
-		Array[File?] project_umap_seurat_object = project_cohort_analysis.umap_seurat_object
-		Array[File?] project_cluster_seurat_object = project_cohort_analysis.cluster_seurat_object
-		Array[File?] project_major_cell_type_plot_pdf = project_cohort_analysis.major_cell_type_plot_pdf
-		Array[File?] project_major_cell_type_plot_png = project_cohort_analysis.major_cell_type_plot_png
-		Array[File?] project_metadata = project_cohort_analysis.metadata
-
-		## Group and feature plots for final metadata
-		Array[Array[File]?] project_group_umap_plots_pdf = project_cohort_analysis.group_umap_plots_pdf
-		Array[Array[File]?] project_group_umap_plots_png = project_cohort_analysis.group_umap_plots_png
-		Array[Array[File]?] project_feature_umap_plots_pdf = project_cohort_analysis.feature_umap_plots_pdf
-		Array[Array[File]?] project_feature_umap_plots_png = project_cohort_analysis.feature_umap_plots_png
-
-		Array[Array[File]?] preprocess_manifests = project_cohort_analysis.preprocess_manifest_tsvs
-		Array[Array[File]?] project_manifests = project_cohort_analysis.cohort_analysis_manifest_tsvs
-
-		# Cross-team cohort analysis outputs
-		## List of samples included in the cohort
-		File? cohort_sample_list = cross_team_cohort_analysis.cohort_sample_list
-
-		## QC plots
-		Array[File]? cohort_qc_plots_pdf = cross_team_cohort_analysis.qc_plots_pdf
-		Array[File]? cohort_qc_plots_png = cross_team_cohort_analysis.qc_plots_png
-
-		## Clustering and sctyping output
-		File? cohort_integrated_seurat_object = cross_team_cohort_analysis.integrated_seurat_object
-		File? cohort_neighbors_seurat_object = cross_team_cohort_analysis.neighbors_seurat_object
-		File? cohort_umap_seurat_object = cross_team_cohort_analysis.umap_seurat_object
-		File? cohort_cluster_seurat_object = cross_team_cohort_analysis.cluster_seurat_object
-		File? cohort_major_cell_type_plot_pdf = cross_team_cohort_analysis.major_cell_type_plot_pdf
-		File? cohort_major_cell_type_plot_png = cross_team_cohort_analysis.major_cell_type_plot_png
-		File? cohort_metadata = cross_team_cohort_analysis.metadata
-
-		## Group and feature plots for final metadata
-		Array[File]? cohort_group_umap_plots_pdf = cross_team_cohort_analysis.group_umap_plots_pdf
-		Array[File]? cohort_group_umap_plots_png = cross_team_cohort_analysis.group_umap_plots_png
-		Array[File]? cohort_feature_umap_plots_pdf = cross_team_cohort_analysis.feature_umap_plots_pdf
-		Array[File]? cohort_feature_umap_plots_png = cross_team_cohort_analysis.feature_umap_plots_png
-
-		Array[File]? cohort_manifests = cross_team_cohort_analysis.cohort_analysis_manifest_tsvs
+		Array[Array[File]] raw_counts = cellranger_count.raw_counts
+		Array[Array[File]] filtered_counts = cellranger_count.filtered_counts
+		Array[Array[File]] molecule_info = cellranger_count.molecule_info
+		Array[Array[File]] metrics_csvs = cellranger_count.metrics_csv
 	}
 
 	meta {
@@ -175,16 +61,9 @@ workflow harmonized_pmdbs_analysis {
 		cohort_id: {help: "Name of the cohort; used to name output files during cross-team cohort analysis."}
 		projects: {help: "The project ID, set of samples and their associated reads and metadata, output bucket locations, and whether or not to run project-level cohort analysis."}
 		cellranger_reference_data: {help: "Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest."}
-		soup_rate: {help: "Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data. [0.2]"}
-		regenerate_preprocessed_seurat_objects: {help: "Regenerate the preprocessed Seurat objects, even if these files already exist. [false]"}
 		run_cross_team_cohort_analysis: {help: "Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}
 		cohort_raw_data_bucket: {help: "Bucket to upload cross-team cohort intermediate files to."}
-		cohort_staging_data_bucket: {help: "Bucket to stage cross-team cohort analysis outputs in."}
-		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}
-		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
-		cell_type_markers_list: {help: "RDS file containing a list of major cell type markers; used to annotate clusters."}
-		groups: {help: "Groups to produce umap plots for. ['sample', 'batch', 'seurat_clusters']"}
-		features: {help: "Features to produce umap plots for. ['doublet_scores', 'nCount_RNA', 'nFeature_RNA', 'percent.mt', 'percent.rb']"}
+		cohort_staging_data_buckets: {help: "Set of buckets to stage cross-team cohort analysis outputs in."}
 		container_registry: {help: "Container registry where workflow Docker images are hosted."}
 		zones: {help: "Space-delimited set of GCP zones to spin up compute in."}
 	}
@@ -217,6 +96,99 @@ task get_workflow_metadata {
 		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk 10 HDD"
+		preemptible: 3
+		zones: zones
+	}
+}
+
+task cellranger_count {
+	input {
+		String sample_id
+
+		Array[File] fastq_R1s
+		Array[File] fastq_R2s
+		Array[File] fastq_I1s
+		Array[File] fastq_I2s
+
+		File cellranger_reference_data
+
+		String raw_data_path
+		Array[Array[String]] workflow_info
+		String billing_project
+		String container_registry
+		String zones
+	}
+
+	Int threads = 16
+	Int disk_size = ceil((size(fastq_R1s, "GB") + size(fastq_R2s, "GB") + size(fastq_I1s, "GB") + size(fastq_I2s, "GB") + size(cellranger_reference_data, "GB")) * 4 + 50)
+	Int mem_gb = 24
+
+	command <<<
+		set -euo pipefail
+
+		# Unpack refdata
+		mkdir cellranger_refdata
+		tar \
+			-zxvf ~{cellranger_reference_data} \
+			-C cellranger_refdata \
+			--strip-components 1
+
+		# Ensure fastqs are in the same directory
+		mkdir fastqs
+		while read -r fastq || [[ -n "${fastq}" ]]; do
+			if [[ -n "${fastq}" ]]; then
+				validated_fastq_name=$(fix_fastq_names --fastq "${fastq}" --sample-id "~{sample_id}")
+				if [[ -e "fastqs/${validated_fastq_name}" ]]; then
+					echo "[ERROR] Something's gone wrong with fastq renaming; trying to create fastq [${validated_fastq_name}] but it already exists. Exiting."
+					exit 1
+				else
+					ln -s "${fastq}" "fastqs/${validated_fastq_name}"
+				fi
+			fi
+		done < <(cat \
+			~{write_lines(fastq_R1s)} \
+			~{write_lines(fastq_R2s)} \
+			~{write_lines(fastq_I1s)} \
+			~{write_lines(fastq_I2s)})
+
+		cellranger --version
+
+		/usr/bin/time \
+		cellranger count \
+			--id=~{sample_id} \
+			--transcriptome="$(pwd)/cellranger_refdata" \
+			--fastqs="$(pwd)/fastqs" \
+			--localcores ~{threads} \
+			--localmem ~{mem_gb - 4}
+
+		# Rename outputs to include sample ID
+		mv ~{sample_id}/outs/raw_feature_bc_matrix.h5 ~{sample_id}.raw_feature_bc_matrix.h5
+		mv ~{sample_id}/outs/filtered_feature_bc_matrix.h5 ~{sample_id}.filtered_feature_bc_matrix.h5
+		mv ~{sample_id}/outs/molecule_info.h5 ~{sample_id}.molecule_info.h5
+		mv ~{sample_id}/outs/metrics_summary.csv ~{sample_id}.metrics_summary.csv
+
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{sample_id}.raw_feature_bc_matrix.h5" \
+			-o "~{sample_id}.filtered_feature_bc_matrix.h5" \
+			-o "~{sample_id}.molecule_info.h5" \
+			-o "~{sample_id}.metrics_summary.csv"
+	>>>
+
+	output {
+		String raw_counts = "~{raw_data_path}/~{sample_id}.raw_feature_bc_matrix.h5"
+		String filtered_counts = "~{raw_data_path}/~{sample_id}.filtered_feature_bc_matrix.h5"
+		String molecule_info = "~{raw_data_path}/~{sample_id}.molecule_info.h5"
+		String metrics_csv = "~{raw_data_path}/~{sample_id}.metrics_summary.csv"
+	}
+
+	runtime {
+		docker: "~{container_registry}/cellranger:7.1.0"
+		cpu: threads
+		memory: "~{mem_gb} GB"
+		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		zones: zones
 	}
