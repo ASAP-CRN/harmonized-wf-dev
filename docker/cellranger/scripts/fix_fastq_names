@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+
+from argparse import ArgumentParser
+import re
+from os.path import basename
+
+
+def main(args):
+    fastq_basename = basename(args.fastq)
+    sample_id = args.sample_id
+
+    valid_fastq_name = re.compile(
+        r".*(S[0-9]+_L[0-9]{3}_[IR][1-2]_[0-9]{3}\.(fastq|fq)(\.gz|))$"
+    )
+
+    if re.search(valid_fastq_name, fastq_basename):
+        print(re.sub(valid_fastq_name, rf"{sample_id}_\1", fastq_basename))
+    else:
+        # Extract what we can from the fastq name
+        sample = re.search(r"[_.](S[0-9]+)[_.]", fastq_basename)
+        lane = re.search(r"[_.](L[0-9]{3})[_.]", fastq_basename)
+        read = re.search(r"[_.]([IR][1-2])[_.]", fastq_basename)
+        extension = re.search(r"(\.(fastq|fq)(\.gz|))$", fastq_basename)
+
+        sample = sample.group(1) if sample else "S1"
+        lane = lane.group(1) if lane else "L001"
+        if not read:
+            raise SystemExit(
+                f"Failed to infer read or invalid read ([R1, R2, I1, I2]) for fastq {fastq_basename}"
+            )
+        else:
+            read = read.group(1)
+        if not extension:
+            raise SystemExit(
+                f"Failed to infer extension or invalid extension for fastq {fastq_basename}"
+            )
+        else:
+            extension = extension.group(1)
+
+        print(f"{sample_id}_{sample}_{lane}_{read}_001{extension}")
+
+
+if __name__ == "__main__":
+    parser = ArgumentParser(
+        "Convert a FASTQ basename to the format required by cellranger (<sample>_S[0-9]+_L[0-9][0-9][0-9]_[IR][12]_[0-9][0-9][0-9])"
+    )
+
+    parser.add_argument("-f", "--fastq", type=str, required=True, help="Path to fastq")
+    parser.add_argument("-s", "--sample-id", type=str, required=True, help="Sample ID")
+
+    args = parser.parse_args()
+    main(args)

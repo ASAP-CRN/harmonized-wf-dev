@@ -9,9 +9,11 @@ workflow run_quality_control {
 		Int n_samples
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	call identify_doublets {
@@ -20,9 +22,11 @@ workflow run_quality_control {
 			preprocessed_seurat_objects = preprocessed_seurat_objects,
 			n_samples = n_samples,
 			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	call plot_qc_metrics {
@@ -31,9 +35,11 @@ workflow run_quality_control {
 			unfiltered_metadata = identify_doublets.unfiltered_metadata, #!FileCoercion
 			n_samples = n_samples,
 			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	output {
@@ -52,14 +58,17 @@ task identify_doublets {
 		Int n_samples
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	Int threads = 2
-	Int disk_size = ceil(size(preprocessed_seurat_objects[0], "GB") * length(preprocessed_seurat_objects) * 2 + 30)
-	Int mem_gb = ceil(0.2 * n_samples + threads * 4)
+	# Assume Seurat objects are 500 MB each
+	Int disk_size = ceil(0.5 * length(preprocessed_seurat_objects) * 2 + 50)
+	Int mem_gb = ceil(0.7 * n_samples + threads * 4 + 25)
 
 	command <<<
 		set -euo pipefail
@@ -73,10 +82,11 @@ task identify_doublets {
 			--project-name ~{cohort_id} \
 			--output-metadata-file ~{cohort_id}.unfiltered_metadata.csv
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{cohort_id}.unfiltered_metadata.csv \
-			~{raw_data_path}/
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{cohort_id}.unfiltered_metadata.csv"
 	>>>
 
 	output {
@@ -90,6 +100,7 @@ task identify_doublets {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
 	}
 }
 
@@ -100,14 +111,16 @@ task plot_qc_metrics {
 		Int n_samples
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	Int threads = 2
 	Int disk_size = ceil(size(unfiltered_metadata, "GB") * 2 + 20)
-	Int mem_gb = ceil(0.02 * n_samples + threads * 2)
+	Int mem_gb = ceil(0.02 * n_samples + threads * 2 + 20)
 
 	command <<<
 		set -euo pipefail
@@ -122,13 +135,14 @@ task plot_qc_metrics {
 			--output-violin-plot-prefix ~{cohort_id}.qc.violin_plots \
 			--output-umis-genes-plot-prefix ~{cohort_id}.qc.umis_genes_plot
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{cohort_id}.qc.violin_plots.pdf \
-			~{cohort_id}.qc.violin_plots.png \
-			~{cohort_id}.qc.umis_genes_plot.pdf \
-			~{cohort_id}.qc.umis_genes_plot.png \
-			~{raw_data_path}/
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{cohort_id}.qc.violin_plots.pdf" \
+			-o "~{cohort_id}.qc.violin_plots.png" \
+			-o "~{cohort_id}.qc.umis_genes_plot.pdf" \
+			-o "~{cohort_id}.qc.umis_genes_plot.png"
 	>>>
 
 	output {
@@ -149,5 +163,6 @@ task plot_qc_metrics {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
 	}
 }

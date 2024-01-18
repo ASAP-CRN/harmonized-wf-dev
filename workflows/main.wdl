@@ -19,7 +19,7 @@ workflow harmonized_pmdbs_analysis {
 
 		Boolean run_cross_team_cohort_analysis = false
 		String cohort_raw_data_bucket
-		String cohort_staging_data_bucket
+		Array[String] cohort_staging_data_buckets
 
 		Int clustering_algorithm = 3
 		Float clustering_resolution = 0.3
@@ -29,17 +29,20 @@ workflow harmonized_pmdbs_analysis {
 		Array[String] features = ["doublet_scores", "nCount_RNA", "nFeature_RNA", "percent.mt", "percent.rb"]
 
 		String container_registry
+		String zones = "us-central1-c us-central1-f"
 	}
 
-	Int multiome_container_revision = 12
+	Int multiome_container_revision = 14
 
 	String workflow_execution_path = "workflow_execution"
 
-	call get_workflow_metadata
+	call get_workflow_metadata {
+		input:
+			zones = zones
+	}
 
 	scatter (project in projects) {
 		String project_raw_data_path_prefix = "~{project.raw_data_bucket}/~{workflow_execution_path}"
-		String project_staging_data_path_prefix = project.staging_data_bucket
 
 		call Preprocess.preprocess {
 			input:
@@ -50,10 +53,10 @@ workflow harmonized_pmdbs_analysis {
 				regenerate_preprocessed_seurat_objects = regenerate_preprocessed_seurat_objects,
 				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = project_raw_data_path_prefix,
-				staging_data_path_prefix = project_staging_data_path_prefix,
 				billing_project = get_workflow_metadata.billing_project,
 				container_registry = container_registry,
-				multiome_container_revision = multiome_container_revision
+				multiome_container_revision = multiome_container_revision,
+				zones = zones
 		}
 
 		if (project.run_project_cohort_analysis) {
@@ -62,6 +65,7 @@ workflow harmonized_pmdbs_analysis {
 					cohort_id = project.project_id,
 					project_sample_ids = preprocess.project_sample_ids,
 					preprocessed_seurat_objects = preprocess.seurat_object, # !FileCoercion
+					preprocessing_output_file_paths = preprocess.preprocessing_output_file_paths,
 					group_by_vars = ["batch"],
 					clustering_algorithm = clustering_algorithm,
 					clustering_resolution = clustering_resolution,
@@ -70,17 +74,17 @@ workflow harmonized_pmdbs_analysis {
 					features = features,
 					run_timestamp = get_workflow_metadata.timestamp,
 					raw_data_path_prefix = project_raw_data_path_prefix,
-					staging_data_path_prefix = project_staging_data_path_prefix,
+					staging_data_buckets = project.staging_data_buckets,
 					billing_project = get_workflow_metadata.billing_project,
 					container_registry = container_registry,
-					multiome_container_revision = multiome_container_revision
+					multiome_container_revision = multiome_container_revision,
+					zones = zones
 			}
 		}
 	}
 
 	if (run_cross_team_cohort_analysis) {
 		String cohort_raw_data_path_prefix = "~{cohort_raw_data_bucket}/~{workflow_execution_path}"
-		String cohort_staging_data_path_prefix = cohort_staging_data_bucket
 
 		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
 			input:
@@ -95,10 +99,11 @@ workflow harmonized_pmdbs_analysis {
 				features = features,
 				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = cohort_raw_data_path_prefix,
-				staging_data_path_prefix = cohort_staging_data_path_prefix,
+				staging_data_buckets = cohort_staging_data_buckets,
 				billing_project = get_workflow_metadata.billing_project,
 				container_registry = container_registry,
-				multiome_container_revision = multiome_container_revision
+				multiome_container_revision = multiome_container_revision,
+				zones = zones
 		}
 	}
 
@@ -109,8 +114,6 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]] filtered_counts = preprocess.filtered_counts
 		Array[Array[File]] molecule_info = preprocess.molecule_info
 		Array[Array[File]] cellranger_metrics_csvs = preprocess.metrics_csv
-
-		Array[File] preprocessing_manifest = preprocess.preprocessing_manifest_tsv
 
 		# Project cohort analysis outputs
 		## List of samples included in the cohort
@@ -135,7 +138,8 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]?] project_feature_umap_plots_pdf = project_cohort_analysis.feature_umap_plots_pdf
 		Array[Array[File]?] project_feature_umap_plots_png = project_cohort_analysis.feature_umap_plots_png
 
-		Array[File?] project_manifest = project_cohort_analysis.cohort_analysis_manifest_tsv
+		Array[Array[File]?] preprocess_manifests = project_cohort_analysis.preprocess_manifest_tsvs
+		Array[Array[File]?] project_manifests = project_cohort_analysis.cohort_analysis_manifest_tsvs
 
 		# Cross-team cohort analysis outputs
 		## List of samples included in the cohort
@@ -160,7 +164,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[File]? cohort_feature_umap_plots_pdf = cross_team_cohort_analysis.feature_umap_plots_pdf
 		Array[File]? cohort_feature_umap_plots_png = cross_team_cohort_analysis.feature_umap_plots_png
 
-		File? cohort_manifest = cross_team_cohort_analysis.cohort_analysis_manifest_tsv
+		Array[File]? cohort_manifests = cross_team_cohort_analysis.cohort_analysis_manifest_tsvs
 	}
 
 	meta {
@@ -182,11 +186,14 @@ workflow harmonized_pmdbs_analysis {
 		groups: {help: "Groups to produce umap plots for. ['sample', 'batch', 'seurat_clusters']"}
 		features: {help: "Features to produce umap plots for. ['doublet_scores', 'nCount_RNA', 'nFeature_RNA', 'percent.mt', 'percent.rb']"}
 		container_registry: {help: "Container registry where workflow Docker images are hosted."}
+		zones: {help: "Space-delimited set of GCP zones to spin up compute in."}
 	}
 }
 
 task get_workflow_metadata {
-	input {}
+	input {
+		String zones
+	}
 
 	command <<<
 		set -euo pipefail
@@ -211,5 +218,6 @@ task get_workflow_metadata {
 		memory: "4 GB"
 		disks: "local-disk 10 HDD"
 		preemptible: 3
+		zones: zones
 	}
 }

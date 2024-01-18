@@ -4,10 +4,10 @@ struct Sample {
 	String sample_id
 	String? batch
 
-	File fastq_R1
-	File fastq_R2
-	File? fastq_I1
-	File? fastq_I2
+	Array[File]+ fastq_R1s
+	Array[File]+ fastq_R2s
+	Array[File] fastq_I1s
+	Array[File] fastq_I2s
 }
 
 struct Project {
@@ -17,5 +17,5 @@ struct Project {
 	Boolean run_project_cohort_analysis
 
 	String raw_data_bucket
-	String staging_data_bucket
+	Array[String] staging_data_buckets
 }

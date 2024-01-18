@@ -6,7 +6,6 @@ workflow cluster_data {
 	input {
 		String cohort_id
 		Array[File] normalized_seurat_objects
-		Int n_samples
 
 		Array[String] group_by_vars
 
@@ -15,10 +14,14 @@ workflow cluster_data {
 		File cell_type_markers_list
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
+
+	Int n_samples = length(normalized_seurat_objects)
 
 	call integrate_sample_data {
 		input:
@@ -27,9 +30,11 @@ workflow cluster_data {
 			n_samples = n_samples,
 			group_by_vars = group_by_vars,
 			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	# Find neighbors, run umap, and cluster cells
@@ -42,9 +47,11 @@ workflow cluster_data {
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	call annotate_clusters {
@@ -54,9 +61,11 @@ workflow cluster_data {
 			n_samples = n_samples,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision
+			multiome_container_revision = multiome_container_revision,
+			zones = zones
 	}
 
 	output {
@@ -79,14 +88,20 @@ task integrate_sample_data {
 		Array[String] group_by_vars
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
+	# Assume input objects are ~500 MB
+	Int disk_size = ceil(length(normalized_seurat_objects) * 3 + 50)
+
+	# Ensure we don't go over the max possible machine size when running many samples
+	Int mem_gb_by_sample_count = ceil(n_samples * 1.6 + 50)
+	Int mem_gb = if (mem_gb_by_sample_count > 640) then 640 else mem_gb_by_sample_count
 	Int threads = 8
-	Int disk_size = ceil(size(normalized_seurat_objects[0], "GB") * length(normalized_seurat_objects) * 2 + 30)
-	Int mem_gb = ceil(0.6 * n_samples + 15)
 
 	command <<<
 		set -euo pipefail
@@ -100,10 +115,11 @@ task integrate_sample_data {
 			--seurat-objects-fofn ~{write_lines(normalized_seurat_objects)} \
 			--output-seurat-object ~{cohort_id}.seurat_object.harmony_integrated_04.rds
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{cohort_id}.seurat_object.harmony_integrated_04.rds \
-			~{raw_data_path}/
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{cohort_id}.seurat_object.harmony_integrated_04.rds"
 	>>>
 
 	output {
@@ -117,6 +133,8 @@ task integrate_sample_data {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
+		cpuPlatform: "Intel Cascade Lake"
 	}
 }
 
@@ -131,15 +149,17 @@ task cluster_cells {
 		File cell_type_markers_list
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	String integrated_seurat_object_basename = basename(integrated_seurat_object, "_04.rds")
 	Int threads = 2
 	Int disk_size = ceil(size(integrated_seurat_object, "GB") * 6 + 50)
-	Int mem_gb = ceil(0.3 * n_samples + 15)
+	Int mem_gb = ceil(0.8 * n_samples + 50)
 
 	command <<<
 		set -euo pipefail
@@ -173,14 +193,15 @@ task cluster_cells {
 			--output-cell-type-plot-prefix ~{cohort_id}.major_type_module_umap \
 			--output-seurat-object ~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{integrated_seurat_object_basename}_neighbors_05.rds \
-			~{integrated_seurat_object_basename}_neighbors_umap_06.rds \
-			~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds \
-			~{cohort_id}.major_type_module_umap.pdf \
-			~{cohort_id}.major_type_module_umap.png \
-			~{raw_data_path}/
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{integrated_seurat_object_basename}_neighbors_05.rds" \
+			-o "~{integrated_seurat_object_basename}_neighbors_umap_06.rds" \
+			-o "~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds" \
+			-o "~{cohort_id}.major_type_module_umap.pdf" \
+			-o "~{cohort_id}.major_type_module_umap.png"
 	>>>
 
 	output {
@@ -198,6 +219,8 @@ task cluster_cells {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
+		cpuPlatform: "Intel Cascade Lake"
 	}
 }
 
@@ -210,9 +233,11 @@ task annotate_clusters {
 		File cell_type_markers_list
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	Int threads = 2
@@ -231,10 +256,11 @@ task annotate_clusters {
 			--cell-type-markers-list ~{cell_type_markers_list} \
 			--output-metadata-file ~{cohort_id}.final_metadata.csv
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{cohort_id}.final_metadata.csv \
-			~{raw_data_path}/
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{cohort_id}.final_metadata.csv"
 	>>>
 
 	output {
@@ -248,5 +274,6 @@ task annotate_clusters {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
 	}
 }

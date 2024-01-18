@@ -3,7 +3,6 @@ version 1.0
 # Get read counts and generate a preprocessed Seurat object
 
 import "../structs.wdl"
-import "../common/upload_final_outputs.wdl" as UploadFinalOutputs
 
 workflow preprocess {
 	input {
@@ -18,22 +17,23 @@ workflow preprocess {
 
 		String run_timestamp
 		String raw_data_path_prefix
-		String staging_data_path_prefix
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	String workflow_name = "preprocess"
 
-	String cellranger_task_version = "1.0.0"
+	String cellranger_task_version = "1.1.0"
 	String counts_to_seurat_task_version = "1.0.0"
 
 	# Used in the manifest; doesn't influence output locations or whether the task needs to be rerun
 	String workflow_version = "~{cellranger_task_version}_~{counts_to_seurat_task_version}"
 
+	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version]]
+
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}"
-	String staging_data_path = "~{staging_data_path_prefix}/~{workflow_name}"
 
 	scatter (sample_object in samples) {
 		String cellranger_count_output = "~{raw_data_path}/cellranger/~{cellranger_task_version}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
@@ -45,7 +45,8 @@ workflow preprocess {
 		input:
 			cellranger_count_output_files = cellranger_count_output,
 			counts_to_seurat_output_files = counts_to_seurat_output,
-			billing_project = billing_project
+			billing_project = billing_project,
+			zones = zones
 	}
 
 	scatter (index in range(length(samples))) {
@@ -65,14 +66,16 @@ workflow preprocess {
 			call cellranger_count {
 				input:
 					sample_id = sample.sample_id,
-					fastq_R1 = sample.fastq_R1,
-					fastq_R2 = sample.fastq_R2,
-					fastq_I1 = sample.fastq_I1,
-					fastq_I2 = sample.fastq_I2,
+					fastq_R1s = sample.fastq_R1s,
+					fastq_R2s = sample.fastq_R2s,
+					fastq_I1s = sample.fastq_I1s,
+					fastq_I2s = sample.fastq_I2s,
 					cellranger_reference_data = cellranger_reference_data,
 					raw_data_path = "~{raw_data_path}/cellranger/~{cellranger_task_version}",
+					workflow_info = workflow_info,
 					billing_project = billing_project,
-					container_registry = container_registry
+					container_registry = container_registry,
+					zones = zones
 			}
 		}
 
@@ -92,49 +95,15 @@ workflow preprocess {
 					filtered_counts = filtered_counts_output, # !FileCoercion
 					soup_rate = soup_rate,
 					raw_data_path = "~{raw_data_path}/counts_to_seurat/~{counts_to_seurat_task_version}",
+					workflow_info = workflow_info,
 					billing_project = billing_project,
 					container_registry = container_registry,
-					multiome_container_revision = multiome_container_revision
+					multiome_container_revision = multiome_container_revision,
+					zones = zones
 			}
 		}
 
 		File seurat_object_output = select_first([counts_to_seurat.preprocessed_seurat_object, preprocessed_seurat_object]) #!FileCoercion
-	}
-
-	String preprocessing_manifest = "~{staging_data_path}/MANIFEST.tsv"
-	Array[String] new_preprocessing_final_outputs = select_all(flatten([
-		cellranger_count.raw_counts,
-		cellranger_count.filtered_counts,
-		cellranger_count.molecule_info,
-		cellranger_count.metrics_csv,
-		counts_to_seurat.preprocessed_seurat_object
-	]))
-
-	if (length(new_preprocessing_final_outputs) > 0) {
-		call UploadFinalOutputs.upload_final_outputs {
-			input:
-				manifest_path = preprocessing_manifest,
-				output_file_paths = new_preprocessing_final_outputs,
-				workflow_name = workflow_name,
-				workflow_version = workflow_version,
-				run_timestamp = run_timestamp,
-				staging_data_path = staging_data_path,
-				billing_project = billing_project,
-				container_registry = container_registry
-		}
-	}
-
-	if (length(new_preprocessing_final_outputs) == 0) {
-		call UploadFinalOutputs.sync_buckets {
-			input:
-				source_buckets = [
-					"~{raw_data_path}/cellranger/~{cellranger_task_version}",
-					"~{raw_data_path}/counts_to_seurat/~{counts_to_seurat_task_version}"
-				],
-				target_bucket = staging_data_path,
-				billing_project = billing_project,
-				container_registry = container_registry
-		}
 	}
 
 	output {
@@ -150,7 +119,13 @@ workflow preprocess {
 		# Seurat counts
 		Array[File] seurat_object = seurat_object_output
 
-		File preprocessing_manifest_tsv = select_first([upload_final_outputs.updated_manifest, preprocessing_manifest]) #!FileCoercion
+		Array[String] preprocessing_output_file_paths = flatten([
+			raw_counts_output,
+			filtered_counts_output,
+			molecule_info_output,
+			metrics_csv_output,
+			seurat_object_output
+		]) #!StringCoercion
 	}
 }
 
@@ -160,6 +135,7 @@ task check_output_files_exist {
 		Array[String] counts_to_seurat_output_files
 
 		String billing_project
+		String zones
 	}
 
 	command <<<
@@ -169,15 +145,17 @@ task check_output_files_exist {
 			counts_file=$(echo "${output_files}" | cut -f 1)
 			seurat_object=$(echo "${output_files}" | cut -f 2)
 
-			if gsutil -u ~{billing_project} ls "${seurat_object}"; then
-				# If the seurat object exists, assume that the counts file does as well
-				echo -e "true\ttrue" >> sample_preprocessing_complete.tsv
-			else
-				if gsutil -u ~{billing_project} ls "${counts_file}"; then
-					echo -e "true\tfalse" >> sample_preprocessing_complete.tsv
+			if gsutil -u ~{billing_project} ls "${counts_file}"; then
+				if gsutil -u ~{billing_project} ls "${seurat_object}"; then
+					# If we find both the cellranger and seurat outputs, don't rerun anything
+					echo -e "true\ttrue" >> sample_preprocessing_complete.tsv
 				else
-					echo -e "false\tfalse" >> sample_preprocessing_complete.tsv
+					# If we find the counts file but not the seurat object, just rerun seurat object generation
+					echo -e "true\tfalse" >> sample_preprocessing_complete.tsv
 				fi
+			else
+				# If we don't find cellranger output, we must also need to run (or rerun) preprocessing
+				echo -e "false\tfalse" >> sample_preprocessing_complete.tsv
 			fi
 		done < <(paste ~{write_lines(cellranger_count_output_files)} ~{write_lines(counts_to_seurat_output_files)})
 	>>>
@@ -192,6 +170,7 @@ task check_output_files_exist {
 		memory: "4 GB"
 		disks: "local-disk 20 HDD"
 		preemptible: 3
+		zones: zones
 	}
 }
 
@@ -199,20 +178,22 @@ task cellranger_count {
 	input {
 		String sample_id
 
-		File fastq_R1
-		File fastq_R2
-		File? fastq_I1
-		File? fastq_I2
+		Array[File] fastq_R1s
+		Array[File] fastq_R2s
+		Array[File] fastq_I1s
+		Array[File] fastq_I2s
 
 		File cellranger_reference_data
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
+		String zones
 	}
 
 	Int threads = 16
-	Int disk_size = ceil(size([fastq_R1, fastq_R2, cellranger_reference_data], "GB") * 4 + 50)
+	Int disk_size = ceil((size(fastq_R1s, "GB") + size(fastq_R2s, "GB") + size(fastq_I1s, "GB") + size(fastq_I2s, "GB") + size(cellranger_reference_data, "GB")) * 4 + 50)
 	Int mem_gb = 24
 
 	command <<<
@@ -227,7 +208,21 @@ task cellranger_count {
 
 		# Ensure fastqs are in the same directory
 		mkdir fastqs
-		ln -s ~{fastq_R1} ~{fastq_R2} ~{fastq_I1} ~{fastq_I2} fastqs/
+		while read -r fastq || [[ -n "${fastq}" ]]; do
+			if [[ -n "${fastq}" ]]; then
+				validated_fastq_name=$(fix_fastq_names --fastq "${fastq}" --sample-id "~{sample_id}")
+				if [[ -e "fastqs/${validated_fastq_name}" ]]; then
+					echo "[ERROR] Something's gone wrong with fastq renaming; trying to create fastq [${validated_fastq_name}] but it already exists. Exiting."
+					exit 1
+				else
+					ln -s "${fastq}" "fastqs/${validated_fastq_name}"
+				fi
+			fi
+		done < <(cat \
+			~{write_lines(fastq_R1s)} \
+			~{write_lines(fastq_R2s)} \
+			~{write_lines(fastq_I1s)} \
+			~{write_lines(fastq_I2s)})
 
 		cellranger --version
 
@@ -245,13 +240,14 @@ task cellranger_count {
 		mv ~{sample_id}/outs/molecule_info.h5 ~{sample_id}.molecule_info.h5
 		mv ~{sample_id}/outs/metrics_summary.csv ~{sample_id}.metrics_summary.csv
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{sample_id}.raw_feature_bc_matrix.h5 \
-			~{sample_id}.filtered_feature_bc_matrix.h5 \
-			~{sample_id}.molecule_info.h5 \
-			~{sample_id}.metrics_summary.csv \
-			~{raw_data_path}/
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{sample_id}.raw_feature_bc_matrix.h5" \
+			-o "~{sample_id}.filtered_feature_bc_matrix.h5" \
+			-o "~{sample_id}.molecule_info.h5" \
+			-o "~{sample_id}.metrics_summary.csv"
 	>>>
 
 	output {
@@ -267,6 +263,7 @@ task cellranger_count {
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
+		zones: zones
 	}
 }
 
@@ -282,9 +279,11 @@ task counts_to_seurat {
 		Float soup_rate
 
 		String raw_data_path
+		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
 		Int multiome_container_revision
+		String zones
 	}
 
 	Int disk_size = ceil(size([raw_counts, filtered_counts], "GB") * 2 + 20)
@@ -306,10 +305,11 @@ task counts_to_seurat {
 			--soup-rate ~{soup_rate} \
 			--output-seurat-object ~{sample_id}.seurat_object.preprocessed_01.rds
 
-		# Upload outputs
-		gsutil -u ~{billing_project} -m cp \
-			~{sample_id}.seurat_object.preprocessed_01.rds \
-			~{raw_data_path}/
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{sample_id}.seurat_object.preprocessed_01.rds"
 	>>>
 
 	output {
@@ -323,5 +323,6 @@ task counts_to_seurat {
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
+		zones: zones
 	}
 }
