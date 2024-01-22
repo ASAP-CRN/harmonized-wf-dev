@@ -1,14 +1,39 @@
 
 
-There are two variations sketched here:
+## _PREPROCESS_
+- _pre-preprocessing_: `cellbender` ('cellbender.py') or `scAR`('prepreprocess.py').  (replacing `soupx` in preprocess.R)
+- _preprocessing_: `scrublet` ('preprocess.py') or `SOLO` ('preprocess_solo.py'). 
+
+## _QC_
+- 'plot_qc_metrics.py'
+- NOTE:  currently concatenating all of the adatas.  This is inefficient
+
+## _FILTER and PROCESS_
+- _filtering_: 'filter.py'
+- _processing_: 'process.py'.  normalize + identify variable genes
+
+## _INTEGRATION_
+- 'scvi.py'.  
+    - merge adatas
+    - `scVI` integration 
+
+## _CLUSTERING_
+- _clustering_: `umap` ('clustering_umap.py') or `mde` ('clustering_mde.py')
+- NOTE:  mde is super fast and efficient on a GPU
+
+## _ANNOTATION_
+- 'annotate_clusters.py'.  To implement ..
+
+## _PLOTTING_
+- 'plot_featueres.py'.  To implement ..
+- 'plot_groups.py'.  To implement ..
 
 
-1) A more generic variant: `cellbender`->`preprocess`-> `plot_metrics` (merge) -> `filter` -> `scvi` -> `mde` (visualizing only, or `clustering_mde` to cluster on the neighbor graph (slow))
-
-and 
-2) a full scvi-tools variant: `prepreprocess`(scar)-> `preprocess_solo` -> (`plot_metrics`) (merge) -> `filter` -> `scvi` ->`clustering_mde` 
 
 
-For #2 its still not clear what the optimal flow is.  `scVI` VAEs are trained on individual samples AND are used to harmonize teh data downstream. 
+## CONSIDERATIONS.
+The "best" tools are probably `scAR`+`SOLO`+`scVI`.  Tradeoffs are probably some computation.
 
-Also, its unclear how well normalizing with scvi (in pre-process) and then using those normalized "expression" values works compared with batch correcting all at once.
+- filtering and processing on concatenated datasets... highly variable gene selection might be optimized
+Tradeoffs between generating extra artifacts 
+
