@@ -1,5 +1,18 @@
 import scvi
-import scanpy
+import anndata as ad
+
+
+
+
+# https://raw.githubusercontent.com/theislab/scanpy_usage/master/180209_cell_cycle/data/regev_lab_cell_cycle_genes.txt
+
+# cell_cycle_genes = [x.strip() for x in open('./data/regev_lab_cell_cycle_genes.txt')]
+# # Split into 2 lists
+# s_genes = cell_cycle_genes[:43]
+# g2m_genes = cell_cycle_genes[43:]
+
+# cell_cycle_genes = [x for x in cell_cycle_genes if x in adata.var_names]
+
 
 # parameters
 n_latent = 10
@@ -7,27 +20,13 @@ n_layers = 2
 train_size = 0.85
 latent_key='X_scvi'
 
-adata = scanpy.read_h5ad(snakemake.input.anndata) # type: ignore
+# extract sample name from the file name.
 
-
-# does this work with sparse uint8?
-adata.layers['counts'] = adata.X.copy() # type: ignore
-
-scanpy.pp.normalize_total(adata, target_sum=1e4)
-
-scanpy.pp.log1p(adata)
-
-adata.raw = adata
-
-scanpy.pp.highly_variable_genes(
-    adata, 
-    batch_key='sample', 
-    subset=True, 
-    flavor='seurat_v3', 
-    layer='counts', 
-    n_top_genes=3000
+adata = ad.concat(
+    merge='same', uns_merge='same', index_unique='_',
+    adatas={[item for item in dataset.split('_') if 'ARC' in item][0]:   
+            ad.read_h5ad(dataset) for dataset in snakemake.input.objects} # type: ignore
 )
-
 
 noise = ['doublet_score', 'pct_counts_mt', 'pct_counts_rb']
 
