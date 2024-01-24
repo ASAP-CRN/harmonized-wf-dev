@@ -1,8 +1,8 @@
-import scanpy
-import anndata
+import scanpy as sc
+import anndata as ad
 from .utils.helpers import minify_adata
 import argparse
-
+import pandas as pc
 
 # Create the parser
 parser = argparse.ArgumentParser(description='Call doublets')
@@ -27,9 +27,9 @@ args = parser.parse_args()
 
 
 
-scanpy.settings.verbosity = 1
-scanpy.settings.figdir = 'plots/'
-scanpy.settings.set_figure_params(dpi=100, fontsize=10, dpi_save=300, format='png', figsize=('12', '8')) # type: ignore
+sc.settings.verbosity = 1
+sc.settings.figdir = 'plots/'
+sc.settings.set_figure_params(dpi=100, fontsize=10, dpi_save=300, format='png', figsize=('12', '8')) # type: ignore
 
 
 parser.add_argument('--adata-objects-fofn', dest='adata_objects_fofn', type=str, 
@@ -60,7 +60,7 @@ for sample in samples:
     sample_name = sample.name.split("_")[1]
     adatas[sample_name] = raw
 
-
+# we could subset to the top_genes here before concat if we have memory issues (e.g. whole dataset harmonization.)
 
 adata = ad.concat(
         merge='same', uns_merge='same', index_unique='_',
@@ -71,9 +71,6 @@ for metric in metrics: # type: ignore
     sc.pl.violin(adata, keys=metric, size=0, save=''.join('_' + metric))
 
 
-top_genes_ = sorted(top_genes.items(), key=lambda x: x[1], reverse=True)
-top_genes_ = [x[0] for x in top_genes_]
-top_genes_
-
+top_genes = pd.DataFrame(index=top_genes.keys(), columns=['rank'], data=top_genes.values())
 
 #TODO: export top_genes and plots
