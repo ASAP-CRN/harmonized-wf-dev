@@ -1,5 +1,23 @@
 import scanpy
+import argparse
 
+# Create the parser
+parser = argparse.ArgumentParser(description='Normalize seurat objects')
+
+# Add arguments
+parser.add_argument('--working-dir', dest='working_dir', type=str, 
+                    help='Working directory', default='/data/CARD_singlecell/harmony-rna/')
+parser.add_argument('--script-dir', dest='script_dir', type=str, 
+                    help='Directory containing workflow scripts', default='scripts')
+parser.add_argument('--threads', dest='threads', type=int, 
+                    help='Number of threads to use for processing')
+parser.add_argument('--adata-input', dest='adata_input', type=str, 
+                    help='AnnData object for a dataset')
+parser.add_argument('--output-adata', dest='output_adatat', type=str, 
+                    help='Output file to save AnnData object to')
+
+# Parse the arguments
+args = parser.parse_args()
 
 # TODO: impliment cell cycle scoring 
 # https://raw.githubusercontent.com/theislab/scanpy_usage/master/180209_cell_cycle/data/regev_lab_cell_cycle_genes.txt
