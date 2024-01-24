@@ -10,7 +10,15 @@ parser.add_argument('--threads', dest='threads', type=int, help='Number of threa
 parser.add_argument('--seurat-object', dest='seurat_object', type=str, help='Seurat object for a dataset')
 parser.add_argument('--cell-type-markers-list', dest='cell_type_markers_list', type=str, help='Seurat object containing a list of major cell type markers')
 parser.add_argument('--output-metadata-file', dest='output_metadata_file', type=str, help='Output file to write metadata to')
+parser.add_argument('--output-adata', dest='output_adatat', type=str, 
+                    help='Output file to save AnnData object to')
+# Parse the arguments
 args = parser.parse_args()
 
+adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 
 # TODO: write annotation code to clusters
+
+
+
+adata.write_h5ad(filename=args.output_adata, compression='gzip') 

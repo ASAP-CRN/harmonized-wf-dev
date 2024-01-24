@@ -14,12 +14,15 @@ parser.add_argument('--script-dir', dest='script_dir', type=str,
                     help='Directory containing workflow scripts', default='scripts')
 parser.add_argument('--threads', dest='threads', type=int, 
                     help='Number of threads to use for processing')
-parser.add_argument('--seurat-objects-fofn', dest='seurat_objects_fofn', type=str, 
+parser.add_argument('--adata-objects-fofn', dest='adata_objects_fofn', type=str, 
                     help='Newline-delimited paths to the set of input seurat objects (file-of-filenames)')
 parser.add_argument('--project-name', dest='project_name', type=str, 
                     help='Project name')
 parser.add_argument('--output-metadata-file', dest='output_metadata_file', type=str, 
                     help='Output file to write metadata to')
+
+parser.add_argument('--output-adata', dest='output_adatat', type=str, 
+                    help='Output file to save AnnData object to')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -44,19 +47,19 @@ adatas = {}
 top_genes = {}
 for sample in samples:
     raw = sc.read_h5ad(sample) 
-    adata = raw.copy()
-    sc.pp.normalize_total(adata, target_sum=1e4)
-    sc.pp.log1p(adata)
-    sc.pp.highly_variable_genes(adata, flavor='seurat', n_top_genes=8000)
+    # adata = raw.copy()
+    # sc.pp.normalize_total(adata, target_sum=1e4)
+    # sc.pp.log1p(adata)
+    # sc.pp.highly_variable_genes(adata, flavor='seurat', n_top_genes=8000)
 
-    ranked_genes = adata.var[adata.var.highly_variable].dispersions_norm.argsort().to_dict()   
-    for k,v in ranked_genes.items():
-        if k in top_genes:
-            top_genes[k] += v
-        else:
-            top_genes[k] = v
+    # ranked_genes = adata.var[adata.var.highly_variable].dispersions_norm.argsort().to_dict()   
+    # for k,v in ranked_genes.items():
+    #     if k in top_genes:
+    #         top_genes[k] += v
+    #     else:
+    #         top_genes[k] = v
     
-    raw = minify_adata(raw)
+    # raw = minify_adata(raw)
     sample_name = sample.name.split("_")[1]
     adatas[sample_name] = raw
 
@@ -71,6 +74,9 @@ for metric in metrics: # type: ignore
     sc.pl.violin(adata, keys=metric, size=0, save=''.join('_' + metric))
 
 
-top_genes = pd.DataFrame(index=top_genes.keys(), columns=['rank'], data=top_genes.values())
+# top_genes = pd.DataFrame(index=top_genes.keys(), columns=['rank'], data=top_genes.values())
 
 #TODO: export top_genes and plots
+
+# export concatenated data.
+adata.write_h5ad(filename=args.output_adata, compression='gzip') 

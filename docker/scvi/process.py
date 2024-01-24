@@ -56,5 +56,4 @@ scanpy.pp.highly_variable_genes(
     n_top_genes=5000
 )
 
-
-adata.write_h5ad(filename=snakemake.output.anndata, compression='gzip') # type: ignore
+adata.write_h5ad(filename=args.output_adata, compression='gzip') 

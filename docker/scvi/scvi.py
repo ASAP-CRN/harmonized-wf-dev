@@ -28,6 +28,7 @@ parser.add_argument('positional_arguments', nargs='*', type=str,
 # Parse the arguments
 args = parser.parse_args()
 
+adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 
 # https://raw.githubusercontent.com/theislab/scanpy_usage/master/180209_cell_cycle/data/regev_lab_cell_cycle_genes.txt
 
@@ -87,6 +88,6 @@ adata.obsm[snakemake.params.latent_key] = model.get_latent_representation() # ty
 # minify the adata 
 
 # artifact 2
-# save the model? (could save model with minified adata together)
+# TODO: save the model? (could save model with minified adata together)
 
-adata.write_h5ad(filename=snakemake.output.anndata, compression='gzip') # type: ignore
+adata.write_h5ad(filename=args.output_adata, compression='gzip') 

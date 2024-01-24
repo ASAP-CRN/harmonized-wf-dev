@@ -14,4 +14,7 @@ scanpy.settings.verbosity = 1
 scanpy.settings.figdir = 'plots/'
 scanpy.settings.set_figure_params(dpi=100, fontsize=10, dpi_save=300, format='png', figsize=('12', '8')) # type: ignore
 
+# Parse the arguments
+args = parser.parse_args()
 
+adata = scanpy.read_h5ad(args.adata_input) # type: ignore

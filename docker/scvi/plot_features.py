@@ -14,11 +14,20 @@ parser.add_argument('--feature', dest='feature', type=str,
                     help='Feature to plot umaps for')
 parser.add_argument('--output-feature-umap-plot-prefix', dest='output_feature_umap_plot_prefix', type=str, 
                     help='Output file to write the feature umap plot to')
-
+parser.add_argument('--adata-input', dest='adata_input', type=str, 
+                    help='AnnData object for a dataset')
+                    
+# Parse the arguments
 # Parse the arguments
 args = parser.parse_args()
 
+adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 
 scanpy.settings.verbosity = 1
 scanpy.settings.figdir = 'plots/'
 scanpy.settings.set_figure_params(dpi=100, fontsize=10, dpi_save=300, format='png', figsize=('12', '8')) # type: ignore
+
+# Parse the arguments
+args = parser.parse_args()
+
+adata = scanpy.read_h5ad(args.adata_input) # type: ignore
