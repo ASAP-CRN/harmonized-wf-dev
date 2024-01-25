@@ -26,15 +26,10 @@
 - 'annotate_clusters.py'.  To implement ..
 
 #### _PLOTTING_
-- 'plot_featueres.py'.  To implement ..
-- 'plot_groups.py'.  To implement ..
-
-
+- 'plot_feats_and_groups.py'.  
 
 
 #### CONSIDERATIONS.
-The "best" tools are probably `scAR`+`SOLO`+`scVI`.  Tradeoffs are probably some computation.
-
-- filtering and processing on concatenated datasets... highly variable gene selection might be optimized
-Tradeoffs between generating extra artifacts 
+The "best" tools are probably `scAR`+`SOLO`+`scVI`.   Tradeoffs are probably some computation.  However, withouth further testing
+we will default to `cellbender`+`scrublet` for removing ambient and creating the doublet metrics. `scVI` to be used for integration.
 
