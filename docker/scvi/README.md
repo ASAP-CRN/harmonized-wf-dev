@@ -2,19 +2,20 @@
 
 #### _PREPROCESS_
 - _pre-preprocessing_: `cellbender` ('cellbender.py') or `scAR`('preprocess_scar.py').  (replacing `soupx` in preprocess.R)
-- _preprocessing_: `scrublet` ('preprocess.py') or `SOLO` ('preprocess_solo.py'). 
+- _preprocessing_: `scrublet` ('preprocess.py') or ~~`SOLO` ('preprocess_solo.py'). ~~
 
 #### _QC_
 - 'plot_qc_metrics.py'
-- NOTE:  currently concatenating all of the adatas.  This is inefficient
+    - merges adatas
+    - NOTE:  merging here could be inefficient.  stubs of code to create gene_list to pre-filter 
+        - consider filtering cells first... 'processing' filters genes to "highly variable"
 
-#### _FILTER and PROCESS_
+#### _FILTER and PROCESS_ 
 - _filtering_: 'filter.py'
 - _processing_: 'process.py'.  normalize + identify variable genes
 
 #### _INTEGRATION_
 - 'scvi.py'.  
-    - merge adatas
     - `scVI` integration 
 
 #### _CLUSTERING_
