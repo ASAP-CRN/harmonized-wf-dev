@@ -2,7 +2,7 @@
 
 #### _PREPROCESS_
 - _pre-preprocessing_: `cellbender` ('cellbender.py') ~~or `scAR`('preprocess_scar.py').~~  (replacing `soupx` in preprocess.R)
-- _preprocessing_: `scrublet` ('preprocess.py') or ~~`SOLO` ('preprocess_solo.py'). ~~
+- _preprocessing_: `scrublet` ('preprocess.py') ~~ or`SOLO` ('preprocess_solo.py'). ~~
 
 #### _QC_
 - 'plot_qc_metrics.py'
