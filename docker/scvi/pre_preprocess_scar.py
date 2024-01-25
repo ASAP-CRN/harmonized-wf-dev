@@ -23,7 +23,7 @@ parser.add_argument('--filtered-counts', dest='filtered_counts', type=str,
                     help='Filtered feature-barcode matrices HDF5 output by cellranger')
 parser.add_argument('--ambient-p', dest='soup_rate', type=float, 
                     help='Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data')
-parser.add_argument('--output-adata', dest='output_adatat', type=str, 
+parser.add_argument('--adata-output', dest='adata_output', type=str, 
                     help='Output file to save AnnData object to')
 
 # Parse the arguments

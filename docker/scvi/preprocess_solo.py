@@ -19,7 +19,7 @@ parser.add_argument('--batch', dest='batch', type=str,
 parser.add_argument('--project', dest='project', type=str, 
                     help='Project ID')
 
-parser.add_argument('--output-adata', dest='output_adatat', type=str, 
+parser.add_argument('--adata-output', dest='adata_output', type=str, 
                     help='Output file to save AnnData object to')
 
 # Parse the arguments
@@ -59,6 +59,7 @@ adata.obs['batch'] = args.batch
 adata.obs['project'] = args.project
 adata.obs['batch_id'] = args.project+args.batch #
 
+# drop the celbender obs? 'background_fraction', 'cell_probability', 'cell_size', 'droplet_efficiency',
 
-adata.write_h5ad(filename=args.output_adata, compression='gzip') 
+adata.write_h5ad(filename=args.adata_output, compression='gzip') 
 

@@ -11,7 +11,7 @@ parser.add_argument('--latent-key', dest='latent_key', type=str, default='X_scvi
                     help='latent key to save the scvi latent to')
 parser.add_argument('--adata-input', dest='adata_input', type=str, 
                     help='AnnData object for a dataset')
-parser.add_argument('--output-adata', dest='output_adatat', type=str, 
+parser.add_argument('--adata-output', dest='adata_output', type=str, 
                     help='Output file to save AnnData object to')
 parser.add_argument('--output-scvi', dest='output_scvi', type=str, 
                     help='Output file to save `scvi` model')
@@ -37,11 +37,10 @@ early_stopping = True
 early_stopping_patience = 40
 # latent_key='X_scvi'
 
-
 adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 
 # just use the counts layer. does this delete the "raw"
-adata = adata.layers['counts']
+# adata = adata.layers['counts']
 
 ## integrate the data with `scVI`
 # noise = ['doublet_score', 'pct_counts_mt', 'pct_counts_rb']
@@ -70,4 +69,4 @@ adata.obsm[args.latent_key] = model.get_latent_representation() # type: ignore
 # artifacts
 model.save(args.output_scvi)
 
-adata.write_h5ad(filename=args.output_adata, compression='gzip') 
+adata.write_h5ad(filename=args.adata_output, compression='gzip') 

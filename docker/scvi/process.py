@@ -11,7 +11,7 @@ parser.add_argument('--working-dir', dest='working_dir', type=str,
 
 parser.add_argument('--adata-input', dest='adata_input', type=str, 
                     help='AnnData object for a dataset')
-parser.add_argument('--output-adata', dest='output_adatat', type=str, 
+parser.add_argument('--adata-output', dest='adata_output', type=str, 
                     help='Output file to save AnnData object to')
 
 parser.add_argument('--top-genes', dest='top_genes', type=str, 
@@ -53,4 +53,4 @@ scanpy.pp.highly_variable_genes(
     n_top_genes=5000
 )
 
-adata.write_h5ad(filename=args.output_adata, compression='gzip') 
+adata.write_h5ad(filename=args.adata_output, compression='gzip') 

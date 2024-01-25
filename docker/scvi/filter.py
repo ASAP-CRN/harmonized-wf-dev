@@ -9,10 +9,10 @@ parser = argparse.ArgumentParser(description='Filter')
 # Add arguments
 parser.add_argument('--adata-input', dest='adata_input', type=str, 
                     help='AnnData object for a dataset')
-parser.add_argument('--output-adata', dest='output_adatat', type=str, 
+parser.add_argument('--adata-output', dest='adata_output', type=str, 
                     help='Output file to save AnnData object to')
+# TODO: add filter parameters as arguments
 
-# backed adata hack https://discourse.scverse.org/t/concat-anndata-objects-on-disk/400/2
 # Parse the arguments
 args = parser.parse_args()
 
@@ -24,4 +24,4 @@ muon.pp.filter_obs(adata, 'doublet_score', lambda x: x < 0.2)
 muon.pp.filter_obs(adata, 'total_counts', lambda x: (x >= 500) & (x <= 100000))
 muon.pp.filter_obs(adata, 'n_genes_by_counts', lambda x: (x >= 300) & (x <= 10000))
 
-adata.write_h5ad(filename=args.output_adata, compression='gzip') 
+adata.write_h5ad(filename=args.adata_output, compression='gzip') 

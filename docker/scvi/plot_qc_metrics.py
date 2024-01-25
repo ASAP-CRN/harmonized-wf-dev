@@ -21,7 +21,7 @@ parser.add_argument('--project-name', dest='project_name', type=str,
 parser.add_argument('--output-metadata-file', dest='output_metadata_file', type=str, 
                     help='Output file to write metadata to')
 
-parser.add_argument('--output-adata', dest='output_adatat', type=str, 
+parser.add_argument('--adata-output', dest='adata_output', type=str, 
                     help='Output file to save AnnData object to')
 
 # Parse the arguments
@@ -82,4 +82,4 @@ for metric in metrics: # type: ignore
 #TODO: export top_genes? and plots
 
 # export concatenated data.
-adata.write_h5ad(filename=args.output_adata, compression='gzip') 
+adata.write_h5ad(filename=args.adata_output, compression='gzip') 

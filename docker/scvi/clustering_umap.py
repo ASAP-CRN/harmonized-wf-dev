@@ -12,21 +12,17 @@ parser.add_argument('--cell-type-markers-list', dest='cell_type_markers_list', t
                     help='Seurat object containing a list of major cell type markers')
 parser.add_argument('--output-metadata-file', dest='output_metadata_file', type=str, 
                     help='Output file to write metadata to')
-parser.add_argument('--output-adata', dest='output_adatat', type=str, 
+parser.add_argument('--adata-output', dest='adata_output', type=str, 
                     help='Output file to save AnnData object to')
+parser.add_argument('--latent-key', dest='latent_key', type=str, default='X_scvi',
+                    help='latent key to the scvi latent')
 # Parse the arguments
 args = parser.parse_args()
 
 adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 
-# k = round(median(sqrt(adata.obs.sample.value_counts() * 0.5)))
-# calculate PCS for reference
-
-# this could be a resource problem...
-scanpy.pp.pca(adata, n_comps=50)
-
 # calculate neighbor graph on scVI latent
-scanpy.pp.neighbors(adata, n_neighbors=50, use_rep=snakemake.params.latent_key)
+scanpy.pp.neighbors(adata, n_neighbors=50, use_rep=args.latent_key)
 
 # do leiden
 scanpy.tl.leiden(adata, resolution=0.4)
@@ -34,4 +30,4 @@ scanpy.tl.leiden(adata, resolution=0.4)
 scanpy.tl.umap(adata)
 
 
-adata.write_h5ad(filename=args.output_adata, compression='gzip') 
+adata.write_h5ad(filename=args.adata_output, compression='gzip') 
