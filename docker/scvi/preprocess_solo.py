@@ -1,8 +1,6 @@
 import scvi
 import scanpy
-from cellbender.remove_background.downstream import anndata_from_h5
 import argparse
-
 # Create the parser
 parser = argparse.ArgumentParser(description='Preprocess')
 
@@ -27,9 +25,13 @@ parser.add_argument('--output-adata', dest='output_adatat', type=str,
 # Parse the arguments
 args = parser.parse_args()
 
+
+os.setwd(args.working_dir)
+from util.helpers import anndata_from_h5, get_solo_results
+
 # load the data from cellbender output
-adata = anndata_from_h5(args.inpadata_inputut)
-# adata = scanpy.read_10x_h5(args.input)
+adata = anndata_from_h5(args.adata_input)
+# adata = scanpy.read_10x_h5(args.adata_input)
 
 adata.var_names_make_unique()
 adata.var['mt'] = adata.var_names.str.startswith('MT-')
@@ -44,11 +46,12 @@ vae.train()
 solo = scvi.external.SOLO.from_scvi_model(vae)
 solo.train()
 
-scores = solo.predict(soft=True)
+# I'm not sure that this is returning reliable results... use scrublet for now...
+# scores = solo.predict(adata, return_solo=False)
+scores = get_solo_results(solo, adata, vae, gen_report=False, expected_doublet_rate=None) # 5% doublet rate matches scrublet default...
 
 # add doublet score
-adata.obs['doublet_score'] = scores['doublet']
-# adata.obs['singlet_score'] = scores['singlet']
+adata.obs['doublet_score'] = scores['softmax_scores']
 
 # add metadata
 adata.obs['sample'] = args.sample_id

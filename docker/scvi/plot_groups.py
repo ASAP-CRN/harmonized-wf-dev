@@ -18,3 +18,5 @@ scanpy.settings.set_figure_params(dpi=100, fontsize=10, dpi_save=300, format='pn
 args = parser.parse_args()
 
 adata = scanpy.read_h5ad(args.adata_input) # type: ignore
+
+# TODO: impliment plotting code

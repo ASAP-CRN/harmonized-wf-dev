@@ -1,8 +1,8 @@
 import scanpy as sc
 import anndata as ad
-from .utils.helpers import minify_adata
 import argparse
 import pandas as pc
+import os
 
 # Create the parser
 parser = argparse.ArgumentParser(description='Call doublets')
@@ -27,7 +27,8 @@ parser.add_argument('--output-adata', dest='output_adatat', type=str,
 # Parse the arguments
 args = parser.parse_args()
 
-
+# os.setwd(args.working_dir)
+# from .utils.helpers import minify_adata
 
 
 sc.settings.verbosity = 1
@@ -47,12 +48,13 @@ adatas = {}
 top_genes = {}
 for sample in samples:
     raw = sc.read_h5ad(sample) 
+    # code below if memory issues with concatenating all the ge
     # adata = raw.copy()
     # sc.pp.normalize_total(adata, target_sum=1e4)
     # sc.pp.log1p(adata)
     # sc.pp.highly_variable_genes(adata, flavor='seurat', n_top_genes=8000)
 
-    # ranked_genes = adata.var[adata.var.highly_variable].dispersions_norm.argsort().to_dict()   
+    # # ranked_genes = adata.var[adata.var.highly_variable].dispersions_norm.argsort().to_dict()   
     # for k,v in ranked_genes.items():
     #     if k in top_genes:
     #         top_genes[k] += v
@@ -70,13 +72,14 @@ adata = ad.concat(
         adatas=adatas
         )
 
+
 for metric in metrics: # type: ignore
     sc.pl.violin(adata, keys=metric, size=0, save=''.join('_' + metric))
 
 
 # top_genes = pd.DataFrame(index=top_genes.keys(), columns=['rank'], data=top_genes.values())
 
-#TODO: export top_genes and plots
+#TODO: export top_genes? and plots
 
 # export concatenated data.
 adata.write_h5ad(filename=args.output_adata, compression='gzip') 

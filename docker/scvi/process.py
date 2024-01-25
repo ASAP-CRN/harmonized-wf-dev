@@ -33,20 +33,17 @@ adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 
 # cell_cycle_genes = [x for x in cell_cycle_genes if x in adata.var_names]
 # TODO load the top_genes from the qc plotting step and subset... to the top 8k genes
-gene_list = pd.read_csv(top_genes, header=None)[0].tolist()
-adata = adata[:, gene_list.index]
+#  if we have memory issues, consider subsetting to a gene_list
+# gene_list = pd.read_csv(top_genes, header=None)[0].tolist()
+# adata = adata[:, gene_list.index]
 
 # does this work with sparse uint8?
 adata.layers['counts'] = adata.X.copy() # type: ignore
 
 scanpy.pp.normalize_total(adata, target_sum=1e4)
-
 scanpy.pp.log1p(adata)
 
-adata.raw = adata
-
 # sc.tl.score_genes_cell_cycle(adata, s_genes=s_genes, g2m_genes=g2m_genes)
-
 scanpy.pp.highly_variable_genes(
     adata, 
     batch_key='sample', 

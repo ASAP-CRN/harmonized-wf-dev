@@ -1,6 +1,6 @@
 import scanpy
 import argparse
-from cellbender.remove_background.downstream import anndata_from_h5
+import os
 
 # Create the parser
 parser = argparse.ArgumentParser(description='Preprocess')
@@ -27,9 +27,12 @@ parser.add_argument('--output-adata', dest='output_adatat', type=str,
 # Parse the arguments
 args = parser.parse_args()
 
+os.setwd(args.working_dir)
+from util.helpers import anndata_from_h5, get_solo_results
+
 # load the data from cellbender output
-adata = anndata_from_h5(args.inpadata_inputut)
-# adata = scanpy.read_10x_h5(args.input)
+adata = anndata_from_h5(args.adata_input)
+# adata = scanpy.read_10x_h5(args.adata_input)
 
 adata.var_names_make_unique()
 adata.var['mt'] = adata.var_names.str.startswith('MT-')
@@ -37,7 +40,8 @@ adata.var['rb'] = adata.var_names.str.startswith(('RPL', 'RPS'))
 scanpy.pp.calculate_qc_metrics(adata, qc_vars=['rb', 'mt'], percent_top=None, log1p=False, inplace=True)
 
 # add doublet score
-scanpy.external.pp.scrublet(adata, expected_doublet_rate=(adata.n_obs / 1000) * 0.008)
+scanpy.external.pp.scrublet(adata)
+# keep the metadata clean ad drop predicted_doublet... rely on the probability of dublet i.e. doublet_score
 adata.obs.drop('predicted_doublet', axis=1, inplace=True)
 
 # add metadata

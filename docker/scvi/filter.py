@@ -7,12 +7,6 @@ import argparse
 parser = argparse.ArgumentParser(description='Filter')
 
 # Add arguments
-parser.add_argument('--working-dir', dest='working_dir', type=str, 
-                    help='Working directory', default='/data/CARD_singlecell/harmony-rna/')
-parser.add_argument('--script-dir', dest='script_dir', type=str, 
-                    help='Directory containing workflow scripts', default='scripts')
-parser.add_argument('--metadata', dest='metadata', type=str, 
-                    help='Metadata file output by gmm_doublet_calling')
 parser.add_argument('--adata-input', dest='adata_input', type=str, 
                     help='AnnData object for a dataset')
 parser.add_argument('--output-adata', dest='output_adatat', type=str, 
