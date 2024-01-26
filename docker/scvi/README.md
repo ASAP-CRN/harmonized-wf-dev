@@ -15,7 +15,7 @@
 - _processing_: 'process.py'.  normalize + identify variable genes
 
 #### _INTEGRATION_
-- 'scvi.py'.  
+- 'integrate_scvi.py'.  
     - `scVI` integration 
 
 #### _CLUSTERING_
