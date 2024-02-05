@@ -25,6 +25,15 @@ adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 #  4. model = CellAssign(bdata, marker_genes)
 #  5. model.train()
 #  6. model.predict()
+#  7. adata.obs["cell_type"] = model.predicted_cell_types
+#  8. adata.obs["cell_type"] = adata.obs["cell_type"].astype("category")
+#  9. adata.obs = pd.concat([adata.obs, ], axis=1)
+
+
+# make minified adata
+# TODO: impliment
+# archive bdata and adata
+
 
 
 adata.write_h5ad(filename=args.adata_output, compression='gzip') 

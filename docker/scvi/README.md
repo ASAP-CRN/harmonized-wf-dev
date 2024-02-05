@@ -23,7 +23,7 @@
 - NOTE:  mde is super fast and efficient on a GPU
 
 #### _ANNOTATION_
-- 'annotate_clusters.py'.  To implement ..
+- 'annotate_clusters.py'.  To implement .. Use cellassign and a list of marker genes.  Need to curate a list of marker genes apropriate for all the brain regions we are processing.
 
 #### _PLOTTING_
 - 'plot_feats_and_groups.py'.  
