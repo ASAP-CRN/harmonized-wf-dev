@@ -26,6 +26,9 @@ assay <- 'RNA'
 
 object <- readRDS(seurat_object)
 
+# A list of cell cycle markers, from Tirosh et al, 2015, is loaded with Seurat.  We can
+# segregate this list into markers of G2/M phase and markers of S phase
+
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
 
