@@ -1,1 +1,5 @@
 inputs.test_data*.json
+
+# Mac/OSX system file
+.DS_Store
+
