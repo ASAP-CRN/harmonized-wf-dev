@@ -11,6 +11,8 @@ workflow harmonized_pmdbs_analysis {
 
 		File cellranger_reference_data
 
+		Boolean regenerate_preprocessed_adata_objects = false
+
 		Boolean run_cross_team_cohort_analysis = false
 		String cohort_raw_data_bucket
 		Array[String] cohort_staging_data_buckets
@@ -22,35 +24,70 @@ workflow harmonized_pmdbs_analysis {
 	# Task and subworkflow versions
 	String cellranger_task_version = "v1.1.0"
 
+	String workflow_execution_path = "workflow_execution"
+
 	call get_workflow_metadata {
 		input:
 			zones = zones
 	}
 
 	scatter (project in projects) {
-		scatter (sample in project.samples) {
-			call cellranger_count {
-				input:
-					sample_id = sample.sample_id,
-					fastq_R1s = sample.fastq_R1s,
-					fastq_R2s = sample.fastq_R2s,
-					fastq_I1s = sample.fastq_I1s,
-					fastq_I2s = sample.fastq_I2s,
-					cellranger_reference_data = cellranger_reference_data,
-					raw_data_path = "~{project.raw_data_bucket}/workflow_execution/cellranger/~{cellranger_task_version}",
-					workflow_info = [[get_workflow_metadata.timestamp, "cellranger", cellranger_task_version]],
-					billing_project = get_workflow_metadata.billing_project,
-					container_registry = container_registry,
-					zones = zones
+		scatter (sample_object in project.samples) {
+			String cellranger_count_output = "~{project.raw_data_bucket}/~{workflow_execution_path}/cellranger/~{cellranger_task_version}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
+		}
+
+		# For each sample, outputs an array of true/false
+		call check_output_files_exist {
+		input:
+			cellranger_count_output_files = cellranger_count_output,
+			billing_project = get_workflow_metadata.billing_project,
+			zones = zones
+		}
+
+		scatter (index in range(length(project.samples))) {
+			Sample sample = project.samples[index]
+			String cellranger_count_complete = check_output_files_exist.sample_cellranger_complete[index][0]
+
+			Array[String] project_sample_id = [project.project_id, sample.sample_id]
+
+			String cellranger_raw_counts = "~{project.raw_data_bucket}/~{workflow_execution_path}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
+			String cellranger_filtered_counts = "~{project.raw_data_bucket}/~{workflow_execution_path}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
+			String cellranger_molecule_info = "~{project.raw_data_bucket}/~{workflow_execution_path}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.molecule_info.h5"
+			String cellranger_metrics_csv = "~{project.raw_data_bucket}/~{workflow_execution_path}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.metrics_summary.csv"
+
+			if (cellranger_count_complete == "false") {
+				call cellranger_count {
+					input:
+						sample_id = sample.sample_id,
+						fastq_R1s = sample.fastq_R1s,
+						fastq_R2s = sample.fastq_R2s,
+						fastq_I1s = sample.fastq_I1s,
+						fastq_I2s = sample.fastq_I2s,
+						cellranger_reference_data = cellranger_reference_data,
+						raw_data_path = "~{project.raw_data_bucket}/workflow_execution/cellranger/~{cellranger_task_version}",
+						workflow_info = [[get_workflow_metadata.timestamp, "cellranger", cellranger_task_version]],
+						billing_project = get_workflow_metadata.billing_project,
+						container_registry = container_registry,
+						zones = zones
+				}
 			}
+
+			File raw_counts_output = select_first([cellranger_count.raw_counts, cellranger_raw_counts]) #!FileCoercion
+			File filtered_counts_output = select_first([cellranger_count.filtered_counts, cellranger_filtered_counts]) #!FileCoercion
+			File molecule_info_output = select_first([cellranger_count.molecule_info, cellranger_molecule_info]) #!FileCoercion
+			File metrics_csv_output = select_first([cellranger_count.metrics_csv, cellranger_metrics_csv]) #!FileCoercion
 		}
 	}
 
 	output {
-		Array[Array[File]] raw_counts = cellranger_count.raw_counts
-		Array[Array[File]] filtered_counts = cellranger_count.filtered_counts
-		Array[Array[File]] molecule_info = cellranger_count.molecule_info
-		Array[Array[File]] metrics_csvs = cellranger_count.metrics_csv
+		# Sample list
+		Array[Array[Array[String]]] project_sample_ids = project_sample_id
+
+		# Cellranger
+		Array[Array[File]] raw_counts = raw_counts_output
+		Array[Array[File]] filtered_counts = filtered_counts_output
+		Array[Array[File]] molecule_info = molecule_info_output
+		Array[Array[File]] metrics_csvs = metrics_csv_output
 	}
 
 	meta {
@@ -96,6 +133,40 @@ task get_workflow_metadata {
 		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk 10 HDD"
+		preemptible: 3
+		zones: zones
+	}
+}
+
+task check_output_files_exist {
+	input {
+		Array[String] cellranger_count_output_files
+
+		String billing_project
+		String zones
+	}
+
+	command <<<
+		set -euo pipefail
+
+		while read -r output_files || [[ -n "${output_files}" ]]; do 
+			if gsutil -u ~{billing_project} ls "${output_files}"; then
+				echo "true" >> sample_cellranger_complete.tsv
+			else
+				echo "false" >> sample_cellranger_complete.tsv
+			fi
+		done < ~{write_lines(cellranger_count_output_files)}
+	>>>
+
+	output {
+		Array[Array[String]] sample_cellranger_complete = read_tsv("sample_cellranger_complete.tsv")
+	}
+
+	runtime {
+		docker: "gcr.io/google.com/cloudsdktool/google-cloud-cli:444.0.0-slim"
+		cpu: 2
+		memory: "4 GB"
+		disks: "local-disk 20 HDD"
 		preemptible: 3
 		zones: zones
 	}
