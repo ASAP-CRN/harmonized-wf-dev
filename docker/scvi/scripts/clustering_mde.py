@@ -1,7 +1,7 @@
 import scanpy
 from scvi.model.utils import mde
 import argparse
-import scanpy
+
 parser = argparse.ArgumentParser(description='Run clustering')
 parser.add_argument('--working-dir', dest='working_dir', type=str, help='Working directory', default='/data/CARD_singlecell/harmony-rna/')
 parser.add_argument('--script-dir', dest='script_dir', type=str, help='Directory containing workflow scripts', default='scripts')

@@ -1,6 +1,5 @@
 import scvi
 import anndata as ad
-
 import argparse
 
 # Create the parser
@@ -58,7 +57,7 @@ model = scvi.model.SCVI(
 model.train(
     train_size=train_size,
     max_epochs=scvi_epochs,
-    early_stopping=early_stopping
+    early_stopping=early_stopping,
     early_stopping_patience=early_stopping_patience,
     plan_kwargs=plan_kwargs,
 )

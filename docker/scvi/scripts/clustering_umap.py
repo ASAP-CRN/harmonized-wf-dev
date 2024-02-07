@@ -1,4 +1,6 @@
+import argparse
 import scanpy
+
 parser = argparse.ArgumentParser(description='Annotate clusters')
 parser.add_argument('--working-dir', dest='working_dir', type=str, 
                     help='Working directory', default='/data/CARD_singlecell/harmony-rna/')
