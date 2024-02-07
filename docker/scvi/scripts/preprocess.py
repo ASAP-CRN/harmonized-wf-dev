@@ -1,30 +1,57 @@
-import scanpy
 import argparse
 import os
+import scanpy
 
-# Create the parser
-parser = argparse.ArgumentParser(description='Preprocess')
 
-# Add arguments
-parser.add_argument('--working-dir', dest='working_dir', type=str, 
-                    help='Working directory', default='/data/CARD_singlecell/harmony-rna/')
-parser.add_argument('--script-dir', dest='script_dir', type=str, 
-                    help='Directory containing workflow scripts', default='scripts')
-parser.add_argument('--adata-input', dest='adata_input', type=str, 
-                    help='AnnData object for a dataset')
+parser = argparse.ArgumentParser(
+    description='Preprocess'
+)
+parser.add_argument(
+	'--working-dir',
+	dest='working_dir',
+	type=str,
+    help='Working directory',
+	default='/data/CARD_singlecell/harmony-rna/'
+)
+parser.add_argument(
+	'--script-dir',
+	dest='script_dir',
+	type=str,
+    help='Directory containing workflow scripts',
+	default='scripts'
+)
+parser.add_argument(
+	'--adata-input',
+	dest='adata_input',
+	type=str,
+    help='AnnData object for a dataset'
+)
 # toplevel metadata to add to the adata
-parser.add_argument('--sample-id', dest='sample_id', type=str, 
-                    help='Sample/dataset ID')
-parser.add_argument('--batch', dest='batch', type=str, 
-                    help='Batch from which the sample/dataset originated')
-parser.add_argument('--project', dest='project', type=str, 
-                    help='Project ID')
-                    
-parser.add_argument('--adata-output', dest='adata_output', type=str, 
-                    help='Output file to save AnnData object to')
+parser.add_argument(
+	'--sample-id',
+	dest='sample_id',
+	type=str,
+    help='Sample/dataset ID'
+)
+parser.add_argument(
+	'--batch',
+	dest='batch',
+	type=str,
+    help='Batch from which the sample/dataset originated'
+)
+parser.add_argument(
+	'--project',
+	dest='project',
+	type=str,
+    help='Project ID'
+)                  
+parser.add_argument(
+	'--adata-output',
+	dest='adata_output',
+	type=str,
+    help='Output file to save AnnData object to'
+)
 
-
-# Parse the arguments
 args = parser.parse_args()
 
 os.setwd(args.working_dir)

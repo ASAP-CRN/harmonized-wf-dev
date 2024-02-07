@@ -4,15 +4,29 @@ from math import sqrt
 from statistics import median
 from scvi.model.utils import mde
 
-# Create the parser
-parser = argparse.ArgumentParser(description='Minimum-Distortion Embedding (MDE)')
-# Add arguments
-parser.add_argument('--latent-key', dest='latent_key', type=str, default='X_scvi',
-                    help='Latent key to save the scvi latent to')
-parser.add_argument('--adata-input', dest='adata_input', type=str, 
-                    help='AnnData object for a dataset')
-parser.add_argument('--adata-output', dest='adata_output', type=str, 
-                    help='Output file to save AnnData object to')
+
+parser = argparse.ArgumentParser(
+    description='Minimum-Distortion Embedding (MDE)'
+)
+parser.add_argument(
+    '--latent-key',
+    dest='latent_key',
+    type=str,
+    default='X_scvi',
+    help='Latent key to save the scvi latent to'
+)
+parser.add_argument(
+    '--adata-input',
+    dest='adata_input',
+    type=str,
+    help='AnnData object for a dataset'
+)
+parser.add_argument(
+    '--adata-output',
+    dest='adata_output',
+    type=str,
+    help='Output file to save AnnData object to'
+)
 
 args = parser.parse_args()
 

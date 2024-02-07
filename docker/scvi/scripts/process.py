@@ -1,24 +1,38 @@
-import scanpy
 import argparse
 import pandas as pd
-
-# Create the parser
-parser = argparse.ArgumentParser(description='Normalize seurat objects')
-
-# Add arguments
-parser.add_argument('--working-dir', dest='working_dir', type=str, 
-                    help='Working directory', default='/data/CARD_singlecell/harmony-rna/')
-
-parser.add_argument('--adata-input', dest='adata_input', type=str, 
-                    help='AnnData object for a dataset')
-parser.add_argument('--adata-output', dest='adata_output', type=str, 
-                    help='Output file to save AnnData object to')
-
-parser.add_argument('--top-genes', dest='top_genes', type=str, 
-                    help='csv containing top genes', default='top_genes.csv')
+import scanpy
 
 
-# Parse the arguments
+parser = argparse.ArgumentParser(
+    description='Normalize seurat objects'
+)
+parser.add_argument(
+	'--working-dir',
+	dest='working_dir',
+	type=str,
+    help='Working directory',
+	default='/data/CARD_singlecell/harmony-rna/'
+)
+parser.add_argument(
+	'--adata-input',
+	dest='adata_input',
+	type=str,
+    help='AnnData object for a dataset'
+)
+parser.add_argument(
+	'--adata-output',
+	dest='adata_output',
+	type=str,
+    help='Output file to save AnnData object to'
+)
+parser.add_argument(
+	'--top-genes',
+	dest='top_genes',
+	type=str,
+    help='CSV containing top genes',
+	default='top_genes.csv'
+)
+
 args = parser.parse_args()
 
 adata = scanpy.read_h5ad(args.adata_input) # type: ignore

@@ -1,23 +1,38 @@
+import argparse
 import scvi
 import anndata as ad
-import argparse
 
-# Create the parser
-parser = argparse.ArgumentParser(description='Run harmony analysis')
 
-# Add arguments
-parser.add_argument('--latent-key', dest='latent_key', type=str, default='X_scvi',
-                    help='latent key to save the scvi latent to')
-parser.add_argument('--adata-input', dest='adata_input', type=str, 
-                    help='AnnData object for a dataset')
-parser.add_argument('--adata-output', dest='adata_output', type=str, 
-                    help='Output file to save AnnData object to')
-parser.add_argument('--output-scvi', dest='output_scvi', type=str, 
-                    help='Output file to save `scvi` model')
+parser = argparse.ArgumentParser(
+    description='Run harmony analysis'
+)
+parser.add_argument(
+    '--latent-key',
+    dest='latent_key',
+    type=str,
+    default='X_scvi',
+    help='Latent key to save the scvi latent to'
+)
+parser.add_argument(
+    '--adata-input',
+    dest='adata_input',
+    type=str,
+    help='AnnData object for a dataset'
+)
+parser.add_argument(
+    '--adata-output',
+    dest='adata_output',
+    type=str,
+    help='Output file to save AnnData object to'
+)
+parser.add_argument(
+    '--output-scvi',
+    dest='output_scvi',
+    type=str,
+    help='Output file to save `scvi` model'
+)
 # TODO: optional scvi arguments
 
-
-# Parse the arguments
 args = parser.parse_args()
 
 ## parameters

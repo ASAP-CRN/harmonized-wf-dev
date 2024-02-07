@@ -2,23 +2,45 @@
 #     refer to utily/sctype.r
 import argparse
 import pandas as pd
-import scanpy
 import numpy as np
+import scanpy
 import scvi
 
 
-parser = argparse.ArgumentParser(description='Annotate clusters')
-parser.add_argument('--adata-input', dest='adata_input', type=str, 
-                    help='AnnData object for a dataset')
-parser.add_argument('--marker-genes', dest='marker_genes', type=str, 
-                    help='path to marker_genes .csv file')
-parser.add_argument('--output-cellassign', dest='cellassign_model', type=str, 
-                    help='Output file to write cellAssign model to')
-parser.add_argument('--output-cell-types-file', dest='cell_type_output', type=str, 
-                    help='Output file to write celltypes to')
-parser.add_argument('--adata-output', dest='adata_output', type=str, 
-                    help='Output file to save AnnData object to')
-# Parse the arguments
+parser = argparse.ArgumentParser(
+    description='Annotate clusters'
+)
+parser.add_argument(
+    '--adata-input',
+    dest='adata_input',
+    type=str,
+    help='AnnData object for a dataset'
+)
+parser.add_argument(
+    '--marker-genes',
+    dest='marker_genes',
+    type=str,
+    help='Path to marker_genes .csv file'
+)
+parser.add_argument(
+    '--output-cellassign',
+    dest='cellassign_model',
+    type=str,
+    help='Output file to write cellAssign model to'
+)
+parser.add_argument(
+    '--output-cell-types-file',
+    dest='cell_type_output',
+    type=str,
+    help='Output file to write celltypes to'
+)
+parser.add_argument(
+    '--adata-output',
+    dest='adata_output',
+    type=str,
+    help='Output file to save AnnData object to'
+)
+
 args = parser.parse_args()
 
 # 0. load adata
@@ -39,12 +61,24 @@ bdata.obs['size_factor'] = lib_size / np.mean(lib_size)
 noise = ['doublet_score', 'pct_counts_mt', 'pct_counts_rb'] #, 'S.Score', 'G2M.Score']
 
 #  4. model = CellAssign(bdata, marker_genes)
-scvi.external.CellAssign.setup_anndata(adata, size_factor_key='size_factor', batch_key='sample', layer='counts', continuous_covariate_keys=noise)
+scvi.external.CellAssign.setup_anndata(
+    adata,
+    size_factor_key='size_factor',
+    batch_key='sample',
+    layer='counts',
+    continuous_covariate_keys=noise
+)
 
 #  5. model.train()
 model = scvi.external.CellAssign(bdata, markers)
 plan_args = {'lr_factor': 0.05, 'lr_patience': 20, 'reduce_lr_on_plateau': True}
-model.train(max_epochs=1000, accelerator='gpu', early_stopping=True, plan_kwargs=plan_args, early_stopping_patience=40)
+model.train(
+    max_epochs=1000,
+    accelerator='gpu',
+    early_stopping=True,
+    plan_kwargs=plan_args,
+    early_stopping_patience=40
+)
 
 #  6. model.predict()
 bdata.obs['cellassign_types'] = model.predict().idxmax(axis=1).values

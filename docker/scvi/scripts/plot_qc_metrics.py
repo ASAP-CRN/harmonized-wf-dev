@@ -1,30 +1,58 @@
+import argparse
+import os
+import pandas as pc
 import scanpy as sc
 import anndata as ad
-import argparse
-import pandas as pc
-import os
 
-# Create the parser
-parser = argparse.ArgumentParser(description='Call doublets')
 
-# Add arguments
-parser.add_argument('--working-dir', dest='working_dir', type=str, 
-                    help='Working directory', default='/data/CARD_singlecell/harmony-rna/')
-parser.add_argument('--script-dir', dest='script_dir', type=str, 
-                    help='Directory containing workflow scripts', default='scripts')
-parser.add_argument('--threads', dest='threads', type=int, 
-                    help='Number of threads to use for processing')
-parser.add_argument('--adata-objects-fofn', dest='adata_objects_fofn', type=str, 
-                    help='Newline-delimited paths to the set of input seurat objects (file-of-filenames)')
-parser.add_argument('--project-name', dest='project_name', type=str, 
-                    help='Project name')
-parser.add_argument('--output-metadata-file', dest='output_metadata_file', type=str, 
-                    help='Output file to write metadata to')
+parser = argparse.ArgumentParser(
+    description='Call doublets'
+)
+parser.add_argument(
+    '--working-dir',
+    dest='working_dir',
+    type=str,
+    help='Working directory',
+    default='/data/CARD_singlecell/harmony-rna/'
+)
+parser.add_argument(
+    '--script-dir',
+    dest='script_dir',
+    type=str,
+    help='Directory containing workflow scripts',
+    default='scripts'
+)
+parser.add_argument(
+    '--threads',
+    dest='threads',
+    type=int,
+    help='Number of threads to use for processing'
+)
+parser.add_argument(
+    '--adata-objects-fofn',
+	dest='adata_objects_fofn',
+	type=str,
+    help='Newline-delimited paths to the set of input seurat objects (file-of-filenames)'
+)
+parser.add_argument(
+    '--project-name',
+	dest='project_name',
+	type=str,
+    help='Project name'
+)
+parser.add_argument(
+    '--output-metadata-file',
+	dest='output_metadata_file',
+	type=str,
+    help='Output file to write metadata to'
+)
+parser.add_argument(
+    '--adata-output',
+	dest='adata_output',
+	type=str,
+    help='Output file to save AnnData object to'
+)
 
-parser.add_argument('--adata-output', dest='adata_output', type=str, 
-                    help='Output file to save AnnData object to')
-
-# Parse the arguments
 args = parser.parse_args()
 
 # os.setwd(args.working_dir)
@@ -33,16 +61,24 @@ args = parser.parse_args()
 
 sc.settings.verbosity = 1
 sc.settings.figdir = 'plots/'
-sc.settings.set_figure_params(dpi=100, fontsize=10, dpi_save=300, format='png', figsize=('12', '8')) # type: ignore
-
-
-parser.add_argument('--adata-objects-fofn', dest='adata_objects_fofn', type=str, 
-        help='Newline-delimited paths to the set of input seurat objects (file-of-filenames)')
+sc.settings.set_figure_params(
+    dpi=100,
+    fontsize=10,
+    dpi_save=300,
+    format='png',
+    figsize=('12', '8')
+) # type: ignore
 
 metrics = ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score']
 sc.settings.verbosity = 1
 sc.settings.figdir = 'plots/'
-sc.settings.set_figure_params(dpi=100, fontsize=10, dpi_save=300, format='png', figsize=('12', '8')) # type: ignore
+sc.settings.set_figure_params(
+    dpi=100,
+    fontsize=10,
+    dpi_save=300,
+    format='png',
+    figsize=('12', '8')
+) # type: ignore
 
 adatas = {}
 top_genes = {}
@@ -68,8 +104,10 @@ for sample in samples:
 # we could subset to the top_genes here before concat if we have memory issues (e.g. whole dataset harmonization.)
 
 adata = ad.concat(
-        merge='same', uns_merge='same', index_unique='_',
-        adatas=adatas
+            merge='same',
+            uns_merge='same',
+            index_unique='_',
+            adatas=adatas
         )
 
 

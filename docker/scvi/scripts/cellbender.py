@@ -2,18 +2,30 @@ import os
 import argparse
 import subprocess
 
-# Create the parser
-parser = argparse.ArgumentParser(description='Pre-preprocess')
-# Add arguments
-parser.add_argument('--raw-counts', dest='raw_counts', type=str, 
-                    help='Unfiltered feature-barcode matrices HDF5 output by cellranger')
-parser.add_argument('--output-name', dest='output', type=str, 
-                    help='Output file to save cellbender outputs to object to')
-parser.add_argument('--fpr', dest='fpr', type=str, 
-                    help='False positive rate', default='0.0')
+
+parser = argparse.ArgumentParser(
+    description='Pre-preprocess'
+)
+parser.add_argument(
+    '--raw-counts',
+    dest='raw_counts',
+    type=str,
+    help='Unfiltered feature-barcode matrices HDF5 output by cellranger'
+)
+parser.add_argument(
+    '--output-name',
+    dest='output',
+    type=str,
+    help='Output file to save cellbender outputs to object to'
+)
+parser.add_argument(
+    '--fpr',
+    dest='fpr',
+    type=str,
+    help='False positive rate', default='0.0'
+)
 
 args = parser.parse_args()
-
 
 cellbender_args = [
     '--cuda'

@@ -3,17 +3,24 @@ import muon
 import scanpy
 import argparse
 
-# Create the parser
-parser = argparse.ArgumentParser(description='Filter')
 
-# Add arguments
-parser.add_argument('--adata-input', dest='adata_input', type=str, 
-                    help='AnnData object for a dataset')
-parser.add_argument('--adata-output', dest='adata_output', type=str, 
-                    help='Output file to save AnnData object to')
+parser = argparse.ArgumentParser(
+    description='Filter'
+)
+parser.add_argument(
+    '--adata-input',
+    dest='adata_input',
+    type=str,
+    help='AnnData object for a dataset'
+)
+parser.add_argument(
+    '--adata-output',
+    dest='adata_output',
+    type=str,
+    help='Output file to save AnnData object to'
+)
 # TODO: add filter parameters as arguments
 
-# Parse the arguments
 args = parser.parse_args()
 
 adata = scanpy.read_h5ad(args.adata_input) # type: ignore

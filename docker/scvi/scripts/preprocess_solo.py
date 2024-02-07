@@ -1,29 +1,57 @@
+import argparse
 import scvi
 import scanpy
-import argparse
 
-# Create the parser
-parser = argparse.ArgumentParser(description='Preprocess')
 
-# Add arguments
-parser.add_argument('--working-dir', dest='working_dir', type=str, 
-                    help='Working directory', default='/team-X/xxx')
-parser.add_argument('--script-dir', dest='script_dir', type=str, 
-                    help='Directory containing workflow scripts', default='scvi')
-parser.add_argument('--adata-input', dest='adata_input', type=str, 
-                    help='AnnData object for a dataset')
+parser = argparse.ArgumentParser(
+    description='Preprocess'
+)
+parser.add_argument(
+	'--working-dir',
+	dest='working_dir',
+	type=str,
+    help='Working directory',
+	default='/team-X/xxx'
+)
+parser.add_argument(
+	'--script-dir',
+	dest='script_dir',
+	type=str,
+    help='Directory containing workflow scripts',
+	default='scvi'
+)
+parser.add_argument(
+	'--adata-input',
+	dest='adata_input',
+	type=str,
+    help='AnnData object for a dataset'
+)
 # toplevel metadata to add to the adata
-parser.add_argument('--sample-id', dest='sample_id', type=str, 
-                    help='Sample/dataset ID')
-parser.add_argument('--batch', dest='batch', type=str, 
-                    help='Batch from which the sample/dataset originated')
-parser.add_argument('--project', dest='project', type=str, 
-                    help='Project ID')
+parser.add_argument(
+	'--sample-id',
+	dest='sample_id',
+	type=str,
+    help='Sample/dataset ID'
+)
+parser.add_argument(
+	'--batch',
+	dest='batch',
+	type=str,
+    help='Batch from which the sample/dataset originated'
+)
+parser.add_argument(
+	'--project',
+	dest='project',
+	type=str,
+    help='Project ID'
+)
+parser.add_argument(
+	'--adata-output',
+	dest='adata_output',
+	type=str,
+    help='Output file to save AnnData object to'
+)
 
-parser.add_argument('--adata-output', dest='adata_output', type=str, 
-                    help='Output file to save AnnData object to')
-
-# Parse the arguments
 args = parser.parse_args()
 
 
@@ -62,5 +90,4 @@ adata.obs['batch_id'] = args.project+args.batch #
 
 # drop the celbender obs? 'background_fraction', 'cell_probability', 'cell_size', 'droplet_efficiency',
 
-adata.write_h5ad(filename=args.adata_output, compression='gzip') 
-
+adata.write_h5ad(filename=args.adata_output, compression='gzip')
