@@ -1,7 +1,6 @@
 import os
 import argparse
 import subprocess
-import argparse
 
 # Create the parser
 parser = argparse.ArgumentParser(description='Pre-preprocess')
