@@ -23,11 +23,12 @@
 - NOTE:  mde is super fast and efficient on a GPU
 
 #### _ANNOTATION_
-- 'annotate_clusters.py'.  To implement ..
+- 'annotate_cells.py'.  Use cellassign and a list of marker genes.  Need to curate a list of marker genes apropriate for all the brain regions we are processing.  Currently using CARD cortical list of genes.  NOTE: this is not annotating the "clusters" but the cells based on marker gene expression.
 
 #### _PLOTTING_
 - 'plot_feats_and_groups.py'.  
-
+- features: "sample", "batch", "cell_type"
+- groups: 'n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score'
 
 #### CONSIDERATIONS.
 The "best" tools are probably `scAR`+`SOLO`+`scVI`.   Tradeoffs are probably some computation.  However, withouth further testing

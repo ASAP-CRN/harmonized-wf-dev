@@ -65,6 +65,9 @@ model.train(
 adata.obsm[args.latent_key] = model.get_latent_representation() # type: ignore
 
 
+# make minified adata
+# TODO: impliment
+
 # artifacts
 model.save(args.output_scvi)
 

@@ -1,6 +1,7 @@
 import scvi
 import scanpy
 import argparse
+
 # Create the parser
 parser = argparse.ArgumentParser(description='Preprocess')
 

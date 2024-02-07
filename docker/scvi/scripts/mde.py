@@ -1,8 +1,8 @@
+import argparse
 import scanpy
 from math import sqrt
 from statistics import median
 from scvi.model.utils import mde
-import argparse
 
 # Create the parser
 parser = argparse.ArgumentParser(description='Minimum-Distortion Embedding (MDE)')
@@ -25,6 +25,6 @@ adata = scanpy.read_h5ad(args.adata_input)
 # scanpy.pp.neighbors(adata, n_neighbors=50, use_rep=snakemake.params.latent_key)
 # scanpy.tl.leiden(adata, resolution=0.4)
 # scanpy.tl.umap(adata)
-mde(adata.obsm[args.latent_key]) 
+mde(adata.obsm[args.latent_key])
 
 adata.write_h5ad(filename=args.adata_output, compression='gzip')
