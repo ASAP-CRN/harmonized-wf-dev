@@ -1,5 +1,6 @@
 anndata==0.10.2
 argparse==1.4.0
+cellbender==0.3.0
 matplotlib==3.8.0
 matplotlib-inline==0.1.6
 muon==0.1.5
