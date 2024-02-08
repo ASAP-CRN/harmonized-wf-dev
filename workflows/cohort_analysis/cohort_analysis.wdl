@@ -10,9 +10,11 @@ workflow cohort_analysis {
 		String cohort_id
 		Array[Array[String]] project_sample_ids
 		Array[File] preprocessed_adata_objects
+		File top_genes_csv
 
 		String run_timestamp
 		String raw_data_path_prefix
+		Array[String] staging_data_buckets
 		String billing_project
 		String container_registry
 		String zones
@@ -48,6 +50,19 @@ workflow cohort_analysis {
 			billing_project = billing_project,
 			container_registry = container_registry,
 			zones = zones
+	}
+
+	scatter (preprocessed_adata_object in preprocessed_adata_objects) {
+		call filter_and_normalize {
+			input:
+				preprocessed_adata_object = preprocessed_adata_object,
+				top_genes_csv = top_genes_csv,
+				raw_data_path = raw_data_path,
+				workflow_info = workflow_info,
+				billing_project = billing_project,
+				container_registry = container_registry,
+				zones = zones
+		}
 	}
 
 	output {
@@ -137,7 +152,7 @@ task merge_and_plot_qc_metrics {
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.merged_adata_objects.h5ad.gz" \
-			-o violin_n_genes_by_counts.png \
+			-o violin_n_genes_by_counts.png \ # TODO - double check file name and type for all plots
 			-o violin_total_counts.png \
 			-o violin_pct_counts_mt.png \
 			-o violin_pct_counts_rb.png \
@@ -160,6 +175,69 @@ task merge_and_plot_qc_metrics {
 		docker: "~{container_registry}/scvi:1.0.4"
 		cpu: threads
 		memory: "~{mem_gb} GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
+		bootDiskSizeGb: 20
+		zones: zones
+	}
+}
+
+task filter_and_normalize {
+	input {
+		File preprocessed_adata_object
+		File top_genes_csv
+
+		String raw_data_path
+		Array[Array[String]] workflow_info
+		String billing_project
+		String container_registry
+		String zones
+
+		# Purposefully unset
+		String? my_none
+	}
+
+	Int threads = 2
+	String adata_object_basename = basename(preprocessed_adata_object, ".h5ad.gz")
+	Int disk_size = ceil(size(preprocessed_adata_object, "GB") * 4 + 20)
+
+	command <<<
+		set -euo pipefail
+
+		python filter.py \
+			--adata-input ~{preprocessed_adata_object} \
+			--adata-output ~{adata_object_basename}_filtered.h5ad.gz
+
+		# If any cells remain after filtering, the data is normalized and variable genes are identified
+		if [[ -s "~{adata_object_basename}_filtered.h5ad.gz" ]]; then
+			python process.py \
+				--working-dir "$(pwd)" \
+				--adata-input ~{adata_object_basename}_filtered.h5ad.gz \
+				--adata-output ~{adata_object_basename}_filtered_normalized.h5ad.gz \
+				--top-genes ~{top_genes_csv}
+
+			upload_outputs \
+				-b ~{billing_project} \
+				-d ~{raw_data_path} \
+				-i ~{write_tsv(workflow_info)} \
+				-o "~{adata_object_basename}_filtered.h5ad.gz" \
+				-o "~{adata_object_basename}_filtered_normalized.h5ad.gz"
+
+			echo true > cells_remaining_post_filter.txt
+		else
+			echo false > cells_remaining_post_filter.txt
+		fi
+	>>>
+
+	output {
+		String? filtered_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{adata_object_basename}_filtered.h5ad.gz" else my_none
+		String? normalized_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{adata_object_basename}_filtered_normalized.h5ad.gz" else my_none
+	}
+
+	runtime {
+		docker: "~{container_registry}/scvi:1.0.4"
+		cpu: threads
+		memory: "12 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20

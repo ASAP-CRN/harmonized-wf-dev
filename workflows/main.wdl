@@ -16,6 +16,8 @@ workflow harmonized_pmdbs_analysis {
 		# Preprocess
 		Float cellbender_fpr = 0.0
 
+		# Cohort analysis
+		File top_genes_csv # TODO - in progress, should be from plot_qc_metrics output
 		Boolean run_cross_team_cohort_analysis = false
 		String cohort_raw_data_bucket
 		Array[String] cohort_staging_data_buckets
@@ -100,8 +102,10 @@ workflow harmonized_pmdbs_analysis {
 					cohort_id = project.project_id,
 					project_sample_ids = preprocess.project_sample_ids,
 					preprocessed_adata_objects = preprocess.adata_object,
+					top_genes_csv = top_genes_csv,
 					run_timestamp = get_workflow_metadata.timestamp,
 					raw_data_path_prefix = project_raw_data_path_prefix,
+					staging_data_buckets = project.staging_data_buckets,
 					billing_project = get_workflow_metadata.billing_project,
 					container_registry = container_registry,
 					zones = zones
@@ -117,8 +121,10 @@ workflow harmonized_pmdbs_analysis {
 				cohort_id = cohort_id,
 				project_sample_ids = flatten(preprocess.project_sample_ids),
 				preprocessed_adata_objects = flatten(preprocess.adata_object),
+				top_genes_csv = top_genes_csv,
 				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = cohort_raw_data_path_prefix,
+				staging_data_buckets = cohort_staging_data_buckets,
 				billing_project = get_workflow_metadata.billing_project,
 				container_registry = container_registry,
 				zones = zones
