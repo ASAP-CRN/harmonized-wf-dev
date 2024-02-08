@@ -4,6 +4,7 @@ version 1.0
 
 import "structs.wdl"
 import "preprocess/preprocess.wdl" as Preprocess
+import "cohort_analysis/cohort_analysis.wdl" as CohortAnalysis
 
 workflow harmonized_pmdbs_analysis {
 	input {
@@ -52,8 +53,6 @@ workflow harmonized_pmdbs_analysis {
 			Sample sample = project.samples[index]
 			String cellranger_count_complete = check_output_files_exist.sample_cellranger_complete[index][0]
 
-			Array[String] project_sample_id = [project.project_id, sample.sample_id]
-
 			String cellranger_raw_counts = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
 			String cellranger_filtered_counts = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
 			String cellranger_molecule_info = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.molecule_info.h5"
@@ -94,12 +93,42 @@ workflow harmonized_pmdbs_analysis {
 				container_registry = container_registry,
 				zones = zones
 		}
+
+		if (project.run_project_cohort_analysis) {
+			call CohortAnalysis.cohort_analysis as project_cohort_analysis {
+				input:
+					cohort_id = project.project_id,
+					project_sample_ids = preprocess.project_sample_ids,
+					preprocessed_adata_objects = preprocess.adata_object,
+					run_timestamp = get_workflow_metadata.timestamp,
+					raw_data_path_prefix = project_raw_data_path_prefix,
+					billing_project = get_workflow_metadata.billing_project,
+					container_registry = container_registry,
+					zones = zones
+			}
+		}
+	}
+
+	if (run_cross_team_cohort_analysis) {
+		String cohort_raw_data_path_prefix = "~{cohort_raw_data_bucket}/~{workflow_execution_path}"
+
+		call CohortAnalysis.cohort_analysis as cross_team_cohort_analysis {
+			input:
+				cohort_id = cohort_id,
+				project_sample_ids = flatten(preprocess.project_sample_ids),
+				preprocessed_adata_objects = flatten(preprocess.adata_object),
+				run_timestamp = get_workflow_metadata.timestamp,
+				raw_data_path_prefix = cohort_raw_data_path_prefix,
+				billing_project = get_workflow_metadata.billing_project,
+				container_registry = container_registry,
+				zones = zones
+		}
 	}
 
 	output {
 		# Sample-level outputs
 		# Sample list
-		Array[Array[Array[String]]] project_sample_ids = project_sample_id
+		Array[Array[Array[String]]] project_sample_ids = preprocess.project_sample_ids
 
 		# Cellranger
 		Array[Array[File]] raw_counts = raw_counts_output
@@ -118,6 +147,22 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]] checkpoint_tar_gz = preprocess.checkpoint_tar_gz
 		Array[Array[File]] posterior_probability = preprocess.posterior_probability 
 		Array[Array[File]] adata_object = preprocess.adata_object
+
+		# Project cohort analysis outputs
+		## List of samples included in the cohort
+		Array[File?] project_cohort_sample_list = project_cohort_analysis.cohort_sample_list
+
+		## Merged adata objects and QC plots
+		Array[File?] project_merged_adata_objects = project_cohort_analysis.merged_adata_objects
+		Array[Array[File]?] project_qc_plots_png = project_cohort_analysis.qc_plots_png
+
+		# Cross-team cohort analysis outputs
+		## List of samples included in the cohort
+		File? cohort_sample_list = cross_team_cohort_analysis.cohort_sample_list
+
+		## QC plots
+		File? cohort_merged_adata_objects = cross_team_cohort_analysis.merged_adata_objects
+		Array[File]? cohort_qc_plots_png = cross_team_cohort_analysis.qc_plots_png
 	}
 
 	meta {

@@ -29,6 +29,8 @@ workflow preprocess {
 
 	scatter (index in range(length(samples))) {
 		Sample sample = samples[index]
+
+		Array[String] project_sample_id = [project_id, sample.sample_id]
 		
 		call remove_technical_artifacts {
 			input:
@@ -57,6 +59,9 @@ workflow preprocess {
 	}
 
 	output {
+		# Sample list
+		Array[Array[String]] project_sample_ids = project_sample_id
+		
 		# Remove technical artifacts - Cellbender
 		Array[File] report_html = remove_technical_artifacts.report_html #!FileCoercion
 		Array[File] remove_background_counts = remove_technical_artifacts.remove_background_counts #!FileCoercion
