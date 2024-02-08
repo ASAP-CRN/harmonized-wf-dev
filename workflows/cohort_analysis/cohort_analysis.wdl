@@ -2,7 +2,7 @@ version 1.0
 
 # Run steps in the cohort analysis
 
-#import "cluster_data/cluster_data.wdl" as ClusterData
+import "cluster_data/cluster_data.wdl" as ClusterData
 #import "../common/upload_final_outputs.wdl" as UploadFinalOutputs
 
 workflow cohort_analysis {
@@ -10,7 +10,6 @@ workflow cohort_analysis {
 		String cohort_id
 		Array[Array[String]] project_sample_ids
 		Array[File] preprocessed_adata_objects
-		File top_genes_csv
 
 		String run_timestamp
 		String raw_data_path_prefix
@@ -56,7 +55,6 @@ workflow cohort_analysis {
 		call filter_and_normalize {
 			input:
 				preprocessed_adata_object = preprocessed_adata_object,
-				top_genes_csv = top_genes_csv,
 				raw_data_path = raw_data_path,
 				workflow_info = workflow_info,
 				billing_project = billing_project,
@@ -144,7 +142,6 @@ task merge_and_plot_qc_metrics {
 			--threads ~{threads} \
 			--adata-objects-fofn adata_objects_paths.txt \
 			--project-name ~{cohort_id} \
-			--output-metadata-file ~{cohort_id}.metadata.csv \
 			--adata-output ~{cohort_id}.merged_adata_objects.h5ad.gz
 
 		upload_outputs \
@@ -185,7 +182,6 @@ task merge_and_plot_qc_metrics {
 task filter_and_normalize {
 	input {
 		File preprocessed_adata_object
-		File top_genes_csv
 
 		String raw_data_path
 		Array[Array[String]] workflow_info
@@ -213,8 +209,7 @@ task filter_and_normalize {
 			python process.py \
 				--working-dir "$(pwd)" \
 				--adata-input ~{adata_object_basename}_filtered.h5ad.gz \
-				--adata-output ~{adata_object_basename}_filtered_normalized.h5ad.gz \
-				--top-genes ~{top_genes_csv}
+				--adata-output ~{adata_object_basename}_filtered_normalized.h5ad.gz
 
 			upload_outputs \
 				-b ~{billing_project} \
