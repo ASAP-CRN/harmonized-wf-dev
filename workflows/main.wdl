@@ -117,6 +117,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]] metrics_csv = preprocess.metrics_csv
 		Array[Array[File]] checkpoint_tar_gz = preprocess.checkpoint_tar_gz
 		Array[Array[File]] posterior_probability = preprocess.posterior_probability 
+		Array[Array[File]] adata_object = preprocess.adata_object
 	}
 
 	meta {

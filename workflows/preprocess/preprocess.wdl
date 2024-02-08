@@ -41,6 +41,19 @@ workflow preprocess {
 				container_registry = container_registry,
 				zones = zones
 		}
+
+		call counts_to_adata {
+			input:
+				sample_id = sample.sample_id,
+				batch = select_first([sample.batch]),
+				project_id = project_id,
+				cellbender_counts = remove_technical_artifacts.remove_background_counts, #!FileCoercion
+				raw_data_path = "~{raw_data_path}/counts_to_adata/~{workflow_version}",
+				workflow_info = workflow_info,
+				billing_project = billing_project,
+				container_registry = container_registry,
+				zones = zones
+		}
 	}
 
 	output {
@@ -54,6 +67,9 @@ workflow preprocess {
 		Array[File] metrics_csv = remove_technical_artifacts.metrics_csv #!FileCoercion
 		Array[File] checkpoint_tar_gz = remove_technical_artifacts.checkpoint_tar_gz #!FileCoercion
 		Array[File] posterior_probability = remove_technical_artifacts.posterior_probability #!FileCoercion
+
+		# AnnData counts
+		Array[File] adata_object = counts_to_adata.preprocessed_adata_object #!FileCoercion
 	}
 }
 
@@ -107,6 +123,57 @@ task remove_technical_artifacts {
 		String metrics_csv = "~{sample_id}.cellbender.output_metrics.csv"
 		String checkpoint_tar_gz = "~{sample_id}.cellbender.ckpt.tar.gz"
 		String posterior_probability = "~{sample_id}.cellbender.output_posterior.h5"
+	}
+
+	runtime {
+		docker: "~{container_registry}/scvi:1.0.4"
+		cpu: 4
+		memory: "8 GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
+		bootDiskSizeGb: 20
+		zones: zones
+	}
+}
+
+task counts_to_adata {
+	input {
+		String sample_id
+		String batch
+		String project_id
+
+		File cellbender_counts
+
+		String raw_data_path
+		Array[Array[String]] workflow_info
+		String billing_project
+		String container_registry
+		String zones
+	}
+
+	Int disk_size = ceil(size(cellbender_counts, "GB") * 2 + 20)
+
+	command <<<
+		set -euo pipefail
+
+		python preprocess.py \
+			--working-dir "$(pwd)" \
+			--script-dir /opt/scripts \
+			--adata-input ~{cellbender_counts} \
+			--sample-id ~{sample_id} \
+			--batch ~{batch} \
+			--project ~{project_id} \
+			--adata-output ~{sample_id}.adata_object.h5ad.gz
+
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{sample_id}.adata_object.h5ad.gz"
+	>>>
+
+	output {
+		String preprocessed_adata_object = "~{raw_data_path}/~{sample_id}.adata_object.h5ad.gz"
 	}
 
 	runtime {
