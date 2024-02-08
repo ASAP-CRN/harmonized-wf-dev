@@ -1,0 +1,121 @@
+version 1.0
+
+# Generate a preprocessed AnnData object
+
+import "../structs.wdl"
+
+workflow preprocess {
+	input {
+		String project_id
+		Array[Sample] samples
+
+		Array[File] raw_counts
+
+		Float cellbender_fpr
+
+		String run_timestamp
+		String raw_data_path_prefix
+		String billing_project
+		String container_registry
+		String zones
+	}
+
+	String workflow_name = "preprocess"
+	String workflow_version = "1.0.0"
+
+	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version]]
+
+	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}"
+
+	scatter (index in range(length(samples))) {
+		Sample sample = samples[index]
+		
+		call remove_technical_artifacts {
+			input:
+				sample_id = sample.sample_id,
+				raw_counts = raw_counts[index],
+				cellbender_fpr = cellbender_fpr,
+				raw_data_path = "~{raw_data_path}/remove_technical_artifacts/~{workflow_version}",
+				workflow_info = workflow_info,
+				billing_project = billing_project,
+				container_registry = container_registry,
+				zones = zones
+		}
+	}
+
+	output {
+		# Remove technical artifacts - Cellbender
+		Array[File] report_html = remove_technical_artifacts.report_html #!FileCoercion
+		Array[File] remove_background_counts = remove_technical_artifacts.remove_background_counts #!FileCoercion
+		Array[File] filtered_remove_background_counts = remove_technical_artifacts.filtered_remove_background_counts #!FileCoercion
+		Array[File] cell_barcodes_csv = remove_technical_artifacts.cell_barcodes_csv #!FileCoercion
+		Array[File] graph_pdf = remove_technical_artifacts.graph_pdf #!FileCoercion
+		Array[File] log = remove_technical_artifacts.log #!FileCoercion
+		Array[File] metrics_csv = remove_technical_artifacts.metrics_csv #!FileCoercion
+		Array[File] checkpoint_tar_gz = remove_technical_artifacts.checkpoint_tar_gz #!FileCoercion
+		Array[File] posterior_probability = remove_technical_artifacts.posterior_probability #!FileCoercion
+	}
+}
+
+task remove_technical_artifacts {
+	input {
+		String sample_id
+
+		File raw_counts
+
+		Float cellbender_fpr
+
+		String raw_data_path
+		Array[Array[String]] workflow_info
+		String billing_project
+		String container_registry
+		String zones
+	}
+
+	Int disk_size = ceil(size(raw_counts, "GB") * 2 + 20)
+
+	command <<<
+		set -euo pipefail
+
+		python cellbender.py \
+			--raw-counts ~{raw_counts} \
+			--output-name ~{sample_id}.cellbender. \
+			--fpr ~{cellbender_fpr}
+
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{sample_id}.cellbender.output_report.html" \
+			-o "~{sample_id}.cellbender.output.h5" \
+			-o "~{sample_id}.cellbender.output_filtered.h5" \
+			-o "~{sample_id}.cellbender.output_cell_barcodes.csv" \
+			-o "~{sample_id}.cellbender.output.pdf" \
+			-o "~{sample_id}.cellbender.output.log" \
+			-o "~{sample_id}.cellbender.output_metrics.csv" \
+			-o "~{sample_id}.cellbender.ckpt.tar.gz" \
+			-o "~{sample_id}.cellbender.output_posterior.h5"
+	>>>
+
+	output {
+		String report_html = "~{raw_data_path}/~{sample_id}.cellbender.output_report.html"
+		String remove_background_counts = "~{sample_id}.cellbender.output.h5"
+		String filtered_remove_background_counts = "~{sample_id}.cellbender.output_filtered.h5"
+		String cell_barcodes_csv = "~{sample_id}.cellbender.output_cell_barcodes.csv"
+		String graph_pdf = "~{sample_id}.cellbender.output.pdf"
+		String log = "~{sample_id}.cellbender.output.log"
+		String metrics_csv = "~{sample_id}.cellbender.output_metrics.csv"
+		String checkpoint_tar_gz = "~{sample_id}.cellbender.ckpt.tar.gz"
+		String posterior_probability = "~{sample_id}.cellbender.output_posterior.h5"
+	}
+
+	runtime {
+		docker: "~{container_registry}/scvi:1.0.4"
+		cpu: 4
+		memory: "8 GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
+		bootDiskSizeGb: 20
+		zones: zones
+	}
+}

@@ -3,6 +3,7 @@ version 1.0
 # Harmonized workflow entrypoint
 
 import "structs.wdl"
+import "preprocess/preprocess.wdl" as Preprocess
 
 workflow harmonized_pmdbs_analysis {
 	input {
@@ -11,7 +12,8 @@ workflow harmonized_pmdbs_analysis {
 
 		File cellranger_reference_data
 
-		Boolean regenerate_preprocessed_adata_objects = false
+		# Preprocess
+		Float cellbender_fpr = 0.0
 
 		Boolean run_cross_team_cohort_analysis = false
 		String cohort_raw_data_bucket
@@ -32,8 +34,10 @@ workflow harmonized_pmdbs_analysis {
 	}
 
 	scatter (project in projects) {
+		String project_raw_data_path_prefix = "~{project.raw_data_bucket}/~{workflow_execution_path}"
+
 		scatter (sample_object in project.samples) {
-			String cellranger_count_output = "~{project.raw_data_bucket}/~{workflow_execution_path}/cellranger/~{cellranger_task_version}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
+			String cellranger_count_output = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
 		}
 
 		# For each sample, outputs an array of true/false
@@ -50,10 +54,10 @@ workflow harmonized_pmdbs_analysis {
 
 			Array[String] project_sample_id = [project.project_id, sample.sample_id]
 
-			String cellranger_raw_counts = "~{project.raw_data_bucket}/~{workflow_execution_path}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
-			String cellranger_filtered_counts = "~{project.raw_data_bucket}/~{workflow_execution_path}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
-			String cellranger_molecule_info = "~{project.raw_data_bucket}/~{workflow_execution_path}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.molecule_info.h5"
-			String cellranger_metrics_csv = "~{project.raw_data_bucket}/~{workflow_execution_path}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.metrics_summary.csv"
+			String cellranger_raw_counts = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
+			String cellranger_filtered_counts = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
+			String cellranger_molecule_info = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.molecule_info.h5"
+			String cellranger_metrics_csv = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.metrics_summary.csv"
 
 			if (cellranger_count_complete == "false") {
 				call cellranger_count {
@@ -64,7 +68,7 @@ workflow harmonized_pmdbs_analysis {
 						fastq_I1s = sample.fastq_I1s,
 						fastq_I2s = sample.fastq_I2s,
 						cellranger_reference_data = cellranger_reference_data,
-						raw_data_path = "~{project.raw_data_bucket}/workflow_execution/cellranger/~{cellranger_task_version}",
+						raw_data_path = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}",
 						workflow_info = [[get_workflow_metadata.timestamp, "cellranger", cellranger_task_version]],
 						billing_project = get_workflow_metadata.billing_project,
 						container_registry = container_registry,
@@ -77,9 +81,23 @@ workflow harmonized_pmdbs_analysis {
 			File molecule_info_output = select_first([cellranger_count.molecule_info, cellranger_molecule_info]) #!FileCoercion
 			File metrics_csv_output = select_first([cellranger_count.metrics_csv, cellranger_metrics_csv]) #!FileCoercion
 		}
+
+		call Preprocess.preprocess {
+			input:
+				project_id = project.project_id,
+				samples = project.samples,
+				raw_counts = raw_counts_output,
+				cellbender_fpr = cellbender_fpr,
+				run_timestamp = get_workflow_metadata.timestamp,
+				raw_data_path_prefix = project_raw_data_path_prefix,
+				billing_project = get_workflow_metadata.billing_project,
+				container_registry = container_registry,
+				zones = zones
+		}
 	}
 
 	output {
+		# Sample-level outputs
 		# Sample list
 		Array[Array[Array[String]]] project_sample_ids = project_sample_id
 
@@ -88,6 +106,17 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]] filtered_counts = filtered_counts_output
 		Array[Array[File]] molecule_info = molecule_info_output
 		Array[Array[File]] metrics_csvs = metrics_csv_output
+
+		# Preprocess
+		Array[Array[File]] report_html = preprocess.report_html
+		Array[Array[File]] remove_background_counts = preprocess.remove_background_counts
+		Array[Array[File]] filtered_remove_background_counts = preprocess.filtered_remove_background_counts
+		Array[Array[File]] cell_barcodes_csv = preprocess.cell_barcodes_csv
+		Array[Array[File]] graph_pdf = preprocess.graph_pdf
+		Array[Array[File]] log = preprocess.log
+		Array[Array[File]] metrics_csv = preprocess.metrics_csv
+		Array[Array[File]] checkpoint_tar_gz = preprocess.checkpoint_tar_gz
+		Array[Array[File]] posterior_probability = preprocess.posterior_probability 
 	}
 
 	meta {
@@ -98,6 +127,7 @@ workflow harmonized_pmdbs_analysis {
 		cohort_id: {help: "Name of the cohort; used to name output files during cross-team cohort analysis."}
 		projects: {help: "The project ID, set of samples and their associated reads and metadata, output bucket locations, and whether or not to run project-level cohort analysis."}
 		cellranger_reference_data: {help: "Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest."}
+		cellbender_fpr :{help: "Cellbender false positive rate [0.0]"}
 		run_cross_team_cohort_analysis: {help: "Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}
 		cohort_raw_data_bucket: {help: "Bucket to upload cross-team cohort intermediate files to."}
 		cohort_staging_data_buckets: {help: "Set of buckets to stage cross-team cohort analysis outputs in."}
