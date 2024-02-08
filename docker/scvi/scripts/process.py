@@ -25,13 +25,13 @@ parser.add_argument(
 	type=str,
     help='Output file to save AnnData object to'
 )
-parser.add_argument(
-	'--top-genes',
-	dest='top_genes',
-	type=str,
-    help='CSV containing top genes',
-	default='top_genes.csv'
-)
+# parser.add_argument(
+# 	'--top-genes',
+# 	dest='top_genes',
+# 	type=str,
+#     help='CSV containing top genes',
+# 	default='top_genes.csv'
+# )
 
 args = parser.parse_args()
 

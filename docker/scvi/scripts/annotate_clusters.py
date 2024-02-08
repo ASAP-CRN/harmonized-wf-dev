@@ -39,12 +39,12 @@ parser.add_argument(
     type=str,
     help='Seurat object containing a list of major cell type markers'
 )
-parser.add_argument(
-    '--output-metadata-file',
-    dest='output_metadata_file',
-    type=str,
-    help='Output file to write metadata to'
-)
+# parser.add_argument(
+#     '--output-metadata-file',
+#     dest='output_metadata_file',
+#     type=str,
+#     help='Output file to write metadata to'
+# )
 parser.add_argument(
     '--adata-output',
     dest='adata_output',

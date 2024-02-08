@@ -40,12 +40,12 @@ parser.add_argument(
 	type=str,
     help='Project name'
 )
-parser.add_argument(
-    '--output-metadata-file',
-	dest='output_metadata_file',
-	type=str,
-    help='Output file to write metadata to'
-)
+# parser.add_argument(
+#     '--output-metadata-file',
+# 	dest='output_metadata_file',
+# 	type=str,
+#     help='Output file to write metadata to'
+# )
 parser.add_argument(
     '--adata-output',
 	dest='adata_output',

@@ -12,12 +12,12 @@ parser.add_argument(
     help='Working directory',
     default='/data/CARD_singlecell/harmony-rna/'
 )
-parser.add_argument(
-    '--metadata',
-    dest='metadata',
-    type=str,
-    help='Metadata file output by sctype (annotate_clusters)'
-)
+# parser.add_argument(
+#     '--metadata',
+#     dest='metadata',
+#     type=str,
+#     help='Metadata file output by sctype (annotate_clusters)'
+# )
 parser.add_argument(
     '--group',
     dest='group',
