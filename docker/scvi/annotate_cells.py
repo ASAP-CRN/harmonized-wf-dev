@@ -10,7 +10,7 @@ import scvi
 parser = argparse.ArgumentParser(description='Annotate clusters')
 parser.add_argument('--adata-input', dest='adata_input', type=str, 
                     help='AnnData object for a dataset')
-parser.add_argument('--marker-genes', dest='marker_genes', type=str, 
+parser.add_argument('--marker-genes', dest='marker_genes', type=str, default='resources/celltype_marker_table.csv',
                     help='path to marker_genes .csv file')
 parser.add_argument('--output-cellassign', dest='cellassign_model', type=str, 
                     help='Output file to write cellAssign model to')

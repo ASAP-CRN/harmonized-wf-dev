@@ -18,6 +18,7 @@ import umap
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+import scanpy as sc
 
 matplotlib.use("Agg")
 
@@ -458,3 +459,65 @@ def knn_smooth_pred_class(
             maj_class = uniq_classes[int(np.argmax(counts))]
             smooth_pred_class[group_idx[i]] = maj_class
     return smooth_pred_class
+
+
+
+
+# copied from scib: https://github.com/theislab/scib/blob/main/scib/preprocessing.py
+# Cell Cycle
+def score_cell_cycle(adata, organism="mouse"):
+    """Score cell cycle score given an organism
+
+    Wrapper function for `scanpy.tl.score_genes_cell_cycle`_
+
+    .. _scanpy.tl.score_genes_cell_cycle: https://scanpy.readthedocs.io/en/stable/generated/scanpy.tl.score_genes_cell_cycle.html
+
+    Tirosh et al. cell cycle marker genes downloaded from
+    https://raw.githubusercontent.com/theislab/scanpy_usage/master/180209_cell_cycle/data/regev_lab_cell_cycle_genes.txt
+
+    s_genes and g2m_genes extracted from cell_cycle_genes like this:
+    ``` python
+    cell_cycle_genes = [x.strip() for x in open('./data/regev_lab_cell_cycle_genes.txt')]
+    s_genes = cell_cycle_genes[:43]
+    g2m_genes = cell_cycle_genes[43:]
+    cell_cycle_genes = [x for x in cell_cycle_genes if x in adata.var_names]
+    ```
+
+    For human, mouse genes are capitalised and used directly. This is under the assumption that cell cycle genes are
+    well conserved across species.
+
+    :param adata: anndata object containing
+    :param organism: organism of gene names to match cell cycle genes
+    :return: tuple of ``(s_genes, g2m_genes)`` of S-phase genes and G2- and M-phase genes scores
+    """
+    import pathlib
+
+    root = pathlib.Path(__file__).parent
+
+    cc_files = {
+        "mouse": [
+            root / "resources/s_genes_tirosh.txt",
+            root / "resources/g2m_genes_tirosh.txt",
+        ],
+        "human": [
+            root / "resources/s_genes_tirosh_hm.txt",
+            root / "resources/g2m_genes_tirosh_hm.txt",
+        ],
+    }
+
+
+
+    with open(cc_files[organism][0]) as f:
+        s_genes = [x.strip() for x in f.readlines() if x.strip() in adata.var.index]
+    with open(cc_files[organism][1]) as f:
+        g2m_genes = [x.strip() for x in f.readlines() if x.strip() in adata.var.index]
+
+    if (len(s_genes) == 0) or (len(g2m_genes) == 0):
+        rand_choice = np.random.randint(1, adata.n_vars, 10)
+        rand_genes = adata.var_names[rand_choice].tolist()
+        raise ValueError(
+            f"cell cycle genes not in adata\n organism: {organism}\n varnames: {rand_genes}"
+        )
+
+    sc.tl.score_genes_cell_cycle(adata, s_genes, g2m_genes)
+
