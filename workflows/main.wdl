@@ -215,6 +215,9 @@ workflow harmonized_pmdbs_analysis {
 		Array[File?] project_groups_umap_plot_png = project_cohort_analysis.groups_umap_plot_png
 		Array[File?] project_features_umap_plot_png = project_cohort_analysis.features_umap_plot_png
 
+		Array[Array[File]?] preprocess_manifests = project_cohort_analysis.preprocess_manifest_tsvs
+		Array[Array[File]?] project_manifests = project_cohort_analysis.cohort_analysis_manifest_tsvs
+
 		# Cross-team cohort analysis outputs
 		## List of samples included in the cohort
 		File? cohort_sample_list = cross_team_cohort_analysis.cohort_sample_list
@@ -236,6 +239,8 @@ workflow harmonized_pmdbs_analysis {
 		# Groups and features plots
 		File? cohort_groups_umap_plot_png = cross_team_cohort_analysis.groups_umap_plot_png
 		File? cohort_features_umap_plot_png = cross_team_cohort_analysis.features_umap_plot_png
+
+		Array[File]? cohort_manifests = cross_team_cohort_analysis.cohort_analysis_manifest_tsvs
 	}
 
 	meta {
