@@ -22,9 +22,12 @@ workflow harmonized_pmdbs_analysis {
 		Array[String] cohort_staging_data_buckets
 
 		String scvi_latent_key = "X_scvi"
+		String clustering_method = "umap"
 		Int clustering_algorithm = 3
 		Float clustering_resolution = 0.3
 		File cell_type_markers_list
+
+		File marker_genes_csv
 
 		Array[String] groups = ["sample", "batch", "seurat_clusters"]
 		Array[String] features = ["doublet_scores", "nCount_RNA", "nFeature_RNA", "percent.mt", "percent.rb"]
@@ -113,6 +116,7 @@ workflow harmonized_pmdbs_analysis {
 					group_by_vars = ["batch"],
 					clustering_algorithm = clustering_algorithm,
 					clustering_resolution = clustering_resolution,
+					clustering_method = clustering_method,
 					cell_type_markers_list = cell_type_markers_list,
 					groups = groups,
 					features = features,
@@ -138,6 +142,7 @@ workflow harmonized_pmdbs_analysis {
 				group_by_vars = ["batch"],
 				clustering_algorithm = clustering_algorithm,
 				clustering_resolution = clustering_resolution,
+				clustering_method = clustering_method,
 				cell_type_markers_list = cell_type_markers_list,
 				groups = groups,
 				features = features,
@@ -184,6 +189,10 @@ workflow harmonized_pmdbs_analysis {
 		# Clustering outputs
 		Array[File?] project_integrated_adata_object = project_cohort_analysis.integrated_adata_object
 		Array[File?] project_scvi_model = project_cohort_analysis.scvi_model
+		Array[File?] project_umap_cluster_adata_object = project_cohort_analysis.umap_cluster_adata_object
+		Array[File?] project_mde_cluster_adata_object = project_cohort_analysis.mde_cluster_adata_object
+		Array[File?] project_major_cell_type_plot_pdf = project_cohort_analysis.major_cell_type_plot_pdf
+		Array[File?] project_major_cell_type_plot_png = project_cohort_analysis.major_cell_type_plot_png
 
 		# Cross-team cohort analysis outputs
 		## List of samples included in the cohort
@@ -196,6 +205,10 @@ workflow harmonized_pmdbs_analysis {
 		# Clustering outputs
 		File? cohort_integrated_adata_object = cross_team_cohort_analysis.integrated_adata_object
 		File? cohort_scvi_model = cross_team_cohort_analysis.scvi_model
+		File? cohort_umap_cluster_adata_object = cross_team_cohort_analysis.umap_cluster_adata_object
+		File? cohort_mde_cluster_adata_object = cross_team_cohort_analysis.mde_cluster_adata_object
+		File? cohort_major_cell_type_plot_pdf = cross_team_cohort_analysis.major_cell_type_plot_pdf
+		File? cohort_major_cell_type_plot_png = cross_team_cohort_analysis.major_cell_type_plot_png
 	}
 
 	meta {
@@ -208,6 +221,7 @@ workflow harmonized_pmdbs_analysis {
 		cellranger_reference_data: {help: "Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest."}
 		cellbender_fpr :{help: "Cellbender false positive rate [0.0]"}
 		scvi_latent_key: {help: "Latent key to save the scVI latent to ['X_scvi']"}
+		clustering_method: {help: "Clustering method; options are 'umap' or 'mde' ['umap']"}
 		run_cross_team_cohort_analysis: {help: "Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}
 		cohort_raw_data_bucket: {help: "Bucket to upload cross-team cohort intermediate files to."}
 		cohort_staging_data_buckets: {help: "Set of buckets to stage cross-team cohort analysis outputs in."}

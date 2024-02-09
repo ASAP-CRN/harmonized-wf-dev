@@ -15,6 +15,7 @@ workflow cohort_analysis {
 
 		Array[String] group_by_vars
 
+		String clustering_method
 		Int clustering_algorithm
 		Float clustering_resolution
 		File cell_type_markers_list
@@ -78,6 +79,7 @@ workflow cohort_analysis {
 			normalized_adata_object = select_first([filter_and_normalize.normalized_adata_object]), #!FileCoercion
 			scvi_latent_key = scvi_latent_key,
 			group_by_vars = group_by_vars,
+			clustering_method = clustering_method,
 			clustering_algorithm = clustering_algorithm,
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
@@ -98,6 +100,10 @@ workflow cohort_analysis {
 		# Clustering output
 		File integrated_adata_object = cluster_data.integrated_adata_object #!FileCoercion
 		File scvi_model = cluster_data.scvi_model #!FileCoercion
+		File? umap_cluster_adata_object = cluster_data.umap_cluster_adata_object #!FileCoercion
+		File? mde_cluster_adata_object = cluster_data.mde_cluster_adata_object #!FileCoercion
+		File? major_cell_type_plot_pdf = cluster_data.major_cell_type_plot_pdf #!FileCoercion
+		File? major_cell_type_plot_png = cluster_data.major_cell_type_plot_png #!FileCoercion
 	}
 }
 
@@ -173,12 +179,13 @@ task merge_and_plot_qc_metrics {
 			--project-name ~{cohort_id} \
 			--adata-output ~{cohort_id}.merged_adata_object.h5ad.gz
 
+		# TODO - double check file name and type for all plots
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.merged_adata_object.h5ad.gz" \
-			-o violin_n_genes_by_counts.png \ # TODO - double check file name and type for all plots
+			-o violin_n_genes_by_counts.png \
 			-o violin_total_counts.png \
 			-o violin_pct_counts_mt.png \
 			-o violin_pct_counts_rb.png \
