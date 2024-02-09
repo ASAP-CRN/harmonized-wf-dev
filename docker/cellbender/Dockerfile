@@ -28,22 +28,12 @@ RUN apt-get -qq update && \
 		libbz2-dev \
 		libffi-dev \
 		liblzma-dev \
-		ca-certificates
-
-ARG PYTHON3_VERSION
-ENV PYTHON3_VERSION "${PYTHON3_VERSION}"
-RUN curl -O https://www.python.org/ftp/python/${PYTHON3_VERSION}/Python-${PYTHON3_VERSION}.tar.xz && \
-	tar -xvf Python-${PYTHON3_VERSION}.tar.xz --directory /opt/ && \
-	rm Python-${PYTHON3_VERSION}.tar.xz
-RUN cd /opt/Python-${PYTHON3_VERSION} && \
-	./configure && \
-	make && \
-	make altinstall
-
-ENV PATH "${PATH}:/opt/Python-${PYTHON3_VERSION}"
+		ca-certificates \
+		python3-dev \
+		python3-pip
 
 COPY ./requirements.txt /opt/requirements.txt
-RUN python -m pip install -r /opt/requirements.txt
+RUN python3 -m pip install -r /opt/requirements.txt
 
 # gcloud sdk; needed to upload output files
 ARG GCLOUD_CLI_VERSION
