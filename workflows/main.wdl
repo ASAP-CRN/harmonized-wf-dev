@@ -251,12 +251,17 @@ workflow harmonized_pmdbs_analysis {
 		cohort_id: {help: "Name of the cohort; used to name output files during cross-team cohort analysis."}
 		projects: {help: "The project ID, set of samples and their associated reads and metadata, output bucket locations, and whether or not to run project-level cohort analysis."}
 		cellranger_reference_data: {help: "Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest."}
-		cellbender_fpr :{help: "Cellbender false positive rate [0.0]"}
-		scvi_latent_key: {help: "Latent key to save the scVI latent to ['X_scvi']"}
-		clustering_method: {help: "Clustering method; options are 'umap' or 'mde' ['umap']"}
+		cellbender_fpr :{help: "Cellbender false positive rate. [0.0]"}
 		run_cross_team_cohort_analysis: {help: "Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}
 		cohort_raw_data_bucket: {help: "Bucket to upload cross-team cohort intermediate files to."}
 		cohort_staging_data_buckets: {help: "Set of buckets to stage cross-team cohort analysis outputs in."}
+		scvi_latent_key: {help: "Latent key to save the scVI latent to. ['X_scvi']"}
+		clustering_method: {help: "Clustering method; options are 'umap' or 'mde'. ['umap']"}
+		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}
+		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
+		cell_type_markers_list: {help: "CSV file containing a list of major cell type markers; used to annotate clusters."}
+		groups: {help: "Groups to produce umap plots for. ['sample', 'batch', 'cell_type']"}
+		features: {help: "Features to produce umap plots for. ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score']"}
 		container_registry: {help: "Container registry where workflow Docker images are hosted."}
 		zones: {help: "Space-delimited set of GCP zones to spin up compute in."}
 	}
