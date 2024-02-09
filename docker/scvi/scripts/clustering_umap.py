@@ -31,12 +31,12 @@ parser.add_argument(
     type=str,
     help='AnnData object for a dataset'
 )
-parser.add_argument(
-    '--cell-type-markers-list',
-    dest='cell_type_markers_list',
-    type=str,
-    help='Seurat object containing a list of major cell type markers'
-)
+# parser.add_argument(
+#     '--cell-type-markers-list',
+#     dest='cell_type_markers_list',
+#     type=str,
+#     help='Seurat object containing a list of major cell type markers'
+# )
 # parser.add_argument(
 #     '--output-metadata-file',
 #     dest='output_metadata_file',
