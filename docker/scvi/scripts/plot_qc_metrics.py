@@ -32,7 +32,7 @@ parser.add_argument(
     '--adata-objects-fofn',
 	dest='adata_objects_fofn',
 	type=str,
-    help='Newline-delimited paths to the set of input seurat objects (file-of-filenames)'
+    help='Newline-delimited paths to the set of input adata objects (file-of-filenames)'
 )
 parser.add_argument(
     '--project-name',
