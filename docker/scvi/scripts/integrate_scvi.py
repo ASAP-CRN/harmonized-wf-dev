@@ -14,6 +14,12 @@ parser.add_argument(
     help='Latent key to save the scvi latent to'
 )
 parser.add_argument(
+    '--batch-key',
+    dest='batch_key',
+    type=str,
+    help='Key in AnnData object for batch information'
+)
+parser.add_argument(
     '--adata-input',
     dest='adata_input',
     type=str,
@@ -59,8 +65,8 @@ adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 
 ## integrate the data with `scVI`
 # noise = ['doublet_score', 'pct_counts_mt', 'pct_counts_rb']
-# scvi.model.SCVI.setup_anndata(adata, layer='counts', batch_key='sample', continuous_covariate_keys=noise)
-scvi.model.SCVI.setup_anndata(adata, layer='counts', batch_key='sample')
+# scvi.model.SCVI.setup_anndata(adata, layer='counts', batch_key=args.batch_key, continuous_covariate_keys=noise)
+scvi.model.SCVI.setup_anndata(adata, layer='counts', batch_key=args.batch_key)
 
 model = scvi.model.SCVI(
     adata, 

@@ -94,8 +94,10 @@ task integrate_sample_data {
 	command <<<
 		set -euo pipefail
 
+		# TODO - double check that ~{cohort_id} is OK for batch-key
 		python integrate_scvi.py \
 			--latent-key ~{scvi_latent_key} \
+			--batch-key ~{cohort_id} \
 			--adata-input ~{normalized_adata_object} \
 			--adata-output ~{cohort_id}.adata_object.scvi_integrated.h5ad.gz \
 			--output-scvi ~{cohort_id}.scvi_model.pkl
