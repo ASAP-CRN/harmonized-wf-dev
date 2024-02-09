@@ -21,6 +21,7 @@ workflow harmonized_pmdbs_analysis {
 		String cohort_raw_data_bucket
 		Array[String] cohort_staging_data_buckets
 
+		Int n_top_genes = 8000
 		String scvi_latent_key = "X_scvi"
 		String clustering_method = "umap"
 		# TODO - double check these defaults once clustering_mde.py is complete
@@ -129,6 +130,7 @@ workflow harmonized_pmdbs_analysis {
 					project_sample_ids = preprocess.project_sample_ids,
 					preprocessed_adata_objects = preprocess.adata_object,
 					preprocessing_output_file_paths = preprocessing_output_file_paths,
+					n_top_genes = n_top_genes,
 					scvi_latent_key =scvi_latent_key,
 					clustering_algorithm = clustering_algorithm,
 					clustering_resolution = clustering_resolution,
@@ -155,6 +157,7 @@ workflow harmonized_pmdbs_analysis {
 				project_sample_ids = flatten(preprocess.project_sample_ids),
 				preprocessed_adata_objects = flatten(preprocess.adata_object),
 				preprocessing_output_file_paths = flatten(preprocessing_output_file_paths),
+				n_top_genes = n_top_genes,
 				scvi_latent_key =scvi_latent_key,
 				clustering_algorithm = clustering_algorithm,
 				clustering_resolution = clustering_resolution,
@@ -256,6 +259,7 @@ workflow harmonized_pmdbs_analysis {
 		run_cross_team_cohort_analysis: {help: "Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}
 		cohort_raw_data_bucket: {help: "Bucket to upload cross-team cohort intermediate files to."}
 		cohort_staging_data_buckets: {help: "Set of buckets to stage cross-team cohort analysis outputs in."}
+		n_top_genes: {help: "Number of HVG genes to keep. [8000]"}
 		scvi_latent_key: {help: "Latent key to save the scVI latent to. ['X_scvi']"}
 		clustering_method: {help: "Clustering method; options are 'umap' or 'mde'. ['umap']"}
 		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}

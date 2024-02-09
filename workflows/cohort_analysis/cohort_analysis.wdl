@@ -14,6 +14,8 @@ workflow cohort_analysis {
 		# If provided, these files will be uploaded to the staging bucket alongside other intermediate files made by this workflow
 		Array[String] preprocessing_output_file_paths = []
 
+		Int n_top_genes
+
 		String scvi_latent_key
 
 		String clustering_method
@@ -67,6 +69,7 @@ workflow cohort_analysis {
 	call filter_and_normalize {
 		input:
 			merged_adata_object = merge_and_plot_qc_metrics.merged_adata_object, #!FileCoercion
+			n_top_genes = n_top_genes,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
@@ -289,6 +292,8 @@ task filter_and_normalize {
 	input {
 		File merged_adata_object
 
+		Int n_top_genes
+
 		String raw_data_path
 		Array[Array[String]] workflow_info
 		String billing_project
@@ -315,7 +320,8 @@ task filter_and_normalize {
 			python process.py \
 				--working-dir "$(pwd)" \
 				--adata-input ~{merged_adata_object_basename}_filtered.h5ad.gz \
-				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad.gz
+				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad.gz \
+				--n-top-genes ~{n_top_genes}
 
 			upload_outputs \
 				-b ~{billing_project} \
