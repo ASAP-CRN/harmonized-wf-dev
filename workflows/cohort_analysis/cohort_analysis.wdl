@@ -3,13 +3,16 @@ version 1.0
 # Run steps in the cohort analysis
 
 import "cluster_data/cluster_data.wdl" as ClusterData
-#import "../common/upload_final_outputs.wdl" as UploadFinalOutputs
+import "../common/upload_final_outputs.wdl" as UploadFinalOutputs
 
 workflow cohort_analysis {
 	input {
 		String cohort_id
 		Array[Array[String]] project_sample_ids
 		Array[File] preprocessed_adata_objects
+
+		# If provided, these files will be uploaded to the staging bucket alongside other intermediate files made by this workflow
+		Array[String] preprocessing_output_file_paths = []
 
 		String scvi_latent_key
 
@@ -99,6 +102,55 @@ workflow cohort_analysis {
 			zones = zones
 	}
 
+	Array[String] cohort_analysis_intermediate_output_paths = flatten([
+		[
+			merge_and_plot_qc_metrics.merged_adata_object
+		],
+		select_all([filter_and_normalize.filtered_adata_object]),
+		select_all([filter_and_normalize.normalized_adata_object]),
+		[
+			cluster_data.integrated_adata_object,
+			cluster_data.scvi_model
+		]
+	]) #!StringCoercion
+
+	call UploadFinalOutputs.upload_final_outputs as upload_preprocess_files {
+		input:
+			output_file_paths = flatten([preprocessing_output_file_paths, cohort_analysis_intermediate_output_paths]),
+			staging_data_buckets = staging_data_buckets,
+			staging_data_path = "preprocess",
+			billing_project = billing_project,
+			zones = zones
+	}
+
+	Array[String] cohort_analysis_final_output_paths = flatten([
+		[
+			write_cohort_sample_list.cohort_sample_list
+		],
+		merge_and_plot_qc_metrics.qc_plots_png,
+		[
+			select_first([cluster_data.umap_cluster_adata_object, cluster_data.mde_cluster_adata_object])
+		],
+		select_all([cluster_data.major_cell_type_plot_pdf, cluster_data.major_cell_type_plot_png]),
+		[
+			cluster_data.cellassign_model,
+			cluster_data.cell_types_csv
+		],
+		[
+			plot_groups_and_features.groups_umap_plot_png,
+			plot_groups_and_features.features_umap_plot_png
+		]
+	]) #!StringCoercion
+
+	call UploadFinalOutputs.upload_final_outputs as upload_cohort_analysis_files {
+		input:
+			output_file_paths = cohort_analysis_final_output_paths,
+			staging_data_buckets = staging_data_buckets,
+			staging_data_path = workflow_name,
+			billing_project = billing_project,
+			zones = zones
+	}
+
 	output {
 		File cohort_sample_list = write_cohort_sample_list.cohort_sample_list #!FileCoercion
 
@@ -107,18 +159,21 @@ workflow cohort_analysis {
 		Array[File] qc_plots_png = merge_and_plot_qc_metrics.qc_plots_png #!FileCoercion
 
 		# Clustering output
-		File integrated_adata_object = cluster_data.integrated_adata_object #!FileCoercion
-		File scvi_model = cluster_data.scvi_model #!FileCoercion
-		File? umap_cluster_adata_object = cluster_data.umap_cluster_adata_object #!FileCoercion
-		File? mde_cluster_adata_object = cluster_data.mde_cluster_adata_object #!FileCoercion
-		File? major_cell_type_plot_pdf = cluster_data.major_cell_type_plot_pdf #!FileCoercion
-		File? major_cell_type_plot_png = cluster_data.major_cell_type_plot_png #!FileCoercion
-		File cellassign_model = cluster_data.cellassign_model #!FileCoercion
-		File cell_types_csv = cluster_data.cell_types_csv #!FileCoercion
+		File integrated_adata_object = cluster_data.integrated_adata_object
+		File scvi_model = cluster_data.scvi_model
+		File? umap_cluster_adata_object = cluster_data.umap_cluster_adata_object
+		File? mde_cluster_adata_object = cluster_data.mde_cluster_adata_object
+		File? major_cell_type_plot_pdf = cluster_data.major_cell_type_plot_pdf
+		File? major_cell_type_plot_png = cluster_data.major_cell_type_plot_png
+		File cellassign_model = cluster_data.cellassign_model
+		File cell_types_csv = cluster_data.cell_types_csv
 
 		# Groups and features plots
 		File groups_umap_plot_png = plot_groups_and_features.groups_umap_plot_png #!FileCoercion
 		File features_umap_plot_png = plot_groups_and_features.features_umap_plot_png #!FileCoercion
+
+		Array[File] preprocess_manifest_tsvs = upload_preprocess_files.manifests #!FileCoercion
+		Array[File] cohort_analysis_manifest_tsvs = upload_cohort_analysis_files.manifests #!FileCoercion
 	}
 }
 

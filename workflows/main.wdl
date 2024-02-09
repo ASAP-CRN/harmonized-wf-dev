@@ -27,9 +27,8 @@ workflow harmonized_pmdbs_analysis {
 		Float clustering_resolution = 0.3
 		File cell_type_markers_list
 
-		# TODO - should features and groups be swapped?
-		Array[String] features = ["sample", "batch", "cell_type"]
-		Array[String] groups = ["n_genes_by_counts", "total_counts", "pct_counts_mt", "pct_counts_rb", "doublet_score"]
+		Array[String] groups = ["sample", "batch", "cell_type"]
+		Array[String] features = ["n_genes_by_counts", "total_counts", "pct_counts_mt", "pct_counts_rb", "doublet_score"]
 
 		String container_registry
 		String zones = "us-central1-c us-central1-f"
@@ -105,12 +104,30 @@ workflow harmonized_pmdbs_analysis {
 				zones = zones
 		}
 
+		Array[String] preprocessing_output_file_paths = flatten([
+			raw_counts_output,
+			filtered_counts_output,
+			molecule_info_output,
+			metrics_csv_output,
+			preprocess.report_html,
+			preprocess.remove_background_counts,
+			preprocess.filtered_remove_background_counts,
+			preprocess.cell_barcodes_csv,
+			preprocess.graph_pdf,
+			preprocess.log,
+			preprocess.metrics_csv,
+			preprocess.checkpoint_tar_gz,
+			preprocess.posterior_probability,
+			preprocess.adata_object
+		]) #!StringCoercion
+
 		if (project.run_project_cohort_analysis) {
 			call CohortAnalysis.cohort_analysis as project_cohort_analysis {
 				input:
 					cohort_id = project.project_id,
 					project_sample_ids = preprocess.project_sample_ids,
 					preprocessed_adata_objects = preprocess.adata_object,
+					preprocessing_output_file_paths = preprocessing_output_file_paths,
 					scvi_latent_key =scvi_latent_key,
 					clustering_algorithm = clustering_algorithm,
 					clustering_resolution = clustering_resolution,
@@ -136,6 +153,7 @@ workflow harmonized_pmdbs_analysis {
 				cohort_id = cohort_id,
 				project_sample_ids = flatten(preprocess.project_sample_ids),
 				preprocessed_adata_objects = flatten(preprocess.adata_object),
+				preprocessing_output_file_paths = flatten(preprocessing_output_file_paths),
 				scvi_latent_key =scvi_latent_key,
 				clustering_algorithm = clustering_algorithm,
 				clustering_resolution = clustering_resolution,
@@ -172,7 +190,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]] log = preprocess.log
 		Array[Array[File]] metrics_csv = preprocess.metrics_csv
 		Array[Array[File]] checkpoint_tar_gz = preprocess.checkpoint_tar_gz
-		Array[Array[File]] posterior_probability = preprocess.posterior_probability 
+		Array[Array[File]] posterior_probability = preprocess.posterior_probability
 		Array[Array[File]] adata_object = preprocess.adata_object
 
 		# Project cohort analysis outputs
