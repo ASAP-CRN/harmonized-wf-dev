@@ -143,12 +143,12 @@ task cluster_cells {
 		set -euo pipefail
 
 		if [[ ~{clustering_method} = "umap" ]]; then
+			# TODO - script doesn't use cell_type_markers_list (incomplete)
 			python clustering_umap.py \
 				--working-dir "$(pwd)" \
 				--script-dir /opt/scripts \
 				--threads ~{threads} \
 				--adata-input ~{integrated_adata_object} \
-				--cell-type-markers-list ~{cell_type_markers_list} \
 				--adata-output ~{integrated_adata_object_basename}.umap_cluster.h5ad.gz \
 				--latent-key ~{scvi_latent_key}
 
@@ -204,58 +204,5 @@ task cluster_cells {
 		zones: zones
 		gpuType: gpu_type
 		gpuCount: gpu_count
-	}
-}
-
-task annotate_clusters {
-	input {
-		String cohort_id
-		File cluster_adata_object
-		Int n_samples
-
-		File cell_type_markers_list
-
-		String raw_data_path
-		Array[Array[String]] workflow_info
-		String billing_project
-		String container_registry
-		String zones
-	}
-
-	Int threads = 2
-	Int disk_size = ceil(size(cluster_adata_object, "GB") + size(cell_type_markers_list, "GB") * 2 + 20)
-	Int mem_gb = ceil(1.3 * n_samples + 20)
-
-	command <<<
-		set -euo pipefail
-
-		/usr/bin/time \
-		Rscript /opt/scripts/main/annotate_clusters.R \
-			--working-dir "$(pwd)" \
-			--script-dir /opt/scripts \
-			--threads ~{threads} \
-			--adata-object ~{cluster_adata_object} \
-			--cell-type-markers-list ~{cell_type_markers_list} \
-			--output-metadata-file ~{cohort_id}.final_metadata.csv
-
-		upload_outputs \
-			-b ~{billing_project} \
-			-d ~{raw_data_path} \
-			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}.final_metadata.csv"
-	>>>
-
-	output {
-		String metadata = "~{raw_data_path}/~{cohort_id}.final_metadata.csv"
-	}
-
-	runtime {
-		docker: "~{container_registry}/scvi:1.0.4"
-		cpu: threads
-		memory: "~{mem_gb} GB"
-		disks: "local-disk ~{disk_size} HDD"
-		preemptible: 3
-		bootDiskSizeGb: 20
-		zones: zones
 	}
 }

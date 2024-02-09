@@ -27,8 +27,6 @@ workflow harmonized_pmdbs_analysis {
 		Float clustering_resolution = 0.3
 		File cell_type_markers_list
 
-		File marker_genes_csv
-
 		Array[String] groups = ["sample", "batch", "seurat_clusters"]
 		Array[String] features = ["doublet_scores", "nCount_RNA", "nFeature_RNA", "percent.mt", "percent.rb"]
 
