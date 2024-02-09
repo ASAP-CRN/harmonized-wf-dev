@@ -29,7 +29,7 @@ workflow harmonized_pmdbs_analysis {
 		File cell_type_markers_list
 
 		Array[String] groups = ["sample", "batch", "cell_type"]
-		Array[String] features = ["n_genes_by_counts", "total_counts", "pct_counts_mt", "pct_counts_rb", "doublet_score"]
+		Array[String] features = ["n_genes_by_counts", "total_counts", "pct_counts_mt", "pct_counts_rb", "doublet_score", "S_score", "G2M_score"]
 
 		String container_registry
 		String zones = "us-central1-c us-central1-f"
@@ -262,7 +262,7 @@ workflow harmonized_pmdbs_analysis {
 		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
 		cell_type_markers_list: {help: "CSV file containing a list of major cell type markers; used to annotate clusters."}
 		groups: {help: "Groups to produce umap plots for. ['sample', 'batch', 'cell_type']"}
-		features: {help: "Features to produce umap plots for. ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score']"}
+		features: {help: "Features to produce umap plots for. ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score', 'S_score', 'G2M_score']"}
 		container_registry: {help: "Container registry where workflow Docker images are hosted."}
 		zones: {help: "Space-delimited set of GCP zones to spin up compute in."}
 	}
