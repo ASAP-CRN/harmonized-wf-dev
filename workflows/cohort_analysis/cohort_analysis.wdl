@@ -231,8 +231,8 @@ task merge_and_plot_qc_metrics {
 	}
 
 	Int threads = 2
-	Int disk_size = ceil(size(preprocessed_adata_objects, "GB") * 2 + 20)
 	Int mem_gb = ceil(0.02 * n_samples + threads * 2 + 20)
+	Int disk_size = ceil(size(preprocessed_adata_objects, "GB") * 2 + 20)
 
 	command <<<
 		set -euo pipefail
@@ -299,8 +299,8 @@ task filter_and_normalize {
 		String? my_none
 	}
 
-	Int threads = 2
 	String merged_adata_object_basename = basename(merged_adata_object, ".h5ad.gz")
+	Int threads = 2
 	Int disk_size = ceil(size(merged_adata_object, "GB") * 4 + 20)
 
 	command <<<

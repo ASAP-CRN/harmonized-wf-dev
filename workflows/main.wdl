@@ -23,6 +23,7 @@ workflow harmonized_pmdbs_analysis {
 
 		String scvi_latent_key = "X_scvi"
 		String clustering_method = "umap"
+		# TODO - double check these defaults once clustering_mde.py is complete
 		Int clustering_algorithm = 3
 		Float clustering_resolution = 0.3
 		File cell_type_markers_list
@@ -352,8 +353,8 @@ task cellranger_count {
 	}
 
 	Int threads = 16
-	Int disk_size = ceil((size(fastq_R1s, "GB") + size(fastq_R2s, "GB") + size(fastq_I1s, "GB") + size(fastq_I2s, "GB") + size(cellranger_reference_data, "GB")) * 4 + 50)
 	Int mem_gb = 24
+	Int disk_size = ceil((size(fastq_R1s, "GB") + size(fastq_R2s, "GB") + size(fastq_I1s, "GB") + size(fastq_I2s, "GB") + size(cellranger_reference_data, "GB")) * 4 + 50)
 
 	command <<<
 		set -euo pipefail

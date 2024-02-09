@@ -87,9 +87,9 @@ task integrate_sample_data {
 		String zones
 	}
 
-	Int disk_size = ceil(size(normalized_adata_object, "GB") * 3 + 50)
 	Int threads = 8
 	Int mem_gb = threads * 2
+	Int disk_size = ceil(size(normalized_adata_object, "GB") * 3 + 50)
 
 	command <<<
 		set -euo pipefail
@@ -143,9 +143,9 @@ task cluster_cells {
 	}
 
 	String integrated_adata_object_basename = basename(integrated_adata_object, ".h5ad.gz")
-	Int disk_size = ceil(size(integrated_adata_object, "GB") * 6 + 50)
 	Int threads = 2
 	Int mem_gb = threads * 2
+	Int disk_size = ceil(size([integrated_adata_object, cell_type_markers_list], "GB") * 6 + 50)
 
 	# TODO - double check that empty gpuCount and gpuType does not launch GPU for clustering_umap
 	String gpu_type = if clustering_method == "mde" then "nvidia-tesla-k80" else ""
@@ -234,9 +234,9 @@ task annotate_cells {
 	}
 
 	String cluster_adata_object_basename = basename(cluster_adata_object, ".h5ad.gz")
-	Int disk_size = ceil(size([cluster_adata_object, cell_type_markers_list], "GB") * 2 + 20)
 	Int threads = 2
 	Int mem_gb = threads * 2
+	Int disk_size = ceil(size([cluster_adata_object, cell_type_markers_list], "GB") * 2 + 20)
 
 	command <<<
 		set -euo pipefail
