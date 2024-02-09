@@ -4,7 +4,7 @@ import anndata as ad
 
 
 parser = argparse.ArgumentParser(
-    description='Run harmony analysis'
+    description='Run scVI integration'
 )
 parser.add_argument(
     '--latent-key',
@@ -31,6 +31,7 @@ parser.add_argument(
     type=str,
     help='Output file to save `scvi` model'
 )
+
 # TODO: optional scvi arguments
 
 args = parser.parse_args()
