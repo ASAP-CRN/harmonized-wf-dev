@@ -244,7 +244,7 @@ task merge_and_plot_qc_metrics {
 			realpath "${adata_objects}" >> adata_objects_paths.txt
 		done < ~{write_lines(preprocessed_adata_objects)}
 
-		python plot_qc_metrics.py \
+		python /opt/scripts/main/plot_qc_metrics.py \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--threads ~{threads} \
@@ -311,13 +311,13 @@ task filter_and_normalize {
 	command <<<
 		set -euo pipefail
 
-		python filter.py \
+		python /opt/scripts/main/filter.py \
 			--adata-input ~{merged_adata_object} \
 			--adata-output ~{merged_adata_object_basename}_filtered.h5ad.gz
 
 		# If any cells remain after filtering, the data is normalized and variable genes are identified
 		if [[ -s "~{merged_adata_object_basename}_filtered.h5ad.gz" ]]; then
-			python process.py \
+			python /opt/scripts/main/process.py \
 				--working-dir "$(pwd)" \
 				--adata-input ~{merged_adata_object_basename}_filtered.h5ad.gz \
 				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad.gz \
@@ -369,7 +369,7 @@ task plot_groups_and_features {
 	command <<<
 		set -euo pipefail
 
-		python plot_feats_and_groups.py \
+		python /opt/scripts/main/plot_feats_and_groups.py \
 			--working-dir "$(pwd)" \
 			--group ~{sep=',' groups} \
 			--output-group-umap-plot-prefix "~{cohort_id}" \

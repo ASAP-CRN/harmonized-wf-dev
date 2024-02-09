@@ -98,7 +98,7 @@ task remove_technical_artifacts {
 	command <<<
 		set -euo pipefail
 
-		python cellbender.py \
+		python /opt/scripts/cellbender.py \
 			--raw-counts ~{raw_counts} \
 			--output-name ~{sample_id}.cellbender. \
 			--fpr ~{cellbender_fpr}
@@ -161,7 +161,7 @@ task counts_to_adata {
 	command <<<
 		set -euo pipefail
 
-		python preprocess.py \
+		python /opt/scripts/main/preprocess.py \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--adata-input ~{cellbender_counts} \
