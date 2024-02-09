@@ -1,7 +1,7 @@
+FROM us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images/util:1.1.0 as scripts
+
 # Start from nvidia-docker image with drivers pre-installed to use a GPU
 FROM nvcr.io/nvidia/cuda:11.7.1-base-ubuntu18.04
-
-FROM us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images/util:1.1.0 as scripts
 
 MAINTAINER Karen Fang <karen@dnastack.com>
 
@@ -55,6 +55,6 @@ RUN wget "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-clou
 ENV PATH "${PATH}:/opt/google-cloud-sdk/bin"
 
 COPY ./scripts /opt/scripts
-ENV PATH "${PATH}:/opt/scripts"
 
 COPY --from=scripts /opt/scripts /opt/scripts
+ENV PATH "${PATH}:/opt/scripts"
