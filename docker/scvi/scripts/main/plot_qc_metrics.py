@@ -56,7 +56,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 # os.setwd(args.working_dir)
-# from .utils.helpers import minify_adata
+# from utility.helpers import minify_adata
 
 
 sc.settings.verbosity = 1

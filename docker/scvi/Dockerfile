@@ -43,6 +43,10 @@ ENV PATH "${PATH}:/opt/Python-${PYTHON3_VERSION}"
 COPY ./requirements.txt /opt/requirements.txt
 RUN python -m pip install -r /opt/requirements.txt
 
+# Add override scripts
+COPY scripts/main /opt/scripts/main
+COPY scripts/utility /opt/scripts/utility
+
 # gcloud sdk; needed to upload output files
 ARG GCLOUD_CLI_VERSION
 ENV GCLOUD_CLI_VERSION "${GCLOUD_CLI_VERSION}"
@@ -52,7 +56,5 @@ RUN wget "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-clou
 
 ENV PATH "${PATH}:/opt/google-cloud-sdk/bin"
 
-COPY ./scripts /opt/scripts
-ENV PATH "${PATH}:/opt/scripts"
-
 COPY --from=scripts /opt/scripts /opt/scripts
+ENV PATH "${PATH}:/opt/scripts"

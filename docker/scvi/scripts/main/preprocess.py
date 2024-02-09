@@ -55,7 +55,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 os.setwd(args.working_dir)
-from util.helpers import anndata_from_h5, get_solo_results
+from utility.helpers import anndata_from_h5, get_solo_results
 
 # load the data from cellbender output
 adata = anndata_from_h5(args.adata_input)
