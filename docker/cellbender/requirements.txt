@@ -1,0 +1,2 @@
+argparse==1.4.0
+cellbender=0.3.0
