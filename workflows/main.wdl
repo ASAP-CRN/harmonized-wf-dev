@@ -27,8 +27,9 @@ workflow harmonized_pmdbs_analysis {
 		Float clustering_resolution = 0.3
 		File cell_type_markers_list
 
-		Array[String] groups = ["sample", "batch", "seurat_clusters"]
-		Array[String] features = ["doublet_scores", "nCount_RNA", "nFeature_RNA", "percent.mt", "percent.rb"]
+		# TODO - should features and groups be swapped?
+		Array[String] features = ["sample", "batch", "cell_type"]
+		Array[String] groups = ["n_genes_by_counts", "total_counts", "pct_counts_mt", "pct_counts_rb", "doublet_score"]
 
 		String container_registry
 		String zones = "us-central1-c us-central1-f"
@@ -111,7 +112,6 @@ workflow harmonized_pmdbs_analysis {
 					project_sample_ids = preprocess.project_sample_ids,
 					preprocessed_adata_objects = preprocess.adata_object,
 					scvi_latent_key =scvi_latent_key,
-					group_by_vars = ["batch"],
 					clustering_algorithm = clustering_algorithm,
 					clustering_resolution = clustering_resolution,
 					clustering_method = clustering_method,
@@ -137,7 +137,6 @@ workflow harmonized_pmdbs_analysis {
 				project_sample_ids = flatten(preprocess.project_sample_ids),
 				preprocessed_adata_objects = flatten(preprocess.adata_object),
 				scvi_latent_key =scvi_latent_key,
-				group_by_vars = ["batch"],
 				clustering_algorithm = clustering_algorithm,
 				clustering_resolution = clustering_resolution,
 				clustering_method = clustering_method,
@@ -194,6 +193,10 @@ workflow harmonized_pmdbs_analysis {
 		Array[File?] project_cellassign_model = project_cohort_analysis.cellassign_model
 		Array[File?] project_cell_types_csv = project_cohort_analysis.cell_types_csv
 
+		# Groups and features plots
+		Array[File?] project_groups_umap_plot_png = project_cohort_analysis.groups_umap_plot_png
+		Array[File?] project_features_umap_plot_png = project_cohort_analysis.features_umap_plot_png
+
 		# Cross-team cohort analysis outputs
 		## List of samples included in the cohort
 		File? cohort_sample_list = cross_team_cohort_analysis.cohort_sample_list
@@ -211,6 +214,10 @@ workflow harmonized_pmdbs_analysis {
 		File? cohort_major_cell_type_plot_png = cross_team_cohort_analysis.major_cell_type_plot_png
 		File? cohort_cellassign_model = cross_team_cohort_analysis.cellassign_model
 		File? cohort_cell_types_csv = cross_team_cohort_analysis.cell_types_csv
+
+		# Groups and features plots
+		File? cohort_groups_umap_plot_png = cross_team_cohort_analysis.groups_umap_plot_png
+		File? cohort_features_umap_plot_png = cross_team_cohort_analysis.features_umap_plot_png
 	}
 
 	meta {

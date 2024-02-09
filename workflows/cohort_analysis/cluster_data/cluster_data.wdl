@@ -9,8 +9,6 @@ workflow cluster_data {
 
 		String scvi_latent_key
 
-		Array[String] group_by_vars
-
 		String clustering_method
 		Int clustering_algorithm
 		Float clustering_resolution

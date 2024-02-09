@@ -13,8 +13,6 @@ workflow cohort_analysis {
 
 		String scvi_latent_key
 
-		Array[String] group_by_vars
-
 		String clustering_method
 		Int clustering_algorithm
 		Float clustering_resolution
@@ -78,11 +76,22 @@ workflow cohort_analysis {
 			cohort_id = cohort_id,
 			normalized_adata_object = select_first([filter_and_normalize.normalized_adata_object]), #!FileCoercion
 			scvi_latent_key = scvi_latent_key,
-			group_by_vars = group_by_vars,
 			clustering_method = clustering_method,
 			clustering_algorithm = clustering_algorithm,
 			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
+			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
+			billing_project = billing_project,
+			container_registry = container_registry,
+			zones = zones
+	}
+
+	call plot_groups_and_features {
+		input:
+			cohort_id = cohort_id,
+			groups = groups,
+			features = features,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
@@ -106,6 +115,10 @@ workflow cohort_analysis {
 		File? major_cell_type_plot_png = cluster_data.major_cell_type_plot_png #!FileCoercion
 		File cellassign_model = cluster_data.cellassign_model #!FileCoercion
 		File cell_types_csv = cluster_data.cell_types_csv #!FileCoercion
+
+		# Groups and features plots
+		File groups_umap_plot_png = plot_groups_and_features.groups_umap_plot_png #!FileCoercion
+		File features_umap_plot_png = plot_groups_and_features.features_umap_plot_png #!FileCoercion
 	}
 }
 
@@ -272,6 +285,54 @@ task filter_and_normalize {
 		cpu: threads
 		memory: "12 GB"
 		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
+		bootDiskSizeGb: 20
+		zones: zones
+	}
+}
+
+task plot_groups_and_features {
+	input {
+		String cohort_id
+
+		Array[String] groups
+		Array[String] features
+
+		String raw_data_path
+		Array[Array[String]] workflow_info
+		String billing_project
+		String container_registry
+		String zones
+	}
+
+	command <<<
+		set -euo pipefail
+
+		python plot_feats_and_groups.py \
+			--working-dir "$(pwd)" \
+			--group ~{sep=',' groups} \
+			--output-group-umap-plot-prefix "~{cohort_id}" \
+			--feature ~{sep=',' features} \
+			--output-feature-umap-plot-prefix "~{cohort_id}"
+
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{cohort_id}_features_umap.png" \
+			-o "~{cohort_id}_groups_umap.png"
+	>>>
+
+	output {
+		String groups_umap_plot_png = "~{raw_data_path}/~{cohort_id}_groups_umap.png"
+		String features_umap_plot_png = "~{raw_data_path}/~{cohort_id}_features_umap.png"
+	}
+
+	runtime {
+		docker: "~{container_registry}/scvi:1.0.4"
+		cpu: 2
+		memory: "4 GB"
+		disks: "local-disk 10 HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
 		zones: zones
