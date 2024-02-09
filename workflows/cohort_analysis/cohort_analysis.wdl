@@ -104,6 +104,8 @@ workflow cohort_analysis {
 		File? mde_cluster_adata_object = cluster_data.mde_cluster_adata_object #!FileCoercion
 		File? major_cell_type_plot_pdf = cluster_data.major_cell_type_plot_pdf #!FileCoercion
 		File? major_cell_type_plot_png = cluster_data.major_cell_type_plot_png #!FileCoercion
+		File cellassign_model = cluster_data.cellassign_model #!FileCoercion
+		File cell_types_csv = cluster_data.cell_types_csv #!FileCoercion
 	}
 }
 

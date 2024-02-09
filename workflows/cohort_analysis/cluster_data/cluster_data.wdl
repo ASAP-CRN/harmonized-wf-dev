@@ -51,6 +51,18 @@ workflow cluster_data {
 			zones = zones
 	}
 
+	call annotate_cells {
+		input:
+			cohort_id = cohort_id,
+			cluster_adata_object = select_first([cluster_cells.umap_cluster_adata_object, cluster_cells.mde_cluster_adata_object]), #!FileCoercion, #!SelectArray
+			cell_type_markers_list = cell_type_markers_list,
+			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
+			billing_project = billing_project,
+			container_registry = container_registry,
+			zones = zones
+	}
+
 	output {
 		File integrated_adata_object = integrate_sample_data.integrated_adata_object #!FileCoercion
 		File scvi_model = integrate_sample_data.scvi_model #!FileCoercion
@@ -58,6 +70,8 @@ workflow cluster_data {
 		File? mde_cluster_adata_object = cluster_cells.mde_cluster_adata_object #!FileCoercion, #!UnnecessaryQuantifier
 		File? major_cell_type_plot_pdf = cluster_cells.major_cell_type_plot_pdf #!FileCoercion, #!UnnecessaryQuantifier
 		File? major_cell_type_plot_png = cluster_cells.major_cell_type_plot_png #!FileCoercion, #!UnnecessaryQuantifier
+		File cellassign_model = annotate_cells.cellassign_model #!FileCoercion
+		File cell_types_csv = annotate_cells.cell_types_csv #!FileCoercion
 	}
 }
 
@@ -204,5 +218,60 @@ task cluster_cells {
 		zones: zones
 		gpuType: gpu_type
 		gpuCount: gpu_count
+	}
+}
+
+task annotate_cells {
+	input {
+		String cohort_id
+		File cluster_adata_object
+
+		File cell_type_markers_list
+
+		String raw_data_path
+		Array[Array[String]] workflow_info
+		String billing_project
+		String container_registry
+		String zones
+	}
+
+	String cluster_adata_object_basename = basename(cluster_adata_object, ".h5ad.gz")
+	Int disk_size = ceil(size([cluster_adata_object, cell_type_markers_list], "GB") * 2 + 20)
+	Int threads = 2
+	Int mem_gb = threads * 2
+
+	command <<<
+		set -euo pipefail
+
+		# Note: This is not annotating the "clusters" but rather, the cells based on marker gene expression
+		# TODO - script outputs adata-output, but no data manipulation so this is the same as adata-input
+		python annotate_cells.py \
+			--adata-input ~{cluster_adata_object} \
+			--marker-genes ~{cell_type_markers_list} \
+			--output-cellassign ~{cohort_id}.cellassign_model.pkl \
+			--output-cell-types-file ~{cohort_id}.cell_types.csv \
+			--adata-output ~{cluster_adata_object_basename}.annotate_cells.h5ad.gz
+
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{cohort_id}.cellassign_model.pkl" \
+			-o "~{cohort_id}.cell_types.csv"
+	>>>
+
+	output {
+		String cellassign_model = "~{raw_data_path}/~{cohort_id}.cellassign_model.pkl"
+		String cell_types_csv = "~{raw_data_path}/~{cohort_id}.cell_types.csv"
+	}
+
+	runtime {
+		docker: "~{container_registry}/scvi:1.0.4"
+		cpu: threads
+		memory: "~{mem_gb} GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
+		bootDiskSizeGb: 20
+		zones: zones
 	}
 }
