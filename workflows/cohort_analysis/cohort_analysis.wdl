@@ -11,6 +11,17 @@ workflow cohort_analysis {
 		Array[Array[String]] project_sample_ids
 		Array[File] preprocessed_adata_objects
 
+		String scvi_latent_key
+
+		Array[String] group_by_vars
+
+		Int clustering_algorithm
+		Float clustering_resolution
+		File cell_type_markers_list
+
+		Array[String] groups
+		Array[String] features
+
 		String run_timestamp
 		String raw_data_path_prefix
 		Array[String] staging_data_buckets
@@ -51,24 +62,42 @@ workflow cohort_analysis {
 			zones = zones
 	}
 
-	scatter (preprocessed_adata_object in preprocessed_adata_objects) {
-		call filter_and_normalize {
-			input:
-				preprocessed_adata_object = preprocessed_adata_object,
-				raw_data_path = raw_data_path,
-				workflow_info = workflow_info,
-				billing_project = billing_project,
-				container_registry = container_registry,
-				zones = zones
-		}
+	call filter_and_normalize {
+		input:
+			merged_adata_object = merge_and_plot_qc_metrics.merged_adata_object, #!FileCoercion
+			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
+			billing_project = billing_project,
+			container_registry = container_registry,
+			zones = zones
+	}
+
+	call ClusterData.cluster_data {
+		input:
+			cohort_id = cohort_id,
+			normalized_adata_object = select_first([filter_and_normalize.normalized_adata_object]), #!FileCoercion
+			scvi_latent_key = scvi_latent_key,
+			group_by_vars = group_by_vars,
+			clustering_algorithm = clustering_algorithm,
+			clustering_resolution = clustering_resolution,
+			cell_type_markers_list = cell_type_markers_list,
+			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
+			billing_project = billing_project,
+			container_registry = container_registry,
+			zones = zones
 	}
 
 	output {
 		File cohort_sample_list = write_cohort_sample_list.cohort_sample_list #!FileCoercion
 
 		# Merged adata objects and QC plots
-		File merged_adata_objects = merge_and_plot_qc_metrics.merged_adata_objects #!FileCoercion
+		File merged_adata_object = merge_and_plot_qc_metrics.merged_adata_object #!FileCoercion
 		Array[File] qc_plots_png = merge_and_plot_qc_metrics.qc_plots_png #!FileCoercion
+
+		# Clustering output
+		File integrated_adata_object = cluster_data.integrated_adata_object #!FileCoercion
+		File scvi_model = cluster_data.scvi_model #!FileCoercion
 	}
 }
 
@@ -142,13 +171,13 @@ task merge_and_plot_qc_metrics {
 			--threads ~{threads} \
 			--adata-objects-fofn adata_objects_paths.txt \
 			--project-name ~{cohort_id} \
-			--adata-output ~{cohort_id}.merged_adata_objects.h5ad.gz
+			--adata-output ~{cohort_id}.merged_adata_object.h5ad.gz
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}.merged_adata_objects.h5ad.gz" \
+			-o "~{cohort_id}.merged_adata_object.h5ad.gz" \
 			-o violin_n_genes_by_counts.png \ # TODO - double check file name and type for all plots
 			-o violin_total_counts.png \
 			-o violin_pct_counts_mt.png \
@@ -157,7 +186,7 @@ task merge_and_plot_qc_metrics {
 	>>>
 
 	output {
-		String merged_adata_objects = "~{raw_data_path}/~{cohort_id}.merged_adata_objects.h5ad.gz"
+		String merged_adata_object = "~{raw_data_path}/~{cohort_id}.merged_adata_object.h5ad.gz"
 
 		Array[String] qc_plots_png = [
 			"~{raw_data_path}/violin_n_genes_by_counts.png",
@@ -181,7 +210,7 @@ task merge_and_plot_qc_metrics {
 
 task filter_and_normalize {
 	input {
-		File preprocessed_adata_object
+		File merged_adata_object
 
 		String raw_data_path
 		Array[Array[String]] workflow_info
@@ -194,29 +223,29 @@ task filter_and_normalize {
 	}
 
 	Int threads = 2
-	String adata_object_basename = basename(preprocessed_adata_object, ".h5ad.gz")
-	Int disk_size = ceil(size(preprocessed_adata_object, "GB") * 4 + 20)
+	String merged_adata_object_basename = basename(merged_adata_object, ".h5ad.gz")
+	Int disk_size = ceil(size(merged_adata_object, "GB") * 4 + 20)
 
 	command <<<
 		set -euo pipefail
 
 		python filter.py \
-			--adata-input ~{preprocessed_adata_object} \
-			--adata-output ~{adata_object_basename}_filtered.h5ad.gz
+			--adata-input ~{merged_adata_object} \
+			--adata-output ~{merged_adata_object_basename}_filtered.h5ad.gz
 
 		# If any cells remain after filtering, the data is normalized and variable genes are identified
-		if [[ -s "~{adata_object_basename}_filtered.h5ad.gz" ]]; then
+		if [[ -s "~{merged_adata_object_basename}_filtered.h5ad.gz" ]]; then
 			python process.py \
 				--working-dir "$(pwd)" \
-				--adata-input ~{adata_object_basename}_filtered.h5ad.gz \
-				--adata-output ~{adata_object_basename}_filtered_normalized.h5ad.gz
+				--adata-input ~{merged_adata_object_basename}_filtered.h5ad.gz \
+				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad.gz
 
 			upload_outputs \
 				-b ~{billing_project} \
 				-d ~{raw_data_path} \
 				-i ~{write_tsv(workflow_info)} \
-				-o "~{adata_object_basename}_filtered.h5ad.gz" \
-				-o "~{adata_object_basename}_filtered_normalized.h5ad.gz"
+				-o "~{merged_adata_object_basename}_filtered.h5ad.gz" \
+				-o "~{merged_adata_object_basename}_filtered_normalized.h5ad.gz"
 
 			echo true > cells_remaining_post_filter.txt
 		else
@@ -225,8 +254,8 @@ task filter_and_normalize {
 	>>>
 
 	output {
-		String? filtered_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{adata_object_basename}_filtered.h5ad.gz" else my_none
-		String? normalized_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{adata_object_basename}_filtered_normalized.h5ad.gz" else my_none
+		String? filtered_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered.h5ad.gz" else my_none
+		String? normalized_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered_normalized.h5ad.gz" else my_none
 	}
 
 	runtime {

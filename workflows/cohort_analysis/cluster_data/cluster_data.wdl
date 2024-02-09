@@ -5,7 +5,9 @@ version 1.0
 workflow cluster_data {
 	input {
 		String cohort_id
-		Array[File] normalized_seurat_objects
+		File normalized_adata_object
+
+		String scvi_latent_key
 
 		Array[String] group_by_vars
 
@@ -17,117 +19,69 @@ workflow cluster_data {
 		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
-		Int multiome_container_revision
 		String zones
 	}
-
-	Int n_samples = length(normalized_seurat_objects)
 
 	call integrate_sample_data {
 		input:
 			cohort_id = cohort_id,
-			normalized_seurat_objects = normalized_seurat_objects,
-			n_samples = n_samples,
-			group_by_vars = group_by_vars,
+			normalized_adata_object = normalized_adata_object,
+			scvi_latent_key = scvi_latent_key,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision,
-			zones = zones
-	}
-
-	# Find neighbors, run umap, and cluster cells
-	call cluster_cells {
-		input:
-			cohort_id = cohort_id,
-			integrated_seurat_object = integrate_sample_data.integrated_seurat_object, #!FileCoercion
-			n_samples = n_samples,
-			clustering_algorithm = clustering_algorithm,
-			clustering_resolution = clustering_resolution,
-			cell_type_markers_list = cell_type_markers_list,
-			raw_data_path = raw_data_path,
-			workflow_info = workflow_info,
-			billing_project = billing_project,
-			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision,
-			zones = zones
-	}
-
-	call annotate_clusters {
-		input:
-			cohort_id = cohort_id,
-			cluster_seurat_object = cluster_cells.cluster_seurat_object, #!FileCoercion
-			n_samples = n_samples,
-			cell_type_markers_list = cell_type_markers_list,
-			raw_data_path = raw_data_path,
-			workflow_info = workflow_info,
-			billing_project = billing_project,
-			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision,
 			zones = zones
 	}
 
 	output {
-		File integrated_seurat_object = integrate_sample_data.integrated_seurat_object #!FileCoercion
-		File neighbors_seurat_object = cluster_cells.neighbors_seurat_object #!FileCoercion
-		File umap_seurat_object = cluster_cells.umap_seurat_object #!FileCoercion
-		File cluster_seurat_object = cluster_cells.cluster_seurat_object #!FileCoercion
-		File major_cell_type_plot_pdf = cluster_cells.major_cell_type_plot_pdf #!FileCoercion
-		File major_cell_type_plot_png = cluster_cells.major_cell_type_plot_png #!FileCoercion
-		File metadata = annotate_clusters.metadata #!FileCoercion
+		File integrated_adata_object = integrate_sample_data.integrated_adata_object #!FileCoercion
+		File scvi_model = integrate_sample_data.scvi_model #!FileCoercion
 	}
 }
 
 task integrate_sample_data {
 	input {
 		String cohort_id
-		Array[File] normalized_seurat_objects
-		Int n_samples
+		File normalized_adata_object
 
-		Array[String] group_by_vars
+		String scvi_latent_key
 
 		String raw_data_path
 		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
-		Int multiome_container_revision
 		String zones
 	}
 
-	# Assume input objects are ~500 MB
-	Int disk_size = ceil(length(normalized_seurat_objects) * 3 + 50)
-
-	# Ensure we don't go over the max possible machine size when running many samples
-	Int mem_gb_by_sample_count = ceil(n_samples * 1.6 + 50)
-	Int mem_gb = if (mem_gb_by_sample_count > 640) then 640 else mem_gb_by_sample_count
+	Int disk_size = ceil(size(normalized_adata_object, "GB") * 3 + 50)
 	Int threads = 8
+	Int mem_gb = threads * 2
 
 	command <<<
 		set -euo pipefail
 
-		/usr/bin/time \
-		Rscript /opt/scripts/main/harmony.R \
-			--working-dir "$(pwd)" \
-			--script-dir /opt/scripts \
-			--threads ~{threads} \
-			--group-by-vars ~{sep=' ' group_by_vars} \
-			--seurat-objects-fofn ~{write_lines(normalized_seurat_objects)} \
-			--output-seurat-object ~{cohort_id}.seurat_object.harmony_integrated_04.rds
+		python integrate_scvi.py \
+			--latent-key ~{scvi_latent_key} \
+			--adata-input ~{normalized_adata_object} \
+			--adata-output ~{cohort_id}.adata_object.scvi_integrated.h5ad.gz \
+			--output-scvi ~{cohort_id}.scvi_model.pkl
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}.seurat_object.harmony_integrated_04.rds"
+			-o "~{cohort_id}.adata_object.scvi_integrated.h5ad.gz" \
+			-o "~{cohort_id}.scvi_model.pkl"
 	>>>
 
 	output {
-		String integrated_seurat_object = "~{raw_data_path}/~{cohort_id}.seurat_object.harmony_integrated_04.rds"
+		String integrated_adata_object = "~{raw_data_path}/~{cohort_id}.adata_object.scvi_integrated.h5ad.gz"
+		String scvi_model = "~{raw_data_path}/~{cohort_id}.scvi_model.pkl"
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
+		docker: "~{container_registry}/scvi:1.0.4"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -141,7 +95,7 @@ task integrate_sample_data {
 task cluster_cells {
 	input {
 		String cohort_id
-		File integrated_seurat_object
+		File integrated_adata_object
 		Int n_samples
 
 		Int clustering_algorithm
@@ -152,13 +106,12 @@ task cluster_cells {
 		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
-		Int multiome_container_revision
 		String zones
 	}
 
-	String integrated_seurat_object_basename = basename(integrated_seurat_object, "_04.rds")
+	String integrated_adata_object_basename = basename(integrated_adata_object, "_04.rds")
 	Int threads = 2
-	Int disk_size = ceil(size(integrated_seurat_object, "GB") * 6 + 50)
+	Int disk_size = ceil(size(integrated_adata_object, "GB") * 6 + 50)
 	Int mem_gb = ceil(0.8 * n_samples + 50)
 
 	command <<<
@@ -169,16 +122,16 @@ task cluster_cells {
 		Rscript /opt/scripts/main/find_neighbors.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
-			--seurat-object ~{integrated_seurat_object} \
-			--output-seurat-object ~{integrated_seurat_object_basename}_neighbors_05.rds
+			--adata-object ~{integrated_adata_object} \
+			--output-adata-object ~{integrated_adata_object_basename}_neighbors_05.rds
 
 		# Run UMAP
 		/usr/bin/time \
 		Rscript /opt/scripts/main/umap.R \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
-			--seurat-object ~{integrated_seurat_object_basename}_neighbors_05.rds \
-			--output-seurat-object ~{integrated_seurat_object_basename}_neighbors_umap_06.rds
+			--adata-object ~{integrated_adata_object_basename}_neighbors_05.rds \
+			--output-adata-object ~{integrated_adata_object_basename}_neighbors_umap_06.rds
 
 		# Cluster cells
 		/usr/bin/time \
@@ -186,34 +139,34 @@ task cluster_cells {
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--threads ~{threads} \
-			--seurat-object ~{integrated_seurat_object_basename}_neighbors_umap_06.rds \
+			--adata-object ~{integrated_adata_object_basename}_neighbors_umap_06.rds \
 			--clustering-algorithm ~{clustering_algorithm} \
 			--clustering-resolution ~{clustering_resolution} \
 			--cell-type-markers-list ~{cell_type_markers_list} \
 			--output-cell-type-plot-prefix ~{cohort_id}.major_type_module_umap \
-			--output-seurat-object ~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds
+			--output-adata-object ~{integrated_adata_object_basename}_neighbors_umap_cluster_07.rds
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{integrated_seurat_object_basename}_neighbors_05.rds" \
-			-o "~{integrated_seurat_object_basename}_neighbors_umap_06.rds" \
-			-o "~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds" \
+			-o "~{integrated_adata_object_basename}_neighbors_05.rds" \
+			-o "~{integrated_adata_object_basename}_neighbors_umap_06.rds" \
+			-o "~{integrated_adata_object_basename}_neighbors_umap_cluster_07.rds" \
 			-o "~{cohort_id}.major_type_module_umap.pdf" \
 			-o "~{cohort_id}.major_type_module_umap.png"
 	>>>
 
 	output {
-		String neighbors_seurat_object = "~{raw_data_path}/~{integrated_seurat_object_basename}_neighbors_05.rds"
-		String umap_seurat_object = "~{raw_data_path}/~{integrated_seurat_object_basename}_neighbors_umap_06.rds"
-		String cluster_seurat_object = "~{raw_data_path}/~{integrated_seurat_object_basename}_neighbors_umap_cluster_07.rds"
+		String neighbors_adata_object = "~{raw_data_path}/~{integrated_adata_object_basename}_neighbors_05.rds"
+		String umap_adata_object = "~{raw_data_path}/~{integrated_adata_object_basename}_neighbors_umap_06.rds"
+		String cluster_adata_object = "~{raw_data_path}/~{integrated_adata_object_basename}_neighbors_umap_cluster_07.rds"
 		String major_cell_type_plot_pdf = "~{raw_data_path}/~{cohort_id}.major_type_module_umap.pdf"
 		String major_cell_type_plot_png = "~{raw_data_path}/~{cohort_id}.major_type_module_umap.png"
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
+		docker: "~{container_registry}/scvi:1.0.4"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -227,7 +180,7 @@ task cluster_cells {
 task annotate_clusters {
 	input {
 		String cohort_id
-		File cluster_seurat_object
+		File cluster_adata_object
 		Int n_samples
 
 		File cell_type_markers_list
@@ -236,12 +189,11 @@ task annotate_clusters {
 		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
-		Int multiome_container_revision
 		String zones
 	}
 
 	Int threads = 2
-	Int disk_size = ceil(size(cluster_seurat_object, "GB") + size(cell_type_markers_list, "GB") * 2 + 20)
+	Int disk_size = ceil(size(cluster_adata_object, "GB") + size(cell_type_markers_list, "GB") * 2 + 20)
 	Int mem_gb = ceil(1.3 * n_samples + 20)
 
 	command <<<
@@ -252,7 +204,7 @@ task annotate_clusters {
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--threads ~{threads} \
-			--seurat-object ~{cluster_seurat_object} \
+			--adata-object ~{cluster_adata_object} \
 			--cell-type-markers-list ~{cell_type_markers_list} \
 			--output-metadata-file ~{cohort_id}.final_metadata.csv
 
@@ -268,7 +220,7 @@ task annotate_clusters {
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
+		docker: "~{container_registry}/scvi:1.0.4"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"

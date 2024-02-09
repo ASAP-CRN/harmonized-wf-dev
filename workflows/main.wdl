@@ -21,6 +21,14 @@ workflow harmonized_pmdbs_analysis {
 		String cohort_raw_data_bucket
 		Array[String] cohort_staging_data_buckets
 
+		String scvi_latent_key = "X_scvi"
+		Int clustering_algorithm = 3
+		Float clustering_resolution = 0.3
+		File cell_type_markers_list
+
+		Array[String] groups = ["sample", "batch", "seurat_clusters"]
+		Array[String] features = ["doublet_scores", "nCount_RNA", "nFeature_RNA", "percent.mt", "percent.rb"]
+
 		String container_registry
 		String zones = "us-central1-c us-central1-f"
 	}
@@ -101,6 +109,13 @@ workflow harmonized_pmdbs_analysis {
 					cohort_id = project.project_id,
 					project_sample_ids = preprocess.project_sample_ids,
 					preprocessed_adata_objects = preprocess.adata_object,
+					scvi_latent_key =scvi_latent_key,
+					group_by_vars = ["batch"],
+					clustering_algorithm = clustering_algorithm,
+					clustering_resolution = clustering_resolution,
+					cell_type_markers_list = cell_type_markers_list,
+					groups = groups,
+					features = features,
 					run_timestamp = get_workflow_metadata.timestamp,
 					raw_data_path_prefix = project_raw_data_path_prefix,
 					staging_data_buckets = project.staging_data_buckets,
@@ -119,6 +134,13 @@ workflow harmonized_pmdbs_analysis {
 				cohort_id = cohort_id,
 				project_sample_ids = flatten(preprocess.project_sample_ids),
 				preprocessed_adata_objects = flatten(preprocess.adata_object),
+				scvi_latent_key =scvi_latent_key,
+				group_by_vars = ["batch"],
+				clustering_algorithm = clustering_algorithm,
+				clustering_resolution = clustering_resolution,
+				cell_type_markers_list = cell_type_markers_list,
+				groups = groups,
+				features = features,
 				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = cohort_raw_data_path_prefix,
 				staging_data_buckets = cohort_staging_data_buckets,
@@ -156,16 +178,24 @@ workflow harmonized_pmdbs_analysis {
 		Array[File?] project_cohort_sample_list = project_cohort_analysis.cohort_sample_list
 
 		## Merged adata objects and QC plots
-		Array[File?] project_merged_adata_objects = project_cohort_analysis.merged_adata_objects
+		Array[File?] project_merged_adata_object = project_cohort_analysis.merged_adata_object
 		Array[Array[File]?] project_qc_plots_png = project_cohort_analysis.qc_plots_png
+
+		# Clustering outputs
+		Array[File?] project_integrated_adata_object = project_cohort_analysis.integrated_adata_object
+		Array[File?] project_scvi_model = project_cohort_analysis.scvi_model
 
 		# Cross-team cohort analysis outputs
 		## List of samples included in the cohort
 		File? cohort_sample_list = cross_team_cohort_analysis.cohort_sample_list
 
 		## QC plots
-		File? cohort_merged_adata_objects = cross_team_cohort_analysis.merged_adata_objects
+		File? cohort_merged_adata_object = cross_team_cohort_analysis.merged_adata_object
 		Array[File]? cohort_qc_plots_png = cross_team_cohort_analysis.qc_plots_png
+
+		# Clustering outputs
+		File? cohort_integrated_adata_object = cross_team_cohort_analysis.integrated_adata_object
+		File? cohort_scvi_model = cross_team_cohort_analysis.scvi_model
 	}
 
 	meta {
@@ -177,6 +207,7 @@ workflow harmonized_pmdbs_analysis {
 		projects: {help: "The project ID, set of samples and their associated reads and metadata, output bucket locations, and whether or not to run project-level cohort analysis."}
 		cellranger_reference_data: {help: "Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest."}
 		cellbender_fpr :{help: "Cellbender false positive rate [0.0]"}
+		scvi_latent_key: {help: "Latent key to save the scVI latent to ['X_scvi']"}
 		run_cross_team_cohort_analysis: {help: "Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false]"}
 		cohort_raw_data_bucket: {help: "Bucket to upload cross-team cohort intermediate files to."}
 		cohort_staging_data_buckets: {help: "Set of buckets to stage cross-team cohort analysis outputs in."}
