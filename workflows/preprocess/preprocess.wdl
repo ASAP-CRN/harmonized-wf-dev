@@ -161,7 +161,7 @@ task counts_to_adata {
 	command <<<
 		set -euo pipefail
 
-		python /opt/scripts/main/preprocess.py \
+		python3 /opt/scripts/main/preprocess.py \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--adata-input ~{cellbender_counts} \

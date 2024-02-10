@@ -95,7 +95,7 @@ task integrate_sample_data {
 		set -euo pipefail
 
 		# TODO - double check that ~{cohort_id} is OK for batch-key
-		python /opt/scripts/main/integrate_scvi.py \
+		python3 /opt/scripts/main/integrate_scvi.py \
 			--latent-key ~{scvi_latent_key} \
 			--batch-key ~{cohort_id} \
 			--adata-input ~{normalized_adata_object} \
@@ -158,7 +158,7 @@ task cluster_cells {
 
 		if [[ ~{clustering_method} = "umap" ]]; then
 			# TODO - script doesn't use cell_type_markers_list (incomplete)
-			python /opt/scripts/main/clustering_umap.py \
+			python3 /opt/scripts/main/clustering_umap.py \
 				--working-dir "$(pwd)" \
 				--script-dir /opt/scripts \
 				--threads ~{threads} \
@@ -174,7 +174,7 @@ task cluster_cells {
 
 		elif [[ ~{clustering_method} = "mde" ]]; then
 			# Note: mde is super fast and efficient on a GPU
-			python /opt/scripts/main/clustering_mde.py \
+			python3 /opt/scripts/main/clustering_mde.py \
 				--working-dir "$(pwd)" \
 				--script-dir /opt/scripts \
 				--threads ~{threads} \
@@ -245,7 +245,7 @@ task annotate_cells {
 
 		# Note: This is not annotating the "clusters" but rather, the cells based on marker gene expression
 		# TODO - script outputs adata-output, but no data manipulation so this is the same as adata-input
-		python /opt/scripts/main/annotate_cells.py \
+		python3 /opt/scripts/main/annotate_cells.py \
 			--adata-input ~{cluster_adata_object} \
 			--marker-genes ~{cell_type_markers_list} \
 			--output-cellassign ~{cohort_id}.cellassign_model.pkl \
