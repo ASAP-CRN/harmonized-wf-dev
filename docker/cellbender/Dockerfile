@@ -17,6 +17,7 @@ ENV PATH "${CONDA_DIR}/bin:${PATH}"
 
 RUN apt-get -qq update && \
 	apt-get -qq install --no-install-recommends \
+		wget \
 		time \
 		curl \
 		ca-certificates \
@@ -52,6 +53,6 @@ ENV PATH "${PATH}:/opt/scripts"
 RUN conda install -y -c conda-forge crcmod
 
 # Install cellbender and its dependencies
-RUN yes | pip install --no-cache-dir -U "git+https://github.com/broadinstitute/CellBender.git@${IMAGE_TAG}" \
+RUN yes | pip install --no-cache-dir -U "git+https://github.com/broadinstitute/CellBender.git@v${IMAGE_TAG}" \
 	&& conda clean -yaf \
 	&& sudo rm -rf ~/.cache/pip
