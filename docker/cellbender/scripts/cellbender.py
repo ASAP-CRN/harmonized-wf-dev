@@ -28,11 +28,10 @@ parser.add_argument(
 args = parser.parse_args()
 
 cellbender_args = [
-    '--cuda'
-    '--input', args.raw_counts, 
-    '--output', args.output,
-    '--fpr', args.fpr,        
-
+    f'--input {args.raw_counts}',
+    f'--output {args.output}',
+    '--cuda',
+    f'--fpr {args.fpr}',
 ]
 
 # generates _out
