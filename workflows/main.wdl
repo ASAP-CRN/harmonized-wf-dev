@@ -37,7 +37,7 @@ workflow harmonized_pmdbs_analysis {
 	}
 
 	# Task and subworkflow versions
-	String cellranger_task_version = "v1.1.0"
+	String cellranger_task_version = "1.1.0"
 
 	String workflow_execution_path = "workflow_execution"
 
@@ -50,7 +50,8 @@ workflow harmonized_pmdbs_analysis {
 		String project_raw_data_path_prefix = "~{project.raw_data_bucket}/~{workflow_execution_path}"
 
 		scatter (sample_object in project.samples) {
-			String cellranger_count_output = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
+			# TODO - remove 'preprocess' from cellranger gs paths when re-running cellranger
+			String cellranger_count_output = "~{project_raw_data_path_prefix}/preprocess/cellranger/~{cellranger_task_version}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
 		}
 
 		# For each sample, outputs an array of true/false
@@ -65,10 +66,11 @@ workflow harmonized_pmdbs_analysis {
 			Sample sample = project.samples[index]
 			String cellranger_count_complete = check_output_files_exist.sample_cellranger_complete[index][0]
 
-			String cellranger_raw_counts = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
-			String cellranger_filtered_counts = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
-			String cellranger_molecule_info = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.molecule_info.h5"
-			String cellranger_metrics_csv = "~{project_raw_data_path_prefix}/cellranger/~{cellranger_task_version}/~{sample.sample_id}.metrics_summary.csv"
+			# TODO - remove 'preprocess' from cellranger gs paths when re-running cellranger
+			String cellranger_raw_counts = "~{project_raw_data_path_prefix}/preprocess/cellranger/~{cellranger_task_version}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
+			String cellranger_filtered_counts = "~{project_raw_data_path_prefix}/preprocess/cellranger/~{cellranger_task_version}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
+			String cellranger_molecule_info = "~{project_raw_data_path_prefix}/preprocess/cellranger/~{cellranger_task_version}/~{sample.sample_id}.molecule_info.h5"
+			String cellranger_metrics_csv = "~{project_raw_data_path_prefix}/preprocess/cellranger/~{cellranger_task_version}/~{sample.sample_id}.metrics_summary.csv"
 
 			if (cellranger_count_complete == "false") {
 				call cellranger_count {
