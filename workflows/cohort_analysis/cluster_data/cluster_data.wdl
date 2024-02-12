@@ -121,7 +121,7 @@ task integrate_sample_data {
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
-		bootDiskSizeGb: 20
+		bootDiskSizeGb: 40
 		zones: zones
 	}
 }
@@ -214,7 +214,7 @@ task cluster_cells {
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
-		bootDiskSizeGb: 20
+		bootDiskSizeGb: 40
 		zones: zones
 		gpuType: gpu_type
 		gpuCount: gpu_count
@@ -271,7 +271,7 @@ task annotate_cells {
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
-		bootDiskSizeGb: 20
+		bootDiskSizeGb: 40
 		zones: zones
 	}
 }

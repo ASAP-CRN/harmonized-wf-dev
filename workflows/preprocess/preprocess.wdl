@@ -132,11 +132,11 @@ task remove_technical_artifacts {
 
 	runtime {
 		docker: "~{container_registry}/cellbender:0.3.0"
-		cpu: 16
-		memory: "32 GB"
+		cpu: 4
+		memory: "16 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
-		bootDiskSizeGb: 20
+		bootDiskSizeGb: 40
 		zones: zones
 	}
 }
@@ -187,7 +187,7 @@ task counts_to_adata {
 		memory: "8 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
-		bootDiskSizeGb: 20
+		bootDiskSizeGb: 40
 		zones: zones
 	}
 }
