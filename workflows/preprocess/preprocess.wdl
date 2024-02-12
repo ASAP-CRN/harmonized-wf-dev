@@ -31,7 +31,7 @@ workflow preprocess {
 		Sample sample = samples[index]
 
 		Array[String] project_sample_id = [project_id, sample.sample_id]
-		
+
 		call remove_technical_artifacts {
 			input:
 				sample_id = sample.sample_id,
@@ -61,7 +61,7 @@ workflow preprocess {
 	output {
 		# Sample list
 		Array[Array[String]] project_sample_ids = project_sample_id
-		
+
 		# Remove technical artifacts - Cellbender
 		Array[File] report_html = remove_technical_artifacts.report_html #!FileCoercion
 		Array[File] remove_background_counts = remove_technical_artifacts.remove_background_counts #!FileCoercion
@@ -120,14 +120,14 @@ task remove_technical_artifacts {
 
 	output {
 		String report_html = "~{raw_data_path}/~{sample_id}.cellbender.output_report.html"
-		String remove_background_counts = "~{sample_id}.cellbender.output.h5"
-		String filtered_remove_background_counts = "~{sample_id}.cellbender.output_filtered.h5"
-		String cell_barcodes_csv = "~{sample_id}.cellbender.output_cell_barcodes.csv"
-		String graph_pdf = "~{sample_id}.cellbender.output.pdf"
-		String log = "~{sample_id}.cellbender.output.log"
-		String metrics_csv = "~{sample_id}.cellbender.output_metrics.csv"
-		String checkpoint_tar_gz = "~{sample_id}.cellbender.ckpt.tar.gz"
-		String posterior_probability = "~{sample_id}.cellbender.output_posterior.h5"
+		String remove_background_counts = "~{raw_data_path}/~{sample_id}.cellbender.output.h5"
+		String filtered_remove_background_counts = "~{raw_data_path}/~{sample_id}.cellbender.output_filtered.h5"
+		String cell_barcodes_csv = "~{raw_data_path}/~{sample_id}.cellbender.output_cell_barcodes.csv"
+		String graph_pdf = "~{raw_data_path}/~{sample_id}.cellbender.output.pdf"
+		String log = "~{raw_data_path}/~{sample_id}.cellbender.output.log"
+		String metrics_csv = "~{raw_data_path}/~{sample_id}.cellbender.output_metrics.csv"
+		String checkpoint_tar_gz = "~{raw_data_path}/~{sample_id}.cellbender.ckpt.tar.gz"
+		String posterior_probability = "~{raw_data_path}/~{sample_id}.cellbender.output_posterior.h5"
 	}
 
 	runtime {

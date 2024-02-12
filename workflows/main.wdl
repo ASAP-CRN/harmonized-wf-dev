@@ -315,7 +315,7 @@ task check_output_files_exist {
 	command <<<
 		set -euo pipefail
 
-		while read -r output_files || [[ -n "${output_files}" ]]; do 
+		while read -r output_files || [[ -n "${output_files}" ]]; do
 			if gsutil -u ~{billing_project} ls "${output_files}"; then
 				echo "true" >> sample_cellranger_complete.tsv
 			else

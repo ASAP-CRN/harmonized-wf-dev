@@ -315,6 +315,7 @@ task filter_and_normalize {
 			--adata-input ~{merged_adata_object} \
 			--adata-output ~{merged_adata_object_basename}_filtered.h5ad.gz
 
+		# TODO see whether this is still required given the change to python
 		# If any cells remain after filtering, the data is normalized and variable genes are identified
 		if [[ -s "~{merged_adata_object_basename}_filtered.h5ad.gz" ]]; then
 			python3 /opt/scripts/main/process.py \
