@@ -10,40 +10,29 @@ ENV IMAGE_NAME "${IMAGE_NAME}"
 ARG IMAGE_TAG
 ENV IMAGE_TAG "${IMAGE_TAG}"
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DOCKER=true \
+    CONDA_AUTO_UPDATE_CONDA=false \
+    CONDA_DIR="/opt/conda"
+ENV PATH "${CONDA_DIR}/bin:${PATH}"
 
 RUN apt-get -qq update && \
-	apt-get -qq install \
-		build-essential \
-		wget \
+	apt-get -qq install --no-install-recommends \
 		time \
 		curl \
-		zlib1g-dev \
-		libncursesw5-dev \
-		libssl-dev \
-		libsqlite3-dev \
-		tk-dev \
-		libgdbm-dev \
-		libc6-dev \
-		libbz2-dev \
-		libffi-dev \
-		liblzma-dev \
-		ca-certificates
+		ca-certificates \
+		sudo \
+		git
 
-ARG PYTHON3_VERSION
-ENV PYTHON3_VERSION "${PYTHON3_VERSION}"
-RUN curl -O https://www.python.org/ftp/python/${PYTHON3_VERSION}/Python-${PYTHON3_VERSION}.tar.xz && \
-	tar -xvf Python-${PYTHON3_VERSION}.tar.xz --directory /opt/ && \
-	rm Python-${PYTHON3_VERSION}.tar.xz
-RUN cd /opt/Python-${PYTHON3_VERSION} && \
-	./configure && \
-	make && \
-	make altinstall
-
-ENV PATH "${PATH}:/opt/Python-${PYTHON3_VERSION}"
+# Install miniconda
+ARG MINICONDA_VERSION
+ENV MINICONDA_VERSION "${MINICONDA_VERSION}"
+RUN curl -so $HOME/miniconda.sh "https://repo.anaconda.com/miniconda/Miniconda3-py37_${MINICONDA_VERSION}-Linux-x86_64.sh" \
+	&& chmod +x $HOME/miniconda.sh \
+	&& $HOME/miniconda.sh -b -p $CONDA_DIR \
+	&& rm $HOME/miniconda.sh
 
 COPY ./requirements.txt /opt/requirements.txt
-RUN python -m pip install -r /opt/requirements.txt
+RUN pip install -r /opt/requirements.txt
 
 # gcloud sdk; needed to upload output files
 ARG GCLOUD_CLI_VERSION
@@ -58,3 +47,11 @@ COPY ./scripts /opt/scripts
 
 COPY --from=scripts /opt/scripts /opt/scripts
 ENV PATH "${PATH}:/opt/scripts"
+
+# Get compiled crcmod for gsutil
+RUN conda install -y -c conda-forge crcmod
+
+# Install cellbender and its dependencies
+RUN yes | pip install --no-cache-dir -U "git+https://github.com/broadinstitute/CellBender.git@${IMAGE_TAG}" \
+	&& conda clean -yaf \
+	&& sudo rm -rf ~/.cache/pip
