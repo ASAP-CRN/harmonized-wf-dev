@@ -93,7 +93,7 @@ task remove_technical_artifacts {
 		String zones
 	}
 
-	Int disk_size = ceil(size(raw_counts, "GB") * 2 + 20)
+	Int disk_size = ceil(size(raw_counts, "GB") * 2 + 50)
 
 	command <<<
 		set -euo pipefail
@@ -132,8 +132,8 @@ task remove_technical_artifacts {
 
 	runtime {
 		docker: "~{container_registry}/cellbender:0.3.0"
-		cpu: 4
-		memory: "8 GB"
+		cpu: 16
+		memory: "32 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 20
