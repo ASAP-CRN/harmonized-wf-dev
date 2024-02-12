@@ -1,4 +1,4 @@
-FROM util:1.1.0 as scripts
+FROM us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images/util:1.1.0 as scripts
 
 FROM ubuntu:jammy
 
