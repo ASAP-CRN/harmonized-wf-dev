@@ -151,7 +151,7 @@ task cluster_cells {
 
 	# TODO - double check that empty gpuCount and gpuType does not launch GPU for clustering_umap
 	String gpu_type = if clustering_method == "mde" then "nvidia-tesla-k80" else ""
-	Int gpu_count = if clustering_method == "mde" then 1 else ""
+	Int gpu_count = if clustering_method == "mde" then 8 else ""
 
 	command <<<
 		set -euo pipefail
