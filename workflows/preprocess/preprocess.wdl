@@ -3,6 +3,7 @@ version 1.0
 # Generate a preprocessed AnnData object
 
 import "../structs.wdl"
+import "../common/check_output_files_exist.wdl" as CheckOutputFilesExist
 
 workflow preprocess {
 	input {
@@ -25,32 +26,67 @@ workflow preprocess {
 
 	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version]]
 
-	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}"
+	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}"
+
+	scatter (sample_object in samples) {
+		String cellbender_count_output = "~{raw_data_path}/~{sample_object.sample_id}.cellbender.h5"
+	}
+
+	call CheckOutputFilesExist.check_output_files_exist as check_cellbender_outputs_exist {
+		input:
+			output_files = cellbender_count_output,
+			billing_project = billing_project,
+			zones = zones
+	}
 
 	scatter (index in range(length(samples))) {
 		Sample sample = samples[index]
 
 		Array[String] project_sample_id = [project_id, sample.sample_id]
 
-		call remove_technical_artifacts {
-			input:
-				sample_id = sample.sample_id,
-				raw_counts = raw_counts[index],
-				cellbender_fpr = cellbender_fpr,
-				raw_data_path = "~{raw_data_path}/remove_technical_artifacts/~{workflow_version}",
-				workflow_info = workflow_info,
-				billing_project = billing_project,
-				container_registry = container_registry,
-				zones = zones
+		String cellbender_remove_background_complete = check_cellbender_outputs_exist.sample_complete[index][0]
+
+		String cellbender_report_html = "~{raw_data_path}/~{sample.sample_id}.cellbender_report.html"
+		String cellbender_removed_background_counts = "~{raw_data_path}/~{sample.sample_id}.cellbender.h5"
+		String cellbender_filtered_removed_background_counts = "~{raw_data_path}/~{sample.sample_id}.cellbender_filtered.h5"
+		String cellbender_cell_barcodes_csv = "~{raw_data_path}/~{sample.sample_id}.cellbender_cell_barcodes.csv"
+		String cellbender_graph_pdf = "~{raw_data_path}/~{sample.sample_id}.cellbender.pdf"
+		String cellbender_log = "~{raw_data_path}/~{sample.sample_id}.cellbender.log"
+		String cellbender_metrics_csv = "~{raw_data_path}/~{sample.sample_id}.cellbender_metrics.csv"
+		String cellbender_checkpoint_tar_gz = "~{raw_data_path}/~{sample.sample_id}.cellbender_ckpt.tar.gz"
+		String cellbender_posterior_probability = "~{raw_data_path}/~{sample.sample_id}.cellbend_posterior.h5"
+
+		if (cellbender_remove_background_complete == "false") {
+			call remove_technical_artifacts {
+				input:
+					sample_id = sample.sample_id,
+					raw_counts = raw_counts[index],
+					cellbender_fpr = cellbender_fpr,
+					raw_data_path = raw_data_path,
+					workflow_info = workflow_info,
+					billing_project = billing_project,
+					container_registry = container_registry,
+					zones = zones
+			}
 		}
+
+		File report_html_output = select_first([remove_technical_artifacts.report_html, cellbender_report_html]) #!FileCoercion
+		File removed_background_counts_output = select_first([remove_technical_artifacts.removed_background_counts, cellbender_removed_background_counts]) #!FileCoercion
+		File filtered_removed_background_counts_output = select_first([remove_technical_artifacts.filtered_removed_background_counts, cellbender_filtered_removed_background_counts]) #!FileCoercion
+		File cell_barcodes_csv_output = select_first([remove_technical_artifacts.cell_barcodes_csv, cellbender_cell_barcodes_csv]) #!FileCoercion
+		File graph_pdf_output = select_first([remove_technical_artifacts.graph_pdf, cellbender_graph_pdf]) #!FileCoercion
+		File log_output = select_first([remove_technical_artifacts.log, cellbender_log]) #!FileCoercion
+		File metrics_csv_output = select_first([remove_technical_artifacts.metrics_csv, cellbender_metrics_csv]) #!FileCoercion
+		File checkpoint_tar_gz_output = select_first([remove_technical_artifacts.checkpoint_tar_gz, cellbender_checkpoint_tar_gz]) #!FileCoercion
+		File posterior_probability_output = select_first([remove_technical_artifacts.posterior_probability, cellbender_posterior_probability]) #!FileCoercion
 
 		call counts_to_adata {
 			input:
 				sample_id = sample.sample_id,
 				batch = select_first([sample.batch]),
 				project_id = project_id,
-				cellbender_counts = remove_technical_artifacts.removed_background_counts, #!FileCoercion
-				raw_data_path = "~{raw_data_path}/counts_to_adata/~{workflow_version}",
+				cellbender_counts = removed_background_counts_output,
+				raw_data_path = raw_data_path,
 				workflow_info = workflow_info,
 				billing_project = billing_project,
 				container_registry = container_registry,
@@ -63,15 +99,15 @@ workflow preprocess {
 		Array[Array[String]] project_sample_ids = project_sample_id
 
 		# Remove technical artifacts - Cellbender
-		Array[File] report_html = remove_technical_artifacts.report_html #!FileCoercion
-		Array[File] removed_background_counts = remove_technical_artifacts.removed_background_counts #!FileCoercion
-		Array[File] filtered_removed_background_counts = remove_technical_artifacts.filtered_removed_background_counts #!FileCoercion
-		Array[File] cell_barcodes_csv = remove_technical_artifacts.cell_barcodes_csv #!FileCoercion
-		Array[File] graph_pdf = remove_technical_artifacts.graph_pdf #!FileCoercion
-		Array[File] log = remove_technical_artifacts.log #!FileCoercion
-		Array[File] metrics_csv = remove_technical_artifacts.metrics_csv #!FileCoercion
-		Array[File] checkpoint_tar_gz = remove_technical_artifacts.checkpoint_tar_gz #!FileCoercion
-		Array[File] posterior_probability = remove_technical_artifacts.posterior_probability #!FileCoercion
+		Array[File] report_html = report_html_output
+		Array[File] removed_background_counts = removed_background_counts_output #!FileCoercion
+		Array[File] filtered_removed_background_counts = filtered_removed_background_counts_output #!FileCoercion
+		Array[File] cell_barcodes_csv = cell_barcodes_csv_output #!FileCoercion
+		Array[File] graph_pdf = graph_pdf_output #!FileCoercion
+		Array[File] log = log_output #!FileCoercion
+		Array[File] metrics_csv = metrics_csv_output #!FileCoercion
+		Array[File] checkpoint_tar_gz = checkpoint_tar_gz_output #!FileCoercion
+		Array[File] posterior_probability = posterior_probability_output #!FileCoercion
 
 		# AnnData counts
 		Array[File] adata_object = counts_to_adata.preprocessed_adata_object #!FileCoercion

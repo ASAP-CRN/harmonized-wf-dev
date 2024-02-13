@@ -3,6 +3,7 @@ version 1.0
 # Harmonized workflow entrypoint
 
 import "structs.wdl"
+import "common/check_output_files_exist.wdl" as CheckOutputFilesExist
 import "preprocess/preprocess.wdl" as Preprocess
 import "cohort_analysis/cohort_analysis.wdl" as CohortAnalysis
 
@@ -54,17 +55,16 @@ workflow harmonized_pmdbs_analysis {
 			String cellranger_count_output = "~{project_raw_data_path_prefix}/preprocess/cellranger/~{cellranger_task_version}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
 		}
 
-		# For each sample, outputs an array of true/false
-		call check_output_files_exist {
-		input:
-			cellranger_count_output_files = cellranger_count_output,
-			billing_project = get_workflow_metadata.billing_project,
-			zones = zones
+		call CheckOutputFilesExist.check_output_files_exist as check_cellranger_outputs_exist {
+			input:
+				output_files = cellranger_count_output,
+				billing_project = get_workflow_metadata.billing_project,
+				zones = zones
 		}
 
 		scatter (index in range(length(project.samples))) {
 			Sample sample = project.samples[index]
-			String cellranger_count_complete = check_output_files_exist.sample_cellranger_complete[index][0]
+			String cellranger_count_complete = check_cellranger_outputs_exist.sample_complete[index][0]
 
 			# TODO - remove 'preprocess' from cellranger gs paths when re-running cellranger
 			String cellranger_raw_counts = "~{project_raw_data_path_prefix}/preprocess/cellranger/~{cellranger_task_version}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
@@ -301,40 +301,6 @@ task get_workflow_metadata {
 		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk 10 HDD"
-		preemptible: 3
-		zones: zones
-	}
-}
-
-task check_output_files_exist {
-	input {
-		Array[String] cellranger_count_output_files
-
-		String billing_project
-		String zones
-	}
-
-	command <<<
-		set -euo pipefail
-
-		while read -r output_files || [[ -n "${output_files}" ]]; do
-			if gsutil -u ~{billing_project} ls "${output_files}"; then
-				echo "true" >> sample_cellranger_complete.tsv
-			else
-				echo "false" >> sample_cellranger_complete.tsv
-			fi
-		done < ~{write_lines(cellranger_count_output_files)}
-	>>>
-
-	output {
-		Array[Array[String]] sample_cellranger_complete = read_tsv("sample_cellranger_complete.tsv")
-	}
-
-	runtime {
-		docker: "gcr.io/google.com/cloudsdktool/google-cloud-cli:444.0.0-slim"
-		cpu: 2
-		memory: "4 GB"
-		disks: "local-disk 20 HDD"
 		preemptible: 3
 		zones: zones
 	}
