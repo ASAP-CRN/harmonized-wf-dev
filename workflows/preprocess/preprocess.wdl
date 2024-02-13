@@ -49,7 +49,7 @@ workflow preprocess {
 				sample_id = sample.sample_id,
 				batch = select_first([sample.batch]),
 				project_id = project_id,
-				cellbender_counts = remove_technical_artifacts.remove_background_counts, #!FileCoercion
+				cellbender_counts = remove_technical_artifacts.removed_background_counts, #!FileCoercion
 				raw_data_path = "~{raw_data_path}/counts_to_adata/~{workflow_version}",
 				workflow_info = workflow_info,
 				billing_project = billing_project,
@@ -64,8 +64,8 @@ workflow preprocess {
 
 		# Remove technical artifacts - Cellbender
 		Array[File] report_html = remove_technical_artifacts.report_html #!FileCoercion
-		Array[File] remove_background_counts = remove_technical_artifacts.remove_background_counts #!FileCoercion
-		Array[File] filtered_remove_background_counts = remove_technical_artifacts.filtered_remove_background_counts #!FileCoercion
+		Array[File] removed_background_counts = remove_technical_artifacts.removed_background_counts #!FileCoercion
+		Array[File] filtered_removed_background_counts = remove_technical_artifacts.filtered_removed_background_counts #!FileCoercion
 		Array[File] cell_barcodes_csv = remove_technical_artifacts.cell_barcodes_csv #!FileCoercion
 		Array[File] graph_pdf = remove_technical_artifacts.graph_pdf #!FileCoercion
 		Array[File] log = remove_technical_artifacts.log #!FileCoercion
@@ -103,31 +103,33 @@ task remove_technical_artifacts {
 			--output-name ~{sample_id}.cellbender. \
 			--fpr ~{cellbender_fpr}
 
+		mv ckpt.tar.gz "~{sample_id}.cellbender_ckpt.tar.gz"
+
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{sample_id}.cellbender.output_report.html" \
-			-o "~{sample_id}.cellbender.output.h5" \
-			-o "~{sample_id}.cellbender.output_filtered.h5" \
-			-o "~{sample_id}.cellbender.output_cell_barcodes.csv" \
-			-o "~{sample_id}.cellbender.output.pdf" \
-			-o "~{sample_id}.cellbender.output.log" \
-			-o "~{sample_id}.cellbender.output_metrics.csv" \
-			-o "~{sample_id}.cellbender.ckpt.tar.gz" \
-			-o "~{sample_id}.cellbender.output_posterior.h5"
+			-o "~{sample_id}.cellbender_report.html" \
+			-o "~{sample_id}.cellbender.h5" \
+			-o "~{sample_id}.cellbender_filtered.h5" \
+			-o "~{sample_id}.cellbender_cell_barcodes.csv" \
+			-o "~{sample_id}.cellbender.pdf" \
+			-o "~{sample_id}.cellbender.log" \
+			-o "~{sample_id}.cellbender_metrics.csv" \
+			-o "~{sample_id}.cellbender_ckpt.tar.gz" \
+			-o "~{sample_id}.cellbend_posterior.h5"
 	>>>
 
 	output {
-		String report_html = "~{raw_data_path}/~{sample_id}.cellbender.output_report.html"
-		String remove_background_counts = "~{raw_data_path}/~{sample_id}.cellbender.output.h5"
-		String filtered_remove_background_counts = "~{raw_data_path}/~{sample_id}.cellbender.output_filtered.h5"
-		String cell_barcodes_csv = "~{raw_data_path}/~{sample_id}.cellbender.output_cell_barcodes.csv"
-		String graph_pdf = "~{raw_data_path}/~{sample_id}.cellbender.output.pdf"
-		String log = "~{raw_data_path}/~{sample_id}.cellbender.output.log"
-		String metrics_csv = "~{raw_data_path}/~{sample_id}.cellbender.output_metrics.csv"
-		String checkpoint_tar_gz = "~{raw_data_path}/~{sample_id}.cellbender.ckpt.tar.gz"
-		String posterior_probability = "~{raw_data_path}/~{sample_id}.cellbender.output_posterior.h5"
+		String report_html = "~{raw_data_path}/~{sample_id}.cellbender_report.html"
+		String removed_background_counts = "~{raw_data_path}/~{sample_id}.cellbender.h5"
+		String filtered_removed_background_counts = "~{raw_data_path}/~{sample_id}.cellbender_filtered.h5"
+		String cell_barcodes_csv = "~{raw_data_path}/~{sample_id}.cellbender_cell_barcodes.csv"
+		String graph_pdf = "~{raw_data_path}/~{sample_id}.cellbender.pdf"
+		String log = "~{raw_data_path}/~{sample_id}.cellbender.log"
+		String metrics_csv = "~{raw_data_path}/~{sample_id}.cellbender_metrics.csv"
+		String checkpoint_tar_gz = "~{raw_data_path}/~{sample_id}.cellbender_ckpt.tar.gz"
+		String posterior_probability = "~{raw_data_path}/~{sample_id}.cellbend_posterior.h5"
 	}
 
 	runtime {

@@ -114,8 +114,8 @@ workflow harmonized_pmdbs_analysis {
 			molecule_info_output,
 			metrics_csv_output,
 			preprocess.report_html,
-			preprocess.remove_background_counts,
-			preprocess.filtered_remove_background_counts,
+			preprocess.removed_background_counts,
+			preprocess.filtered_removed_background_counts,
 			preprocess.cell_barcodes_csv,
 			preprocess.graph_pdf,
 			preprocess.log,
@@ -189,8 +189,8 @@ workflow harmonized_pmdbs_analysis {
 
 		# Preprocess
 		Array[Array[File]] report_html = preprocess.report_html
-		Array[Array[File]] remove_background_counts = preprocess.remove_background_counts
-		Array[Array[File]] filtered_remove_background_counts = preprocess.filtered_remove_background_counts
+		Array[Array[File]] removed_background_counts = preprocess.removed_background_counts
+		Array[Array[File]] filtered_removed_background_counts = preprocess.filtered_removed_background_counts
 		Array[Array[File]] cell_barcodes_csv = preprocess.cell_barcodes_csv
 		Array[Array[File]] graph_pdf = preprocess.graph_pdf
 		Array[Array[File]] log = preprocess.log
