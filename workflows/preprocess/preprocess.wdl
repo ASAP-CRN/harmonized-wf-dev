@@ -26,10 +26,12 @@ workflow preprocess {
 
 	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version]]
 
-	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}"
+	String workflow_raw_data_path_prefix = "~{raw_data_path_prefix}/~{workflow_name}"
+	String cellbender_raw_data_path = "~{workflow_raw_data_path_prefix}/remove_technical_artifacts/~{workflow_version}"
+	String adata_raw_data_path = "~{workflow_raw_data_path_prefix}/counts_to_adata/~{workflow_version}"
 
 	scatter (sample_object in samples) {
-		String cellbender_count_output = "~{raw_data_path}/~{sample_object.sample_id}.cellbender.h5"
+		String cellbender_count_output = "~{cellbender_raw_data_path}/~{sample_object.sample_id}.cellbender.h5"
 	}
 
 	call CheckOutputFilesExist.check_output_files_exist as check_cellbender_outputs_exist {
@@ -46,15 +48,15 @@ workflow preprocess {
 
 		String cellbender_remove_background_complete = check_cellbender_outputs_exist.sample_complete[index][0]
 
-		String cellbender_report_html = "~{raw_data_path}/~{sample.sample_id}.cellbender_report.html"
-		String cellbender_removed_background_counts = "~{raw_data_path}/~{sample.sample_id}.cellbender.h5"
-		String cellbender_filtered_removed_background_counts = "~{raw_data_path}/~{sample.sample_id}.cellbender_filtered.h5"
-		String cellbender_cell_barcodes_csv = "~{raw_data_path}/~{sample.sample_id}.cellbender_cell_barcodes.csv"
-		String cellbender_graph_pdf = "~{raw_data_path}/~{sample.sample_id}.cellbender.pdf"
-		String cellbender_log = "~{raw_data_path}/~{sample.sample_id}.cellbender.log"
-		String cellbender_metrics_csv = "~{raw_data_path}/~{sample.sample_id}.cellbender_metrics.csv"
-		String cellbender_checkpoint_tar_gz = "~{raw_data_path}/~{sample.sample_id}.cellbender_ckpt.tar.gz"
-		String cellbender_posterior_probability = "~{raw_data_path}/~{sample.sample_id}.cellbend_posterior.h5"
+		String cellbender_report_html = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender_report.html"
+		String cellbender_removed_background_counts = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender.h5"
+		String cellbender_filtered_removed_background_counts = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender_filtered.h5"
+		String cellbender_cell_barcodes_csv = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender_cell_barcodes.csv"
+		String cellbender_graph_pdf = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender.pdf"
+		String cellbender_log = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender.log"
+		String cellbender_metrics_csv = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender_metrics.csv"
+		String cellbender_checkpoint_tar_gz = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender_ckpt.tar.gz"
+		String cellbender_posterior_probability = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbend_posterior.h5"
 
 		if (cellbender_remove_background_complete == "false") {
 			call remove_technical_artifacts {
@@ -62,7 +64,7 @@ workflow preprocess {
 					sample_id = sample.sample_id,
 					raw_counts = raw_counts[index],
 					cellbender_fpr = cellbender_fpr,
-					raw_data_path = raw_data_path,
+					raw_data_path = cellbender_raw_data_path,
 					workflow_info = workflow_info,
 					billing_project = billing_project,
 					container_registry = container_registry,
@@ -86,7 +88,7 @@ workflow preprocess {
 				batch = select_first([sample.batch]),
 				project_id = project_id,
 				cellbender_counts = removed_background_counts_output,
-				raw_data_path = raw_data_path,
+				raw_data_path = adata_raw_data_path,
 				workflow_info = workflow_info,
 				billing_project = billing_project,
 				container_registry = container_registry,
