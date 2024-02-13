@@ -98,7 +98,7 @@ task remove_technical_artifacts {
 	command <<<
 		set -euo pipefail
 
-		python /opt/scripts/cellbender.py \
+		python3 /opt/scripts/cellbender.py \
 			--raw-counts ~{raw_counts} \
 			--output-name ~{sample_id}.cellbender. \
 			--fpr ~{cellbender_fpr}
@@ -138,6 +138,8 @@ task remove_technical_artifacts {
 		preemptible: 3
 		bootDiskSizeGb: 40
 		zones: zones
+		gpuType: "nvidia-tesla-k80"
+		gpuCount: 2
 	}
 }
 
