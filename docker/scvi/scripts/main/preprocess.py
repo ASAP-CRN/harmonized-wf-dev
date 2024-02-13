@@ -54,7 +54,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-os.setwd(args.working_dir)
+os.chdir(args.working_dir)
 from utility.helpers import anndata_from_h5, get_solo_results
 
 # load the data from cellbender output
