@@ -1,7 +1,8 @@
 import argparse
 import pandas as pd
 import scanpy
-from utility.helpers import score_cell_cycle
+sys.path.append('/opt/scripts/utility')
+from helpers import score_cell_cycle
 
 
 parser = argparse.ArgumentParser(

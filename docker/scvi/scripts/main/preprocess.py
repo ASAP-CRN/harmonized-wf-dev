@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 import scanpy
 
 
@@ -55,7 +56,9 @@ parser.add_argument(
 args = parser.parse_args()
 
 os.chdir(args.working_dir)
-from utility.helpers import anndata_from_h5, get_solo_results
+
+sys.path.append('/opt/scripts/utility')
+from helpers import anndata_from_h5, get_solo_results
 
 # load the data from cellbender output
 adata = anndata_from_h5(args.adata_input)

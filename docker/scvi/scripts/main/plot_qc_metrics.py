@@ -56,7 +56,8 @@ parser.add_argument(
 args = parser.parse_args()
 
 # os.chdir(args.working_dir)
-# from utility.helpers import minify_adata
+# sys.path.append('/opt/scripts/utility')
+# from helpers import minify_adata
 
 
 sc.settings.verbosity = 1
