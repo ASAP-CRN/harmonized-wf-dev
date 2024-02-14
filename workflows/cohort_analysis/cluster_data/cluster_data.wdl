@@ -70,7 +70,7 @@ workflow cluster_data {
 		File? major_cell_type_plot_png = cluster_cells.major_cell_type_plot_png #!FileCoercion, #!UnnecessaryQuantifier
 		File cellassign_model = annotate_cells.cellassign_model #!FileCoercion
 		File cell_types_csv = annotate_cells.cell_types_csv #!FileCoercion
-		File annotated_adata_object = annotate_cells.annotated_adata_object #!FileCoercion
+		File cell_annotated_adata_object = annotate_cells.cell_annotated_adata_object #!FileCoercion
 	}
 }
 
@@ -264,7 +264,7 @@ task annotate_cells {
 	output {
 		String cellassign_model = "~{raw_data_path}/~{cohort_id}.cellassign_model.pkl"
 		String cell_types_csv = "~{raw_data_path}/~{cohort_id}.cell_types.csv"
-		String annotated_adata_object = "~{raw_data_path}/~{cluster_adata_object_basename}.annotate_cells.h5ad.gz"
+		String cell_annotated_adata_object = "~{raw_data_path}/~{cluster_adata_object_basename}.annotate_cells.h5ad.gz"
 	}
 
 	runtime {
