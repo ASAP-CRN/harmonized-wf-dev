@@ -244,6 +244,9 @@ task merge_and_plot_qc_metrics {
 			realpath "${adata_objects}" >> adata_objects_paths.txt
 		done < ~{write_lines(preprocessed_adata_objects)}
 
+		# Python script saves plots into this dir
+		mkdir plots
+
 		python3 /opt/scripts/main/plot_qc_metrics.py \
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
@@ -258,11 +261,11 @@ task merge_and_plot_qc_metrics {
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.merged_adata_object.h5ad.gz" \
-			-o violin_n_genes_by_counts.png \
-			-o violin_total_counts.png \
-			-o violin_pct_counts_mt.png \
-			-o violin_pct_counts_rb.png \
-			-o violin_doublet_score.png
+			-o plots/violin_n_genes_by_counts.png \
+			-o plots/violin_total_counts.png \
+			-o plots/violin_pct_counts_mt.png \
+			-o plots/violin_pct_counts_rb.png \
+			-o plots/violin_doublet_score.png
 	>>>
 
 	output {
@@ -370,6 +373,9 @@ task plot_groups_and_features {
 	command <<<
 		set -euo pipefail
 
+		# Python script saves plots into this dir
+		mkdir plots
+
 		python3 /opt/scripts/main/plot_feats_and_groups.py \
 			--working-dir "$(pwd)" \
 			--group ~{sep=',' groups} \
@@ -381,8 +387,8 @@ task plot_groups_and_features {
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}_features_umap.png" \
-			-o "~{cohort_id}_groups_umap.png"
+			-o plots/"~{cohort_id}_features_umap.png" \
+			-o plots/"~{cohort_id}_groups_umap.png"
 	>>>
 
 	output {
