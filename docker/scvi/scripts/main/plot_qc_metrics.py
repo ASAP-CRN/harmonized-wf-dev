@@ -87,9 +87,10 @@ top_genes = {}
 
 with open(args.adata_objects_fofn, 'r') as file:
     file_contents = file.read()
-samples = file_contents.split('\n')
+# Remove empty elements in list, this will cause an error when reading in
+samples = list(filter(None, file_contents.split('\n')))
 
-for sample in samples:
+for sample in sample:
     raw = sc.read_h5ad(sample)
     # code below if memory issues with concatenating all the ge
     # adata = raw.copy()
