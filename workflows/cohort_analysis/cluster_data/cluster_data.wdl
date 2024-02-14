@@ -70,6 +70,7 @@ workflow cluster_data {
 		File? major_cell_type_plot_png = cluster_cells.major_cell_type_plot_png #!FileCoercion, #!UnnecessaryQuantifier
 		File cellassign_model = annotate_cells.cellassign_model #!FileCoercion
 		File cell_types_csv = annotate_cells.cell_types_csv #!FileCoercion
+		File annotated_adata_object = annotate_cells.annotated_adata_object #!FileCoercion
 	}
 }
 
@@ -244,7 +245,6 @@ task annotate_cells {
 		set -euo pipefail
 
 		# Note: This is not annotating the "clusters" but rather, the cells based on marker gene expression
-		# TODO - script outputs adata-output, but no data manipulation so this is the same as adata-input
 		python3 /opt/scripts/main/annotate_cells.py \
 			--adata-input ~{cluster_adata_object} \
 			--marker-genes ~{cell_type_markers_list} \
@@ -257,12 +257,14 @@ task annotate_cells {
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.cellassign_model.pkl" \
-			-o "~{cohort_id}.cell_types.csv"
+			-o "~{cohort_id}.cell_types.csv" \
+			-o "~{cluster_adata_object_basename}.annotate_cells.h5ad.gz"
 	>>>
 
 	output {
 		String cellassign_model = "~{raw_data_path}/~{cohort_id}.cellassign_model.pkl"
 		String cell_types_csv = "~{raw_data_path}/~{cohort_id}.cell_types.csv"
+		String annotated_adata_object = "~{raw_data_path}/~{cluster_adata_object_basename}.annotate_cells.h5ad.gz"
 	}
 
 	runtime {

@@ -114,6 +114,9 @@ workflow cohort_analysis {
 		[
 			cluster_data.integrated_adata_object,
 			cluster_data.scvi_model
+		],
+		[
+			select_first([cluster_data.umap_cluster_adata_object, cluster_data.mde_cluster_adata_object])
 		]
 	]) #!StringCoercion
 
@@ -131,13 +134,11 @@ workflow cohort_analysis {
 			write_cohort_sample_list.cohort_sample_list
 		],
 		merge_and_plot_qc_metrics.qc_plots_png,
-		[
-			select_first([cluster_data.umap_cluster_adata_object, cluster_data.mde_cluster_adata_object])
-		],
 		select_all([cluster_data.major_cell_type_plot_pdf, cluster_data.major_cell_type_plot_png]),
 		[
 			cluster_data.cellassign_model,
-			cluster_data.cell_types_csv
+			cluster_data.cell_types_csv,
+			cluster_data.annotated_adata_object
 		],
 		[
 			plot_groups_and_features.groups_umap_plot_png,
@@ -170,6 +171,7 @@ workflow cohort_analysis {
 		File? major_cell_type_plot_png = cluster_data.major_cell_type_plot_png
 		File cellassign_model = cluster_data.cellassign_model
 		File cell_types_csv = cluster_data.cell_types_csv
+		File annotated_adata_object = cluster_data.annotated_adata_object
 
 		# Groups and features plots
 		File groups_umap_plot_png = plot_groups_and_features.groups_umap_plot_png #!FileCoercion
