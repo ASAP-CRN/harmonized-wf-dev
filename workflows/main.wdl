@@ -120,7 +120,7 @@ workflow harmonized_pmdbs_analysis {
 			preprocess.graph_pdf,
 			preprocess.log,
 			preprocess.metrics_csv,
-			preprocess.checkpoint_tar_gz,
+			preprocess.checkpoint_tar,
 			preprocess.posterior_probability,
 			preprocess.adata_object
 		]) #!StringCoercion
@@ -195,7 +195,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]] graph_pdf = preprocess.graph_pdf
 		Array[Array[File]] log = preprocess.log
 		Array[Array[File]] metrics_csv = preprocess.metrics_csv
-		Array[Array[File]] checkpoint_tar_gz = preprocess.checkpoint_tar_gz
+		Array[Array[File]] checkpoint_tar = preprocess.checkpoint_tar
 		Array[Array[File]] posterior_probability = preprocess.posterior_probability
 		Array[Array[File]] adata_object = preprocess.adata_object
 

@@ -1,4 +1,5 @@
 import argparse
+import os
 import pandas as pd
 import scanpy
 import sys
@@ -63,4 +64,6 @@ scanpy.pp.highly_variable_genes(
     n_top_genes=args.n_top_genes
 )
 
-adata.write_h5ad(filename=args.adata_output, compression='gzip') 
+# TODO - write_h5ad option compression='gzip' is giving an error
+#adata.write_h5ad(filename=args.adata_output, compression='gzip')
+adata.write_h5ad(filename=args.adata_output)

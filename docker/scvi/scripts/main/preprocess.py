@@ -45,7 +45,7 @@ parser.add_argument(
 	dest='project',
 	type=str,
     help='Project ID'
-)                  
+)     
 parser.add_argument(
 	'--adata-output',
 	dest='adata_output',
@@ -83,4 +83,6 @@ adata.obs['batch_id'] = args.project+args.batch #
 
 # drop the celbender obs? 'background_fraction', 'cell_probability', 'cell_size', 'droplet_efficiency',
 
-adata.write_h5ad(filename=args.adata_output, compression='gzip') 
+# TODO - write_h5ad option compression='gzip' is giving an error
+#adata.write_h5ad(filename=args.adata_output, compression='gzip')
+adata.write_h5ad(filename=args.adata_output)

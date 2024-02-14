@@ -100,19 +100,19 @@ task integrate_sample_data {
 			--latent-key ~{scvi_latent_key} \
 			--batch-key ~{cohort_id} \
 			--adata-input ~{normalized_adata_object} \
-			--adata-output ~{cohort_id}.adata_object.scvi_integrated.h5ad.gz \
+			--adata-output ~{cohort_id}.adata_object.scvi_integrated.h5ad \
 			--output-scvi ~{cohort_id}.scvi_model.pkl
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}.adata_object.scvi_integrated.h5ad.gz" \
+			-o "~{cohort_id}.adata_object.scvi_integrated.h5ad" \
 			-o "~{cohort_id}.scvi_model.pkl"
 	>>>
 
 	output {
-		String integrated_adata_object = "~{raw_data_path}/~{cohort_id}.adata_object.scvi_integrated.h5ad.gz"
+		String integrated_adata_object = "~{raw_data_path}/~{cohort_id}.adata_object.scvi_integrated.h5ad"
 		String scvi_model = "~{raw_data_path}/~{cohort_id}.scvi_model.pkl"
 	}
 
@@ -145,7 +145,7 @@ task cluster_cells {
 		String zones
 	}
 
-	String integrated_adata_object_basename = basename(integrated_adata_object, ".h5ad.gz")
+	String integrated_adata_object_basename = basename(integrated_adata_object, ".h5ad")
 	Int threads = 2
 	Int mem_gb = threads * 2
 	Int disk_size = ceil(size([integrated_adata_object, cell_type_markers_list], "GB") * 6 + 50)
@@ -164,14 +164,14 @@ task cluster_cells {
 				--script-dir /opt/scripts \
 				--threads ~{threads} \
 				--adata-input ~{integrated_adata_object} \
-				--adata-output ~{integrated_adata_object_basename}.umap_cluster.h5ad.gz \
+				--adata-output ~{integrated_adata_object_basename}.umap_cluster.h5ad \
 				--latent-key ~{scvi_latent_key}
 
 			upload_outputs \
 				-b ~{billing_project} \
 				-d ~{raw_data_path} \
 				-i ~{write_tsv(workflow_info)} \
-				-o "~{integrated_adata_object_basename}.umap_cluster.h5ad.gz"
+				-o "~{integrated_adata_object_basename}.umap_cluster.h5ad"
 
 		elif [[ ~{clustering_method} = "mde" ]]; then
 			# Note: mde is super fast and efficient on a GPU
@@ -184,7 +184,7 @@ task cluster_cells {
 				--clustering-resolution ~{clustering_resolution} \
 				--cell-type-markers-list ~{cell_type_markers_list} \
 				--output-cell-type-plot-prefix ~{cohort_id}.major_type_module_umap \
-				--adata-output ~{integrated_adata_object_basename}.mde_cluster.h5ad.gz \
+				--adata-output ~{integrated_adata_object_basename}.mde_cluster.h5ad \
 				--latent-key ~{scvi_latent_key}
 
 			# TODO - this will fail because plots are not outputted by script (incomplete)
@@ -192,7 +192,7 @@ task cluster_cells {
 			#	-b ~{billing_project} \
 			#	-d ~{raw_data_path} \
 			#	-i ~{write_tsv(workflow_info)} \
-			#	-o "~{integrated_adata_object_basename}.mde_cluster.h5ad.gz" \
+			#	-o "~{integrated_adata_object_basename}.mde_cluster.h5ad" \
 			#	-o "~{cohort_id}.major_type_module_umap.pdf" \
 			#	-o "~{cohort_id}.major_type_module_umap.png"
 
@@ -203,8 +203,8 @@ task cluster_cells {
 	>>>
 
 	output {
-		String umap_cluster_adata_object = "~{raw_data_path}/~{integrated_adata_object_basename}.umap_cluster.h5ad.gz"
-		String mde_cluster_adata_object = "~{raw_data_path}/~{integrated_adata_object_basename}.mde_cluster.h5ad.gz"
+		String umap_cluster_adata_object = "~{raw_data_path}/~{integrated_adata_object_basename}.umap_cluster.h5ad"
+		String mde_cluster_adata_object = "~{raw_data_path}/~{integrated_adata_object_basename}.mde_cluster.h5ad"
 		String major_cell_type_plot_pdf = "~{raw_data_path}/~{cohort_id}.major_type_module_umap.pdf"
 		String major_cell_type_plot_png = "~{raw_data_path}/~{cohort_id}.major_type_module_umap.png"
 	}
@@ -236,7 +236,7 @@ task annotate_cells {
 		String zones
 	}
 
-	String cluster_adata_object_basename = basename(cluster_adata_object, ".h5ad.gz")
+	String cluster_adata_object_basename = basename(cluster_adata_object, ".h5ad")
 	Int threads = 2
 	Int mem_gb = threads * 2
 	Int disk_size = ceil(size([cluster_adata_object, cell_type_markers_list], "GB") * 2 + 20)
@@ -250,7 +250,7 @@ task annotate_cells {
 			--marker-genes ~{cell_type_markers_list} \
 			--output-cellassign ~{cohort_id}.cellassign_model.pkl \
 			--output-cell-types-file ~{cohort_id}.cell_types.csv \
-			--adata-output ~{cluster_adata_object_basename}.annotate_cells.h5ad.gz
+			--adata-output ~{cluster_adata_object_basename}.annotate_cells.h5ad
 
 		upload_outputs \
 			-b ~{billing_project} \
@@ -258,13 +258,13 @@ task annotate_cells {
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.cellassign_model.pkl" \
 			-o "~{cohort_id}.cell_types.csv" \
-			-o "~{cluster_adata_object_basename}.annotate_cells.h5ad.gz"
+			-o "~{cluster_adata_object_basename}.annotate_cells.h5ad"
 	>>>
 
 	output {
 		String cellassign_model = "~{raw_data_path}/~{cohort_id}.cellassign_model.pkl"
 		String cell_types_csv = "~{raw_data_path}/~{cohort_id}.cell_types.csv"
-		String cell_annotated_adata_object = "~{raw_data_path}/~{cluster_adata_object_basename}.annotate_cells.h5ad.gz"
+		String cell_annotated_adata_object = "~{raw_data_path}/~{cluster_adata_object_basename}.annotate_cells.h5ad"
 	}
 
 	runtime {

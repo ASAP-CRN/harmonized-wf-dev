@@ -31,4 +31,6 @@ muon.pp.filter_obs(adata, 'doublet_score', lambda x: x < 0.2)
 muon.pp.filter_obs(adata, 'total_counts', lambda x: (x >= 500) & (x <= 100000))
 muon.pp.filter_obs(adata, 'n_genes_by_counts', lambda x: (x >= 300) & (x <= 10000))
 
-adata.write_h5ad(filename=args.adata_output, compression='gzip') 
+# TODO - write_h5ad option compression='gzip' is giving an error
+#adata.write_h5ad(filename=args.adata_output, compression='gzip')
+adata.write_h5ad(filename=args.adata_output)

@@ -122,4 +122,6 @@ for metric in metrics: # type: ignore
 #TODO: export top_genes? and plots
 
 # export concatenated data.
-adata.write_h5ad(filename=args.adata_output, compression='gzip') 
+# TODO - write_h5ad option compression='gzip' is giving an error
+#adata.write_h5ad(filename=args.adata_output, compression='gzip')
+adata.write_h5ad(filename=args.adata_output)

@@ -255,14 +255,14 @@ task merge_and_plot_qc_metrics {
 			--threads ~{threads} \
 			--adata-objects-fofn adata_objects_paths.txt \
 			--project-name ~{cohort_id} \
-			--adata-output ~{cohort_id}.merged_adata_object.h5ad.gz
+			--adata-output ~{cohort_id}.merged_adata_object.h5ad
 
 		# TODO - double check file name and type for all plots
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}.merged_adata_object.h5ad.gz" \
+			-o "~{cohort_id}.merged_adata_object.h5ad" \
 			-o plots/violin_n_genes_by_counts.png \
 			-o plots/violin_total_counts.png \
 			-o plots/violin_pct_counts_mt.png \
@@ -271,7 +271,7 @@ task merge_and_plot_qc_metrics {
 	>>>
 
 	output {
-		String merged_adata_object = "~{raw_data_path}/~{cohort_id}.merged_adata_object.h5ad.gz"
+		String merged_adata_object = "~{raw_data_path}/~{cohort_id}.merged_adata_object.h5ad"
 
 		Array[String] qc_plots_png = [
 			"~{raw_data_path}/violin_n_genes_by_counts.png",
@@ -309,7 +309,7 @@ task filter_and_normalize {
 		String? my_none
 	}
 
-	String merged_adata_object_basename = basename(merged_adata_object, ".h5ad.gz")
+	String merged_adata_object_basename = basename(merged_adata_object, ".h5ad")
 	Int threads = 2
 	Int disk_size = ceil(size(merged_adata_object, "GB") * 4 + 20)
 
@@ -318,23 +318,23 @@ task filter_and_normalize {
 
 		python3 /opt/scripts/main/filter.py \
 			--adata-input ~{merged_adata_object} \
-			--adata-output ~{merged_adata_object_basename}_filtered.h5ad.gz
+			--adata-output ~{merged_adata_object_basename}_filtered.h5ad
 
 		# TODO see whether this is still required given the change to python
 		# If any cells remain after filtering, the data is normalized and variable genes are identified
-		if [[ -s "~{merged_adata_object_basename}_filtered.h5ad.gz" ]]; then
+		if [[ -s "~{merged_adata_object_basename}_filtered.h5ad" ]]; then
 			python3 /opt/scripts/main/process.py \
 				--working-dir "$(pwd)" \
-				--adata-input ~{merged_adata_object_basename}_filtered.h5ad.gz \
-				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad.gz \
+				--adata-input ~{merged_adata_object_basename}_filtered.h5ad \
+				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad \
 				--n-top-genes ~{n_top_genes}
 
 			upload_outputs \
 				-b ~{billing_project} \
 				-d ~{raw_data_path} \
 				-i ~{write_tsv(workflow_info)} \
-				-o "~{merged_adata_object_basename}_filtered.h5ad.gz" \
-				-o "~{merged_adata_object_basename}_filtered_normalized.h5ad.gz"
+				-o "~{merged_adata_object_basename}_filtered.h5ad" \
+				-o "~{merged_adata_object_basename}_filtered_normalized.h5ad"
 
 			echo true > cells_remaining_post_filter.txt
 		else
@@ -343,8 +343,8 @@ task filter_and_normalize {
 	>>>
 
 	output {
-		String? filtered_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered.h5ad.gz" else my_none
-		String? normalized_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered_normalized.h5ad.gz" else my_none
+		String? filtered_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered.h5ad" else my_none
+		String? normalized_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered_normalized.h5ad" else my_none
 	}
 
 	runtime {

@@ -77,4 +77,6 @@ adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 # TODO: impliment clustering
 
 
-adata.write_h5ad(filename=args.adata_output, compression='gzip')
+# TODO - write_h5ad option compression='gzip' is giving an error
+#adata.write_h5ad(filename=args.adata_output, compression='gzip')
+adata.write_h5ad(filename=args.adata_output)
