@@ -84,8 +84,13 @@ sc.settings.set_figure_params(
 
 adatas = {}
 top_genes = {}
+
+with open(args.adata_objects_fofn, 'r') as file:
+    file_contents = file.read()
+samples = file_contents.split('\n')
+
 for sample in samples:
-    raw = sc.read_h5ad(sample) 
+    raw = sc.read_h5ad(sample)
     # code below if memory issues with concatenating all the ge
     # adata = raw.copy()
     # sc.pp.normalize_total(adata, target_sum=1e4)
@@ -100,7 +105,7 @@ for sample in samples:
     #         top_genes[k] = v
     
     # raw = minify_adata(raw)
-    sample_name = sample.name.split("_")[1]
+    sample_name = sample.split(".")[0]
     adatas[sample_name] = raw
 
 # we could subset to the top_genes here before concat if we have memory issues (e.g. whole dataset harmonization.)
