@@ -90,7 +90,7 @@ with open(args.adata_objects_fofn, 'r') as file:
 # Remove empty elements in list, this will cause an error when reading in
 samples = list(filter(None, file_contents.split('\n')))
 
-for sample in sample:
+for sample in samples:
     raw = sc.read_h5ad(sample)
     # code below if memory issues with concatenating all the ge
     # adata = raw.copy()
