@@ -281,7 +281,7 @@ task merge_and_plot_qc_metrics {
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.0.4"
+		docker: "~{container_registry}/scvi:1.1.0"
 		cpu: threads
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -346,7 +346,7 @@ task filter_and_normalize {
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.0.4"
+		docker: "~{container_registry}/scvi:1.1.0"
 		cpu: threads
 		memory: "12 GB"
 		disks: "local-disk ~{disk_size} HDD"
@@ -397,7 +397,7 @@ task plot_groups_and_features {
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.0.4"
+		docker: "~{container_registry}/scvi:1.1.0"
 		cpu: 2
 		memory: "4 GB"
 		disks: "local-disk 10 HDD"
