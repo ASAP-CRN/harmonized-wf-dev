@@ -96,6 +96,7 @@ workflow cohort_analysis {
 	call plot_groups_and_features {
 		input:
 			cohort_id = cohort_id,
+			cell_annotated_adata_object = cluster_data.cell_annotated_adata_object,
 			groups = groups,
 			features = features,
 			raw_data_path = raw_data_path,
@@ -361,6 +362,7 @@ task filter_and_normalize {
 task plot_groups_and_features {
 	input {
 		String cohort_id
+		File cell_annotated_adata_object
 
 		Array[String] groups
 		Array[String] features
@@ -372,6 +374,8 @@ task plot_groups_and_features {
 		String zones
 	}
 
+	Int disk_size = ceil(size(cell_annotated_adata_object, "GB") * 4 + 20)
+
 	command <<<
 		set -euo pipefail
 
@@ -380,6 +384,7 @@ task plot_groups_and_features {
 
 		python3 /opt/scripts/main/plot_feats_and_groups.py \
 			--working-dir "$(pwd)" \
+			--adata-input ~{cell_annotated_adata_object} \
 			--group ~{sep=',' groups} \
 			--output-group-umap-plot-prefix "~{cohort_id}" \
 			--feature ~{sep=',' features} \
@@ -402,7 +407,7 @@ task plot_groups_and_features {
 		docker: "~{container_registry}/scvi:1.1.0"
 		cpu: 2
 		memory: "4 GB"
-		disks: "local-disk 10 HDD"
+		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
 		zones: zones

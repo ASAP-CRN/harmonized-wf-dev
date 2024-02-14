@@ -12,6 +12,12 @@ parser.add_argument(
     help='Working directory',
     default='/data/CARD_singlecell/harmony-rna/'
 )
+parser.add_argument(
+    '--adata-input',
+    dest='adata_input',
+    type=str,
+    help='AnnData object for a dataset'
+)
 # parser.add_argument(
 #     '--metadata',
 #     dest='metadata',
@@ -62,12 +68,12 @@ args = parser.parse_args()
 adata = sc.read_h5ad(args.adata_input) # type: ignore
 
 
-plot_featues = [x for x in args.feature if x in adata.obs.columns]
+plot_features = [x for x in args.feature if x in adata.obs.columns]
 file_name = args.output_feature_umap_plot_prefix + '_features_umap.png'
 sc.pl.embedding(
     adata,
     basis="umap",
-    color=plot_featues,
+    color=plot_features,
     frameon=False,
     show=False,
     ncols=1,
