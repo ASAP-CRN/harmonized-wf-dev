@@ -95,7 +95,6 @@ task integrate_sample_data {
 	command <<<
 		set -euo pipefail
 
-		# Note: do not mkdir scvi_model because script creates it and will error if it already exists
 		python3 /opt/scripts/main/integrate_scvi.py \
 			--latent-key ~{scvi_latent_key} \
 			--batch-key "batch_id" \
@@ -253,21 +252,23 @@ task annotate_cells {
 			--adata-input ~{cluster_adata_object} \
 			--marker-genes ~{cell_type_markers_list} \
 			--batch-key "batch_id" \
-			--output-cellassign ~{cohort_id}.cellassign_model.pkl \
+			--output-cellassign-dir cellassign_model \
 			--output-cell-types-file ~{cohort_id}.cell_types.csv \
 			--adata-output ~{cluster_adata_object_basename}.annotate_cells.h5ad
+
+		mv cellassign_model/model.pt "cellassign_model/~{cohort_id}.cellassign_model.pt"
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}.cellassign_model.pkl" \
+			-o cellassign_model/"~{cohort_id}.cellassign_model.pt" \
 			-o "~{cohort_id}.cell_types.csv" \
 			-o "~{cluster_adata_object_basename}.annotate_cells.h5ad"
 	>>>
 
 	output {
-		String cellassign_model = "~{raw_data_path}/~{cohort_id}.cellassign_model.pkl"
+		String cellassign_model = "~{raw_data_path}/~{cohort_id}.cellassign_model.pt"
 		String cell_types_csv = "~{raw_data_path}/~{cohort_id}.cell_types.csv"
 		String cell_annotated_adata_object = "~{raw_data_path}/~{cluster_adata_object_basename}.annotate_cells.h5ad"
 	}

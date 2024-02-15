@@ -92,7 +92,7 @@ adata.obsm[args.latent_key] = model.get_latent_representation() # type: ignore
 # TODO: impliment
 
 # artifacts
-model.save(args.output_scvi_dir)
+model.save(args.output_scvi_dir, overwrite=True)
 
 # TODO - write_h5ad option compression='gzip' is giving an error
 #adata.write_h5ad(filename=args.adata_output, compression='gzip')
