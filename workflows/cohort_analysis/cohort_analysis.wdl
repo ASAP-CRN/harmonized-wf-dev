@@ -68,7 +68,6 @@ workflow cohort_analysis {
 
 	call filter_and_normalize {
 		input:
-			cohort_id = cohort_id,
 			merged_adata_object = merge_and_plot_qc_metrics.merged_adata_object, #!FileCoercion
 			n_top_genes = n_top_genes,
 			raw_data_path = raw_data_path,
@@ -296,7 +295,6 @@ task merge_and_plot_qc_metrics {
 
 task filter_and_normalize {
 	input {
-		String cohort_id
 		File merged_adata_object
 
 		Int n_top_genes
