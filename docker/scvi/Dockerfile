@@ -1,5 +1,7 @@
 FROM us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images/util:1.1.0 as scripts
 
+FROM nvcr.io/nvidia/cuda:12.1.0-base-ubuntu20.04
+
 FROM ubuntu:jammy
 
 MAINTAINER Karen Fang <karen@dnastack.com>

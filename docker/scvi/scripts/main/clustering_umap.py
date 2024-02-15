@@ -1,5 +1,6 @@
 import argparse
 import scanpy
+import leidenalg
 
 
 parser = argparse.ArgumentParser(
