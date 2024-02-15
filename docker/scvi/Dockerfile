@@ -1,8 +1,8 @@
+ARG CUDA_VERSION
 FROM us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images/util:1.1.0 as scripts
 
-FROM nvcr.io/nvidia/cuda:12.1.0-base-ubuntu20.04
-
-FROM ubuntu:jammy
+FROM nvcr.io/nvidia/cuda:${CUDA_VERSION}-base-ubuntu20.04
+ENV CUDA_VERSION "${CUDA_VERSION}"
 
 MAINTAINER Karen Fang <karen@dnastack.com>
 
@@ -13,8 +13,8 @@ ENV IMAGE_TAG "${IMAGE_TAG}"
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get -qq update && \
-	apt-get -qq install \
+RUN apt-get -qq update \
+	&& apt-get -qq install \
 		build-essential \
 		wget \
 		time \
@@ -28,9 +28,21 @@ RUN apt-get -qq update && \
 		libc6-dev \
 		libbz2-dev \
 		libffi-dev \
-		liblzma-dev \
-		python3-dev \
-		python3-pip
+		liblzma-dev
+
+ARG PYTHON3_VERSION
+ENV PYTHON3_VERSION "${PYTHON3_VERSION}"
+RUN curl -O https://www.python.org/ftp/python/${PYTHON3_VERSION}/Python-${PYTHON3_VERSION}.tar.xz && \
+	tar -xvf Python-${PYTHON3_VERSION}.tar.xz --directory /opt/ && \
+	rm Python-${PYTHON3_VERSION}.tar.xz
+RUN cd /opt/Python-${PYTHON3_VERSION} && \
+	./configure && \
+	make && \
+	make altinstall
+
+ENV PATH "${PATH}:/opt/Python-${PYTHON3_VERSION}"
+
+RUN ln -s /opt/Python-${PYTHON3_VERSION}/python /opt/Python-${PYTHON3_VERSION}/python3
 
 COPY ./requirements.txt /opt/requirements.txt
 RUN python3 -m pip install -r /opt/requirements.txt
