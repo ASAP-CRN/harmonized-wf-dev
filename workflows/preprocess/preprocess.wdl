@@ -207,7 +207,6 @@ task counts_to_adata {
 			--working-dir "$(pwd)" \
 			--script-dir /opt/scripts \
 			--adata-input ~{cellbender_counts} \
-			--batch-key ~{sample_id} \
 			--sample-id ~{sample_id} \
 			--batch ~{batch} \
 			--project ~{project_id} \
