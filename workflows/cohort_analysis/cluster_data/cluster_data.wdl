@@ -95,25 +95,26 @@ task integrate_sample_data {
 	command <<<
 		set -euo pipefail
 
-		# TODO - double check that ~{cohort_id} is OK for batch-key
 		python3 /opt/scripts/main/integrate_scvi.py \
 			--latent-key ~{scvi_latent_key} \
-			--batch-key ~{cohort_id} \
+			--batch-key "batch_id" \
 			--adata-input ~{normalized_adata_object} \
 			--adata-output ~{cohort_id}.adata_object.scvi_integrated.h5ad \
-			--output-scvi ~{cohort_id}.scvi_model.pkl
+			--output-scvi-dir scvi_model
+
+		mv scvi_model/model.pt "scvi_model/~{cohort_id}.scvi_model.pt"
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.adata_object.scvi_integrated.h5ad" \
-			-o "~{cohort_id}.scvi_model.pkl"
+			-o scvi_model/"~{cohort_id}.scvi_model.pt"
 	>>>
 
 	output {
 		String integrated_adata_object = "~{raw_data_path}/~{cohort_id}.adata_object.scvi_integrated.h5ad"
-		String scvi_model = "~{raw_data_path}/~{cohort_id}.scvi_model.pkl"
+		String scvi_model = "~{raw_data_path}/~{cohort_id}.scvi_model.pt"
 	}
 
 	runtime {
@@ -124,6 +125,8 @@ task integrate_sample_data {
 		preemptible: 3
 		bootDiskSizeGb: 40
 		zones: zones
+		gpuType: "nvidia-tesla-k80"
+		gpuCount: 8
 	}
 }
 
@@ -152,7 +155,7 @@ task cluster_cells {
 
 	# TODO - double check that empty gpuCount and gpuType does not launch GPU for clustering_umap
 	String gpu_type = if clustering_method == "mde" then "nvidia-tesla-k80" else ""
-	Int gpu_count = if clustering_method == "mde" then 8 else ""
+	Int gpu_count = if clustering_method == "mde" then 8 else 0
 
 	command <<<
 		set -euo pipefail
@@ -248,21 +251,24 @@ task annotate_cells {
 		python3 /opt/scripts/main/annotate_cells.py \
 			--adata-input ~{cluster_adata_object} \
 			--marker-genes ~{cell_type_markers_list} \
-			--output-cellassign ~{cohort_id}.cellassign_model.pkl \
+			--batch-key "batch_id" \
+			--output-cellassign-dir cellassign_model \
 			--output-cell-types-file ~{cohort_id}.cell_types.csv \
 			--adata-output ~{cluster_adata_object_basename}.annotate_cells.h5ad
+
+		mv cellassign_model/model.pt "cellassign_model/~{cohort_id}.cellassign_model.pt"
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}.cellassign_model.pkl" \
+			-o cellassign_model/"~{cohort_id}.cellassign_model.pt" \
 			-o "~{cohort_id}.cell_types.csv" \
 			-o "~{cluster_adata_object_basename}.annotate_cells.h5ad"
 	>>>
 
 	output {
-		String cellassign_model = "~{raw_data_path}/~{cohort_id}.cellassign_model.pkl"
+		String cellassign_model = "~{raw_data_path}/~{cohort_id}.cellassign_model.pt"
 		String cell_types_csv = "~{raw_data_path}/~{cohort_id}.cell_types.csv"
 		String cell_annotated_adata_object = "~{raw_data_path}/~{cluster_adata_object_basename}.annotate_cells.h5ad"
 	}

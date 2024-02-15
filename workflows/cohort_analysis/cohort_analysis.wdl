@@ -258,7 +258,6 @@ task merge_and_plot_qc_metrics {
 			--project-name ~{cohort_id} \
 			--adata-output ~{cohort_id}.merged_adata_object.h5ad
 
-		# TODO - double check file name and type for all plots
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
@@ -327,6 +326,7 @@ task filter_and_normalize {
 			python3 /opt/scripts/main/process.py \
 				--working-dir "$(pwd)" \
 				--adata-input ~{merged_adata_object_basename}_filtered.h5ad \
+				--batch-key "batch_id" \
 				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad \
 				--n-top-genes ~{n_top_genes}
 

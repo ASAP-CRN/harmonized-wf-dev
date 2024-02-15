@@ -24,10 +24,16 @@ parser.add_argument(
     help='Path to marker_genes .csv file'
 )
 parser.add_argument(
-    '--output-cellassign',
-    dest='cellassign_model',
+    '--batch-key',
+    dest='batch_key',
     type=str,
-    help='Output file to write cellAssign model to'
+    help='Key in AnnData object for batch information'
+)
+parser.add_argument(
+    '--output-cellassign-dir',
+    dest='cellassign_model_dir',
+    type=str,
+    help='Output folder to write cellAssign model to'
 )
 parser.add_argument(
     '--output-cell-types-file',
@@ -70,7 +76,7 @@ bdata.obs['size_factor'] = lib_size / np.mean(lib_size)
 scvi.external.CellAssign.setup_anndata(
     bdata,
     size_factor_key='size_factor',
-    batch_key='sample',
+    batch_key=args.batch_key,
     layer='counts',
     # continuous_covariate_keys=noise
 )
@@ -100,8 +106,7 @@ predictions.to_csv(args.cell_type_output, index=False) # # pred_file = "cellassi
 adata.write_h5ad(filename=args.adata_output)
 
 # 10. save model
-model.save(args.cellassign_model, overwrite=True) #model_dir = "cellassign_model"
+model.save(args.cellassign_model_dir, overwrite=True) #model_dir = "cellassign_model"
 
 # 11. save metadata
 adata.obs.to_csv(args.output_metadata_file, index=True) # metadata_file = "metadata.csv"
-
