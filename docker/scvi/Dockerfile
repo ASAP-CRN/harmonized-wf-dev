@@ -37,6 +37,9 @@ RUN python3 -m pip install -r /opt/requirements.txt
 COPY scripts/main /opt/scripts/main
 COPY scripts/utility /opt/scripts/utility
 
+# Add resources
+COPY resources /opt/resources
+
 # gcloud sdk; needed to upload output files
 ARG GCLOUD_CLI_VERSION
 ENV GCLOUD_CLI_VERSION "${GCLOUD_CLI_VERSION}"

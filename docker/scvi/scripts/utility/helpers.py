@@ -496,12 +496,12 @@ def score_cell_cycle(adata, organism="mouse"):
 
     cc_files = {
         "mouse": [
-            root / "resources/s_genes_tirosh.txt",
-            root / "resources/g2m_genes_tirosh.txt",
+            "/opt/resources/s_genes_tirosh.txt",
+            "/opt/resources/g2m_genes_tirosh.txt",
         ],
         "human": [
-            root / "resources/s_genes_tirosh_hm.txt",
-            root / "resources/g2m_genes_tirosh_hm.txt",
+            "/opt/resources/s_genes_tirosh_hm.txt",
+            "/opt/resources/g2m_genes_tirosh_hm.txt",
         ],
     }
 
