@@ -69,7 +69,7 @@ noise = ['doublet_score', 'pct_counts_mt', 'pct_counts_rb'] #, 'S.Score', 'G2M.S
 
 #  4. model = CellAssign(bdata, marker_genes)
 scvi.external.CellAssign.setup_anndata(
-    adata,
+    bdata,
     size_factor_key='size_factor',
     batch_key=args.batch_key,
     layer='counts',
