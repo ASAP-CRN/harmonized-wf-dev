@@ -95,8 +95,7 @@ task integrate_sample_data {
 	command <<<
 		set -euo pipefail
 
-		mkdir scvi_model
-
+		# Note: do not mkdir scvi_model because script creates it and will error if it already exists
 		python3 /opt/scripts/main/integrate_scvi.py \
 			--latent-key ~{scvi_latent_key} \
 			--batch-key "batch_id" \
@@ -104,17 +103,19 @@ task integrate_sample_data {
 			--adata-output ~{cohort_id}.adata_object.scvi_integrated.h5ad \
 			--output-scvi-dir scvi_model
 
+		mv scvi_model/model.pt "scvi_model/~{cohort_id}.scvi_model.pt"
+
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.adata_object.scvi_integrated.h5ad" \
-			-o scvi_model/"~{cohort_id}.scvi_model.pkl"
+			-o scvi_model/"~{cohort_id}.scvi_model.pt"
 	>>>
 
 	output {
 		String integrated_adata_object = "~{raw_data_path}/~{cohort_id}.adata_object.scvi_integrated.h5ad"
-		String scvi_model = "~{raw_data_path}/~{cohort_id}.scvi_model.pkl"
+		String scvi_model = "~{raw_data_path}/~{cohort_id}.scvi_model.pt"
 	}
 
 	runtime {
