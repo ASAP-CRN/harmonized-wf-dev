@@ -38,7 +38,7 @@ parser.add_argument(
 parser.add_argument(
     '--n-top-genes',
     dest='n_top_genes',
-    type=str,
+    type=int,
     help='number of HVG genes to keep',
     default=8000
 )
