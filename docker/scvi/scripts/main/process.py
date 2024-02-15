@@ -24,6 +24,12 @@ parser.add_argument(
     help='AnnData object for a dataset'
 )
 parser.add_argument(
+    '--batch-key',
+    dest='batch_key',
+    type=str,
+    help='Key in AnnData object for batch information'
+)
+parser.add_argument(
 	'--adata-output',
 	dest='adata_output',
 	type=str,
@@ -57,7 +63,7 @@ score_cell_cycle(adata, organism="human")
 # sc.tl.score_genes_cell_cycle(adata, s_genes=s_genes, g2m_genes=g2m_genes)
 scanpy.pp.highly_variable_genes(
     adata, 
-    batch_key='sample', 
+    batch_key=args.batch_key, 
     subset=True, 
     flavor='seurat_v3', 
     layer='counts', 

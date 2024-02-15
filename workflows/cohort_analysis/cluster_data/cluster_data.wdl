@@ -248,6 +248,7 @@ task annotate_cells {
 		python3 /opt/scripts/main/annotate_cells.py \
 			--adata-input ~{cluster_adata_object} \
 			--marker-genes ~{cell_type_markers_list} \
+			--batch-key ~{cohort_id} \
 			--output-cellassign ~{cohort_id}.cellassign_model.pkl \
 			--output-cell-types-file ~{cohort_id}.cell_types.csv \
 			--adata-output ~{cluster_adata_object_basename}.annotate_cells.h5ad

@@ -24,6 +24,12 @@ parser.add_argument(
     help='Path to marker_genes .csv file'
 )
 parser.add_argument(
+    '--batch-key',
+    dest='batch_key',
+    type=str,
+    help='Key in AnnData object for batch information'
+)
+parser.add_argument(
     '--output-cellassign',
     dest='cellassign_model',
     type=str,
@@ -65,7 +71,7 @@ noise = ['doublet_score', 'pct_counts_mt', 'pct_counts_rb'] #, 'S.Score', 'G2M.S
 scvi.external.CellAssign.setup_anndata(
     adata,
     size_factor_key='size_factor',
-    batch_key='sample',
+    batch_key=args.batch_key,
     layer='counts',
     continuous_covariate_keys=noise
 )
