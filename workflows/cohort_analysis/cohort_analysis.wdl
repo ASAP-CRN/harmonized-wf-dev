@@ -259,7 +259,6 @@ task merge_and_plot_qc_metrics {
 			--project-name ~{cohort_id} \
 			--adata-output ~{cohort_id}.merged_adata_object.h5ad
 
-		# TODO - double check file name and type for all plots
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
