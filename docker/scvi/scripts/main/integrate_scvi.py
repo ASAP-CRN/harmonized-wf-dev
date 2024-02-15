@@ -1,6 +1,7 @@
 import argparse
 import scvi
 import anndata as ad
+import scanpy
 
 
 parser = argparse.ArgumentParser(

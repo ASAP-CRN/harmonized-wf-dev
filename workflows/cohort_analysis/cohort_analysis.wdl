@@ -328,7 +328,7 @@ task filter_and_normalize {
 			python3 /opt/scripts/main/process.py \
 				--working-dir "$(pwd)" \
 				--adata-input ~{merged_adata_object_basename}_filtered.h5ad \
-				--batch-key ~{cohort_id} \
+				--batch-key "batch_id" \
 				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad \
 				--n-top-genes ~{n_top_genes}
 

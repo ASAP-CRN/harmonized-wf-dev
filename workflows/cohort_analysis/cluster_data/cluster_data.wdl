@@ -95,10 +95,9 @@ task integrate_sample_data {
 	command <<<
 		set -euo pipefail
 
-		# TODO - double check that ~{cohort_id} is OK for batch-key
 		python3 /opt/scripts/main/integrate_scvi.py \
 			--latent-key ~{scvi_latent_key} \
-			--batch-key ~{cohort_id} \
+			--batch-key "batch_id" \
 			--adata-input ~{normalized_adata_object} \
 			--adata-output ~{cohort_id}.adata_object.scvi_integrated.h5ad \
 			--output-scvi ~{cohort_id}.scvi_model.pkl
@@ -248,7 +247,7 @@ task annotate_cells {
 		python3 /opt/scripts/main/annotate_cells.py \
 			--adata-input ~{cluster_adata_object} \
 			--marker-genes ~{cell_type_markers_list} \
-			--batch-key ~{cohort_id} \
+			--batch-key "batch_id" \
 			--output-cellassign ~{cohort_id}.cellassign_model.pkl \
 			--output-cell-types-file ~{cohort_id}.cell_types.csv \
 			--adata-output ~{cluster_adata_object_basename}.annotate_cells.h5ad
