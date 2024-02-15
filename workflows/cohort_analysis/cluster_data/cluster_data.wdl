@@ -95,19 +95,21 @@ task integrate_sample_data {
 	command <<<
 		set -euo pipefail
 
+		mkdir scvi_model
+
 		python3 /opt/scripts/main/integrate_scvi.py \
 			--latent-key ~{scvi_latent_key} \
 			--batch-key "batch_id" \
 			--adata-input ~{normalized_adata_object} \
 			--adata-output ~{cohort_id}.adata_object.scvi_integrated.h5ad \
-			--output-scvi ~{cohort_id}.scvi_model.pkl
+			--output-scvi-dir scvi_model
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.adata_object.scvi_integrated.h5ad" \
-			-o "~{cohort_id}.scvi_model.pkl"
+			-o scvi_model/"~{cohort_id}.scvi_model.pkl"
 	>>>
 
 	output {
