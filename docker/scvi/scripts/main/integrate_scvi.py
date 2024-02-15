@@ -33,10 +33,10 @@ parser.add_argument(
     help='Output file to save AnnData object to'
 )
 parser.add_argument(
-    '--output-scvi',
-    dest='output_scvi',
+    '--output-scvi-dir',
+    dest='output_scvi_dir',
     type=str,
-    help='Output file to save `scvi` model'
+    help='Output folder to save `scvi` model'
 )
 
 # TODO: optional scvi arguments
@@ -92,7 +92,7 @@ adata.obsm[args.latent_key] = model.get_latent_representation() # type: ignore
 # TODO: impliment
 
 # artifacts
-model.save(args.output_scvi)
+model.save(args.output_scvi_dir)
 
 # TODO - write_h5ad option compression='gzip' is giving an error
 #adata.write_h5ad(filename=args.adata_output, compression='gzip')

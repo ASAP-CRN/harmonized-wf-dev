@@ -125,6 +125,8 @@ task integrate_sample_data {
 		preemptible: 3
 		bootDiskSizeGb: 40
 		zones: zones
+		gpuType: "nvidia-tesla-k80"
+		gpuCount: 8
 	}
 }
 
