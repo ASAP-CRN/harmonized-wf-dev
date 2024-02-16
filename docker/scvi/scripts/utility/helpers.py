@@ -43,7 +43,6 @@ def minify_adata(adata: ad.AnnData):
 # copied from cellbender.remove_background.downstream which only works with python 3.7
 """Functions for downstream work with outputs of remove-background."""
 
-
 def dict_from_h5(file: str) -> Dict[str, np.ndarray]:
     """Read in everything from an h5 file and put into a dictionary.
 

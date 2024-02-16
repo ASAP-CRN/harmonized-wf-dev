@@ -47,7 +47,12 @@ parser.add_argument(
     type=str,
     help='Output file to save AnnData object to'
 )
-
+parser.add_argument(
+    '--output-metadata-file',
+	dest='output_metadata_file',
+	type=str,
+    help='Output file to write metadata to'
+)
 args = parser.parse_args()
 
 # 0. load adata
@@ -65,7 +70,7 @@ bdata = adata[:, adata.var.index.isin(markers.index)].copy()
 #  3. get size_factor and noise
 lib_size = bdata.X.sum(1) # type: ignore
 bdata.obs['size_factor'] = lib_size / np.mean(lib_size)
-noise = ['doublet_score', 'pct_counts_mt', 'pct_counts_rb'] #, 'S.Score', 'G2M.Score']
+# noise = ['doublet_score', 'pct_counts_mt', 'pct_counts_rb'] #, 'S.Score', 'G2M.Score']
 
 #  4. model = CellAssign(bdata, marker_genes)
 scvi.external.CellAssign.setup_anndata(
@@ -73,7 +78,7 @@ scvi.external.CellAssign.setup_anndata(
     size_factor_key='size_factor',
     batch_key=args.batch_key,
     layer='counts',
-    continuous_covariate_keys=noise
+    # continuous_covariate_keys=noise
 )
 
 #  5. model.train()
@@ -97,8 +102,11 @@ adata.obs['cell_type'] = bdata.obs['cellassign_types']
 predictions = bdata.obs[['sample', 'cellassign_types']].reset_index().rename(columns={'index': 'cells'})
 predictions.to_csv(args.cell_type_output, index=False) # # pred_file = "cellassign_predictions.csv"
 
-# TODO - write_h5ad option compression='gzip' is giving an error
-#adata.write_h5ad(filename=args.adata_output, compression='gzip')
+# 9. write_h5ad 
 adata.write_h5ad(filename=args.adata_output)
 
+# 10. save model
 model.save(args.cellassign_model_dir, overwrite=True) #model_dir = "cellassign_model"
+
+# 11. save metadata
+adata.obs.to_csv(args.output_metadata_file, index=True) # metadata_file = "metadata.csv"
