@@ -18,9 +18,6 @@ workflow cohort_analysis {
 
 		String scvi_latent_key
 
-		String clustering_method
-		Int clustering_algorithm
-		Float clustering_resolution
 		File cell_type_markers_list
 
 		Array[String] groups
@@ -82,9 +79,6 @@ workflow cohort_analysis {
 			cohort_id = cohort_id,
 			normalized_adata_object = select_first([filter_and_normalize.normalized_adata_object]), #!FileCoercion
 			scvi_latent_key = scvi_latent_key,
-			clustering_method = clustering_method,
-			clustering_algorithm = clustering_algorithm,
-			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
@@ -114,10 +108,8 @@ workflow cohort_analysis {
 		select_all([filter_and_normalize.normalized_adata_object]),
 		[
 			cluster_data.integrated_adata_object,
-			cluster_data.scvi_model
-		],
-		[
-			select_first([cluster_data.umap_cluster_adata_object, cluster_data.mde_cluster_adata_object])
+			cluster_data.scvi_model,
+			cluster_data.umap_cluster_adata_object
 		]
 	]) #!StringCoercion
 
@@ -135,7 +127,6 @@ workflow cohort_analysis {
 			write_cohort_sample_list.cohort_sample_list
 		],
 		merge_and_plot_qc_metrics.qc_plots_png,
-		select_all([cluster_data.major_cell_type_plot_pdf, cluster_data.major_cell_type_plot_png]),
 		[
 			cluster_data.cellassign_model,
 			cluster_data.cell_types_csv,
@@ -167,10 +158,7 @@ workflow cohort_analysis {
 		# Clustering output
 		File integrated_adata_object = cluster_data.integrated_adata_object
 		File scvi_model = cluster_data.scvi_model
-		File? umap_cluster_adata_object = cluster_data.umap_cluster_adata_object
-		File? mde_cluster_adata_object = cluster_data.mde_cluster_adata_object
-		File? major_cell_type_plot_pdf = cluster_data.major_cell_type_plot_pdf
-		File? major_cell_type_plot_png = cluster_data.major_cell_type_plot_png
+		File umap_cluster_adata_object = cluster_data.umap_cluster_adata_object
 		File cellassign_model = cluster_data.cellassign_model
 		File cell_types_csv = cluster_data.cell_types_csv
 		File cell_annotated_adata_object = cluster_data.cell_annotated_adata_object

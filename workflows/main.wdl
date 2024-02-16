@@ -24,10 +24,6 @@ workflow harmonized_pmdbs_analysis {
 
 		Int n_top_genes = 8000
 		String scvi_latent_key = "X_scvi"
-		String clustering_method = "umap"
-		# TODO - double check these defaults once clustering_mde.py is complete
-		Int clustering_algorithm = 3
-		Float clustering_resolution = 0.3
 		File cell_type_markers_list
 
 		Array[String] groups = ["sample", "batch", "cell_type"]
@@ -134,9 +130,6 @@ workflow harmonized_pmdbs_analysis {
 					preprocessing_output_file_paths = preprocessing_output_file_paths,
 					n_top_genes = n_top_genes,
 					scvi_latent_key =scvi_latent_key,
-					clustering_algorithm = clustering_algorithm,
-					clustering_resolution = clustering_resolution,
-					clustering_method = clustering_method,
 					cell_type_markers_list = cell_type_markers_list,
 					groups = groups,
 					features = features,
@@ -161,9 +154,6 @@ workflow harmonized_pmdbs_analysis {
 				preprocessing_output_file_paths = flatten(preprocessing_output_file_paths),
 				n_top_genes = n_top_genes,
 				scvi_latent_key =scvi_latent_key,
-				clustering_algorithm = clustering_algorithm,
-				clustering_resolution = clustering_resolution,
-				clustering_method = clustering_method,
 				cell_type_markers_list = cell_type_markers_list,
 				groups = groups,
 				features = features,
@@ -211,9 +201,6 @@ workflow harmonized_pmdbs_analysis {
 		Array[File?] project_integrated_adata_object = project_cohort_analysis.integrated_adata_object
 		Array[File?] project_scvi_model = project_cohort_analysis.scvi_model
 		Array[File?] project_umap_cluster_adata_object = project_cohort_analysis.umap_cluster_adata_object
-		Array[File?] project_mde_cluster_adata_object = project_cohort_analysis.mde_cluster_adata_object
-		Array[File?] project_major_cell_type_plot_pdf = project_cohort_analysis.major_cell_type_plot_pdf
-		Array[File?] project_major_cell_type_plot_png = project_cohort_analysis.major_cell_type_plot_png
 		Array[File?] project_cellassign_model = project_cohort_analysis.cellassign_model
 		Array[File?] project_cell_types_csv = project_cohort_analysis.cell_types_csv
 		Array[File?] project_cell_annotated_adata_object = project_cohort_analysis.cell_annotated_adata_object
@@ -238,9 +225,6 @@ workflow harmonized_pmdbs_analysis {
 		File? cohort_integrated_adata_object = cross_team_cohort_analysis.integrated_adata_object
 		File? cohort_scvi_model = cross_team_cohort_analysis.scvi_model
 		File? cohort_umap_cluster_adata_object = cross_team_cohort_analysis.umap_cluster_adata_object
-		File? cohort_mde_cluster_adata_object = cross_team_cohort_analysis.mde_cluster_adata_object
-		File? cohort_major_cell_type_plot_pdf = cross_team_cohort_analysis.major_cell_type_plot_pdf
-		File? cohort_major_cell_type_plot_png = cross_team_cohort_analysis.major_cell_type_plot_png
 		File? cohort_cellassign_model = cross_team_cohort_analysis.cellassign_model
 		File? cohort_cell_types_csv = cross_team_cohort_analysis.cell_types_csv
 		File? cohort_cell_annotated_adata_object = cross_team_cohort_analysis.cell_annotated_adata_object
@@ -267,9 +251,6 @@ workflow harmonized_pmdbs_analysis {
 		cohort_staging_data_buckets: {help: "Set of buckets to stage cross-team cohort analysis outputs in."}
 		n_top_genes: {help: "Number of HVG genes to keep. [8000]"}
 		scvi_latent_key: {help: "Latent key to save the scVI latent to. ['X_scvi']"}
-		clustering_method: {help: "Clustering method; options are 'umap' or 'mde'. ['umap']"}
-		clustering_algorithm: {help: "Clustering algorithm to use. [3]"}
-		clustering_resolution: {help: "Clustering resolution to use during clustering. [0.3]"}
 		cell_type_markers_list: {help: "CSV file containing a list of major cell type markers; used to annotate clusters."}
 		groups: {help: "Groups to produce umap plots for. ['sample', 'batch', 'cell_type']"}
 		features: {help: "Features to produce umap plots for. ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score', 'S_score', 'G2M_score']"}

@@ -9,9 +9,6 @@ workflow cluster_data {
 
 		String scvi_latent_key
 
-		String clustering_method
-		Int clustering_algorithm
-		Float clustering_resolution
 		File cell_type_markers_list
 
 		String raw_data_path
@@ -35,12 +32,8 @@ workflow cluster_data {
 
 	call cluster_cells {
 		input:
-			cohort_id = cohort_id,
 			integrated_adata_object = integrate_sample_data.integrated_adata_object, #!FileCoercion
 			scvi_latent_key =scvi_latent_key,
-			clustering_method = clustering_method,
-			clustering_algorithm = clustering_algorithm,
-			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
@@ -52,7 +45,7 @@ workflow cluster_data {
 	call annotate_cells {
 		input:
 			cohort_id = cohort_id,
-			cluster_adata_object = select_first([cluster_cells.umap_cluster_adata_object, cluster_cells.mde_cluster_adata_object]), #!FileCoercion, #!SelectArray
+			cluster_adata_object = cluster_cells.umap_cluster_adata_object, #!FileCoercion
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
@@ -64,10 +57,7 @@ workflow cluster_data {
 	output {
 		File integrated_adata_object = integrate_sample_data.integrated_adata_object #!FileCoercion
 		File scvi_model = integrate_sample_data.scvi_model #!FileCoercion
-		File? umap_cluster_adata_object = cluster_cells.umap_cluster_adata_object #!FileCoercion, #!UnnecessaryQuantifier
-		File? mde_cluster_adata_object = cluster_cells.mde_cluster_adata_object #!FileCoercion, #!UnnecessaryQuantifier
-		File? major_cell_type_plot_pdf = cluster_cells.major_cell_type_plot_pdf #!FileCoercion, #!UnnecessaryQuantifier
-		File? major_cell_type_plot_png = cluster_cells.major_cell_type_plot_png #!FileCoercion, #!UnnecessaryQuantifier
+		File umap_cluster_adata_object = cluster_cells.umap_cluster_adata_object #!FileCoercion
 		File cellassign_model = annotate_cells.cellassign_model #!FileCoercion
 		File cell_types_csv = annotate_cells.cell_types_csv #!FileCoercion
 		File cell_annotated_adata_object = annotate_cells.cell_annotated_adata_object #!FileCoercion
@@ -128,19 +118,15 @@ task integrate_sample_data {
 		zones: zones
 		gpuType: "nvidia-tesla-t4"
 		gpuCount: 1
-		nvidiaDriverVersion: "530.30.02"
+		nvidiaDriverVersion: "530.30.02" #!UnknownRuntimeKey
 	}
 }
 
 task cluster_cells {
 	input {
-		String cohort_id
 		File integrated_adata_object
 
 		String scvi_latent_key
-		String clustering_method
-		Int clustering_algorithm
-		Float clustering_resolution
 		File cell_type_markers_list
 
 		String raw_data_path
@@ -158,56 +144,24 @@ task cluster_cells {
 	command <<<
 		set -euo pipefail
 
-		if [[ ~{clustering_method} = "umap" ]]; then
-			# TODO - script doesn't use cell_type_markers_list (incomplete)
-			python3 /opt/scripts/main/clustering_umap.py \
-				--working-dir "$(pwd)" \
-				--script-dir /opt/scripts \
-				--threads ~{threads} \
-				--adata-input ~{integrated_adata_object} \
-				--adata-output ~{integrated_adata_object_basename}.umap_cluster.h5ad \
-				--latent-key ~{scvi_latent_key}
+		# TODO - script doesn't use cell_type_markers_list (incomplete)
+		python3 /opt/scripts/main/clustering_umap.py \
+			--working-dir "$(pwd)" \
+			--script-dir /opt/scripts \
+			--threads ~{threads} \
+			--adata-input ~{integrated_adata_object} \
+			--adata-output ~{integrated_adata_object_basename}.umap_cluster.h5ad \
+			--latent-key ~{scvi_latent_key}
 
-			upload_outputs \
-				-b ~{billing_project} \
-				-d ~{raw_data_path} \
-				-i ~{write_tsv(workflow_info)} \
-				-o "~{integrated_adata_object_basename}.umap_cluster.h5ad"
-
-		elif [[ ~{clustering_method} = "mde" ]]; then
-			# Note: mde is super fast and efficient on a GPU
-			python3 /opt/scripts/main/clustering_mde.py \
-				--working-dir "$(pwd)" \
-				--script-dir /opt/scripts \
-				--threads ~{threads} \
-				--adata-object ~{integrated_adata_object} \
-				--clustering-algorithm ~{clustering_algorithm} \
-				--clustering-resolution ~{clustering_resolution} \
-				--cell-type-markers-list ~{cell_type_markers_list} \
-				--output-cell-type-plot-prefix ~{cohort_id}.major_type_module_umap \
-				--adata-output ~{integrated_adata_object_basename}.mde_cluster.h5ad \
-				--latent-key ~{scvi_latent_key}
-
-			# TODO - this will fail because plots are not outputted by script (incomplete)
-			#upload_outputs \
-			#	-b ~{billing_project} \
-			#	-d ~{raw_data_path} \
-			#	-i ~{write_tsv(workflow_info)} \
-			#	-o "~{integrated_adata_object_basename}.mde_cluster.h5ad" \
-			#	-o "~{cohort_id}.major_type_module_umap.pdf" \
-			#	-o "~{cohort_id}.major_type_module_umap.png"
-
-		else
-			echo "[ERROR] Choose a valid clustering method; options are 'umap' or 'mde'"
-			exit 1
-		fi
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{integrated_adata_object_basename}.umap_cluster.h5ad"
 	>>>
 
 	output {
 		String umap_cluster_adata_object = "~{raw_data_path}/~{integrated_adata_object_basename}.umap_cluster.h5ad"
-		String mde_cluster_adata_object = "~{raw_data_path}/~{integrated_adata_object_basename}.mde_cluster.h5ad"
-		String major_cell_type_plot_pdf = "~{raw_data_path}/~{cohort_id}.major_type_module_umap.pdf"
-		String major_cell_type_plot_png = "~{raw_data_path}/~{cohort_id}.major_type_module_umap.png"
 	}
 
 	runtime {
@@ -218,9 +172,6 @@ task cluster_cells {
 		preemptible: 3
 		bootDiskSizeGb: 40
 		zones: zones
-		gpuType: "nvidia-tesla-t4"
-		gpuCount: 1
-		nvidiaDriverVersion: "530.30.02"
 	}
 }
 
@@ -285,6 +236,6 @@ task annotate_cells {
 		zones: zones
 		gpuType: "nvidia-tesla-t4"
 		gpuCount: 1
-		nvidiaDriverVersion: "530.30.02"
+		nvidiaDriverVersion: "530.30.02" #!UnknownRuntimeKey
 	}
 }
