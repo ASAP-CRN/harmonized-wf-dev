@@ -253,9 +253,6 @@ task merge_and_plot_qc_metrics {
 		mkdir plots
 
 		python3 /opt/scripts/main/plot_qc_metrics.py \
-			--working-dir "$(pwd)" \
-			--script-dir /opt/scripts \
-			--threads ~{threads} \
 			--adata-objects-fofn adata_objects_paths.txt \
 			--project-name ~{cohort_id} \
 			--adata-output ~{cohort_id}.merged_adata_object.h5ad
@@ -326,7 +323,6 @@ task filter_and_normalize {
 		# If any cells remain after filtering, the data is normalized and variable genes are identified
 		if [[ -s "~{merged_adata_object_basename}_filtered.h5ad" ]]; then
 			python3 /opt/scripts/main/process.py \
-				--working-dir "$(pwd)" \
 				--adata-input ~{merged_adata_object_basename}_filtered.h5ad \
 				--batch-key "batch_id" \
 				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad \
