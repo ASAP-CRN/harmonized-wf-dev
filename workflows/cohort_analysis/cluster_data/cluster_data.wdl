@@ -146,9 +146,6 @@ task cluster_cells {
 
 		# TODO - script doesn't use cell_type_markers_list (incomplete)
 		python3 /opt/scripts/main/clustering_umap.py \
-			--working-dir "$(pwd)" \
-			--script-dir /opt/scripts \
-			--threads ~{threads} \
 			--adata-input ~{integrated_adata_object} \
 			--adata-output ~{integrated_adata_object_basename}.umap_cluster.h5ad \
 			--latent-key ~{scvi_latent_key}

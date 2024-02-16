@@ -6,26 +6,26 @@ import leidenalg
 parser = argparse.ArgumentParser(
     description='Annotate clusters'
 )
-parser.add_argument(
-    '--working-dir',
-    dest='working_dir',
-    type=str,
-    help='Working directory',
-    default='/data/CARD_singlecell/harmony-rna/'
-)
-parser.add_argument(
-    '--script-dir',
-    dest='script_dir',
-    type=str,
-    help='Directory containing workflow scripts',
-    default='scripts'
-)
-parser.add_argument(
-    '--threads',
-    dest='threads',
-    type=int,
-    help='Number of threads to use for processing'
-)
+# parser.add_argument(
+#     '--working-dir',
+#     dest='working_dir',
+#     type=str,
+#     help='Working directory',
+#     default='/data/CARD_singlecell/harmony-rna/'
+# )
+# parser.add_argument(
+#     '--script-dir',
+#     dest='script_dir',
+#     type=str,
+#     help='Directory containing workflow scripts',
+#     default='scripts'
+# )
+# parser.add_argument(
+#     '--threads',
+#     dest='threads',
+#     type=int,
+#     help='Number of threads to use for processing'
+# )
 parser.add_argument(
     '--adata-input',
     dest='adata_input',
