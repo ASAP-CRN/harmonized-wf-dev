@@ -369,7 +369,6 @@ task plot_groups_and_features {
 		mkdir plots
 
 		python3 /opt/scripts/main/plot_feats_and_groups.py \
-			--working-dir "$(pwd)" \
 			--adata-input ~{cell_annotated_adata_object} \
 			--group ~{sep=',' groups} \
 			--output-group-umap-plot-prefix "~{cohort_id}" \

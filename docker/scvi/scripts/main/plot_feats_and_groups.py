@@ -5,13 +5,13 @@ import scanpy as sc
 parser = argparse.ArgumentParser(
     description='Plot groups'
 )
-parser.add_argument(
-    '--working-dir',
-    dest='working_dir',
-    type=str,
-    help='Working directory',
-    default='/data/CARD_singlecell/harmony-rna/'
-)
+# parser.add_argument(
+#     '--working-dir',
+#     dest='working_dir',
+#     type=str,
+#     help='Working directory',
+#     default='/data/CARD_singlecell/harmony-rna/'
+# )
 parser.add_argument(
     '--adata-input',
     dest='adata_input',
@@ -27,7 +27,7 @@ parser.add_argument(
 parser.add_argument(
     '--group',
     dest='group',
-    type=list,
+    type=str,
     help='Group to plot umaps for'
 )
 parser.add_argument(
@@ -39,7 +39,7 @@ parser.add_argument(
 parser.add_argument(
     '--feature',
     dest='feature',
-    type=list,
+    type=str,
     help='Feature to plot umaps for'
 )
 parser.add_argument(
@@ -62,13 +62,10 @@ sc.settings.set_figure_params(
     figsize=('12', '8')
 ) # type: ignore
 
-# Parse the arguments
-args = parser.parse_args()
-
 adata = sc.read_h5ad(args.adata_input) # type: ignore
 
-
-plot_features = [x for x in args.feature if x in adata.obs.columns]
+features_list = args.feature.split()
+plot_features = [x for x in features_list if x in adata.obs.columns]
 file_name = args.output_feature_umap_plot_prefix + '_features_umap.png'
 sc.pl.embedding(
     adata,
@@ -80,7 +77,8 @@ sc.pl.embedding(
     save=file_name
 )
 
-plot_groups = [x for x in args.group if x in adata.obs.columns]
+groups_list = args.group.split()
+plot_groups = [x for x in groups_list if x in adata.obs.columns]
 file_name = args.output_group_umap_plot_prefix + '_groups_umap.png'
 sc.pl.embedding(
     adata,
