@@ -23,12 +23,4 @@ ENV CUDA_VERSION "${CUDA_VERSION}"
 
 RUN apt-get -qq update && \
 	apt-get -qq install \
-		time 
-
-COPY ./requirements.txt /opt/requirements.txt
-RUN pip install -r /opt/requirements.txt
-
-COPY ./scripts /opt/scripts
-
-COPY --from=scripts /opt/scripts /opt/scripts
-ENV PATH "${PATH}:/opt/scripts"
+		time

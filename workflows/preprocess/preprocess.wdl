@@ -136,9 +136,10 @@ task remove_technical_artifacts {
 	command <<<
 		set -euo pipefail
 
-		python3 /opt/scripts/cellbender.py \
-			--raw-counts ~{raw_counts} \
-			--output-name ~{sample_id}.cellbender. \
+		cellbender remove-background \
+			--cuda \
+			--input ~{raw_counts} \
+			--output ~{sample_id}.cellbender. \
 			--fpr ~{cellbender_fpr}
 
 		mv ckpt.tar "~{sample_id}.cellbender_ckpt.tar"
