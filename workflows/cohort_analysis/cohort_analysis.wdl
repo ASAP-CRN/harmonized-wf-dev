@@ -370,9 +370,9 @@ task plot_groups_and_features {
 
 		python3 /opt/scripts/main/plot_feats_and_groups.py \
 			--adata-input ~{cell_annotated_adata_object} \
-			--group ~{sep=',' groups} \
+			--group ~{sep=', ' groups} \
 			--output-group-umap-plot-prefix "~{cohort_id}" \
-			--feature ~{sep=',' features} \
+			--feature ~{sep=', ' features} \
 			--output-feature-umap-plot-prefix "~{cohort_id}"
 
 		upload_outputs \
