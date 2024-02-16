@@ -153,10 +153,6 @@ task cluster_cells {
 	Int mem_gb = threads * 2
 	Int disk_size = ceil(size([integrated_adata_object, cell_type_markers_list], "GB") * 6 + 50)
 
-	# TODO - double check that empty gpuCount and gpuType does not launch GPU for clustering_umap
-	String gpu_type = if clustering_method == "mde" then "nvidia-tesla-k80" else ""
-	Int gpu_count = if clustering_method == "mde" then 8 else 0
-
 	command <<<
 		set -euo pipefail
 
@@ -220,8 +216,8 @@ task cluster_cells {
 		preemptible: 3
 		bootDiskSizeGb: 40
 		zones: zones
-		gpuType: gpu_type
-		gpuCount: gpu_count
+		gpuType: "nvidia-tesla-k80"
+		gpuCount: 1
 	}
 }
 
