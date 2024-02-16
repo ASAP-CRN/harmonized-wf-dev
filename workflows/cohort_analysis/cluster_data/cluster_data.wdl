@@ -86,6 +86,8 @@ task integrate_sample_data {
 	command <<<
 		set -euo pipefail
 
+		nvidia-smi
+
 		python3 /opt/scripts/main/integrate_scvi.py \
 			--latent-key ~{scvi_latent_key} \
 			--batch-key "batch_id" \
@@ -193,6 +195,8 @@ task annotate_cells {
 
 	command <<<
 		set -euo pipefail
+
+		nvidia-smi
 
 		# Note: This is not annotating the "clusters" but rather, the cells based on marker gene expression
 		python3 /opt/scripts/main/annotate_cells.py \

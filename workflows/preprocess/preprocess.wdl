@@ -136,6 +136,8 @@ task remove_technical_artifacts {
 	command <<<
 		set -euo pipefail
 
+		nvidia-smi
+
 		cellbender remove-background \
 			--cuda \
 			--input ~{raw_counts} \

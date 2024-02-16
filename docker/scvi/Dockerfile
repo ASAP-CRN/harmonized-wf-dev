@@ -10,8 +10,6 @@ ARG IMAGE_NAME
 ENV IMAGE_NAME "${IMAGE_NAME}"
 ARG IMAGE_TAG
 ENV IMAGE_TAG "${IMAGE_TAG}"
-ARG NVIDIA_DRIVER_VERSION
-ENV NVIDIA_DRIVER_VERSION "${NVIDIA_DRIVER_VERSION}"
 ARG CUDA_VERSION
 ENV CUDA_VERSION "${CUDA_VERSION}"
 
@@ -48,6 +46,7 @@ ENV PATH "${PATH}:/opt/Python-${PYTHON3_VERSION}"
 
 RUN ln -s /opt/Python-${PYTHON3_VERSION}/python /opt/Python-${PYTHON3_VERSION}/python3
 
+# Note: this builds JAX against CUDA version 12020 but CUDA version 12010 is installed in the next step for scvi-tools
 RUN python3 -m pip install jaxlib==0.4.19+cuda12.cudnn89 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
 COPY ./requirements.txt /opt/requirements.txt
