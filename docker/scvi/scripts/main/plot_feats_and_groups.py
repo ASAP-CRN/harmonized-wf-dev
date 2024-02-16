@@ -27,7 +27,7 @@ parser.add_argument(
 parser.add_argument(
     '--group',
     dest='group',
-    type=str,
+    type=list,
     help='Group to plot umaps for'
 )
 parser.add_argument(
@@ -39,7 +39,7 @@ parser.add_argument(
 parser.add_argument(
     '--feature',
     dest='feature',
-    type=str,
+    type=list,
     help='Feature to plot umaps for'
 )
 parser.add_argument(
