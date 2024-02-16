@@ -14,7 +14,6 @@ scvi-tools==1.1.0.post2
 tables==3.9.2
 umap-learn==0.5.4
 jax==0.4.19
-jaxlib==0.4.19
 scrublet==0.2.3
 h5py==3.8.0
 pymde==0.1.18
