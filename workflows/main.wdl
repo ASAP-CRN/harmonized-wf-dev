@@ -217,6 +217,7 @@ workflow harmonized_pmdbs_analysis {
 		Array[File?] project_cellassign_model = project_cohort_analysis.cellassign_model
 		Array[File?] project_cell_types_csv = project_cohort_analysis.cell_types_csv
 		Array[File?] project_cell_annotated_adata_object = project_cohort_analysis.cell_annotated_adata_object
+		Array[File?] project_cell_annotated_metadata = project_cohort_analysis.cell_annotated_metadata
 
 		# Groups and features plots
 		Array[File?] project_groups_umap_plot_png = project_cohort_analysis.groups_umap_plot_png
@@ -243,6 +244,7 @@ workflow harmonized_pmdbs_analysis {
 		File? cohort_cellassign_model = cross_team_cohort_analysis.cellassign_model
 		File? cohort_cell_types_csv = cross_team_cohort_analysis.cell_types_csv
 		File? cohort_cell_annotated_adata_object = cross_team_cohort_analysis.cell_annotated_adata_object
+		File? cohort_cell_annotated_metadata = cross_team_cohort_analysis.cell_annotated_metadata
 
 		# Groups and features plots
 		File? cohort_groups_umap_plot_png = cross_team_cohort_analysis.groups_umap_plot_png

@@ -139,7 +139,8 @@ workflow cohort_analysis {
 		[
 			cluster_data.cellassign_model,
 			cluster_data.cell_types_csv,
-			cluster_data.cell_annotated_adata_object
+			cluster_data.cell_annotated_adata_object,
+			cluster_data.cell_annotated_metadata
 		],
 		[
 			plot_groups_and_features.groups_umap_plot_png,
@@ -173,6 +174,7 @@ workflow cohort_analysis {
 		File cellassign_model = cluster_data.cellassign_model
 		File cell_types_csv = cluster_data.cell_types_csv
 		File cell_annotated_adata_object = cluster_data.cell_annotated_adata_object
+		File cell_annotated_metadata = cluster_data.cell_annotated_metadata
 
 		# Groups and features plots
 		File groups_umap_plot_png = plot_groups_and_features.groups_umap_plot_png #!FileCoercion
