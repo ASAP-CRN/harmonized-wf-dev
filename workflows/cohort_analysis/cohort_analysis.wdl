@@ -375,8 +375,8 @@ task plot_groups_and_features {
 			--feature ~{sep=',' features} \
 			--output-feature-umap-plot-prefix "~{cohort_id}"
 
-		mv "/plots/umap~{cohort_id}_features_umap.png" "/plots/~{cohort_id}_features_umap.png"
-		mv "/plots/umap~{cohort_id}_groups_umap.png" "/plots/~{cohort_id}_groups_umap.png"
+		mv "plots/umap~{cohort_id}_features_umap.png" "plots/~{cohort_id}_features_umap.png"
+		mv "plots/umap~{cohort_id}_groups_umap.png" "plots/~{cohort_id}_groups_umap.png"
 
 		upload_outputs \
 			-b ~{billing_project} \
