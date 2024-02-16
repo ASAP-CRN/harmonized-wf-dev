@@ -64,7 +64,7 @@ sc.settings.set_figure_params(
 
 adata = sc.read_h5ad(args.adata_input) # type: ignore
 
-features_list = args.feature.split()
+features_list = args.feature.split(',')
 plot_features = [x for x in features_list if x in adata.obs.columns]
 file_name = args.output_feature_umap_plot_prefix + '_features_umap.png'
 sc.pl.embedding(
@@ -77,7 +77,7 @@ sc.pl.embedding(
     save=file_name
 )
 
-groups_list = args.group.split()
+groups_list = args.group.split(',')
 plot_groups = [x for x in groups_list if x in adata.obs.columns]
 file_name = args.output_group_umap_plot_prefix + '_groups_umap.png'
 sc.pl.embedding(
