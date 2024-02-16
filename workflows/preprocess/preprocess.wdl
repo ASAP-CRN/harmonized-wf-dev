@@ -55,7 +55,7 @@ workflow preprocess {
 		String cellbender_graph_pdf = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender.pdf"
 		String cellbender_log = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender.log"
 		String cellbender_metrics_csv = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender_metrics.csv"
-		String cellbender_checkpoint_tar = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender_ckpt.tar"
+		String cellbender_checkpoint_tar_gz = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender_ckpt.tar.gz"
 		String cellbender_posterior_probability = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbend_posterior.h5"
 
 		if (cellbender_remove_background_complete == "false") {
@@ -79,7 +79,7 @@ workflow preprocess {
 		File graph_pdf_output = select_first([remove_technical_artifacts.graph_pdf, cellbender_graph_pdf]) #!FileCoercion
 		File log_output = select_first([remove_technical_artifacts.log, cellbender_log]) #!FileCoercion
 		File metrics_csv_output = select_first([remove_technical_artifacts.metrics_csv, cellbender_metrics_csv]) #!FileCoercion
-		File checkpoint_tar_output = select_first([remove_technical_artifacts.checkpoint_tar, cellbender_checkpoint_tar]) #!FileCoercion
+		File checkpoint_tar_gz_output = select_first([remove_technical_artifacts.checkpoint_tar_gz, cellbender_checkpoint_tar_gz]) #!FileCoercion
 		File posterior_probability_output = select_first([remove_technical_artifacts.posterior_probability, cellbender_posterior_probability]) #!FileCoercion
 
 		call counts_to_adata {
@@ -108,7 +108,7 @@ workflow preprocess {
 		Array[File] graph_pdf = graph_pdf_output #!FileCoercion
 		Array[File] log = log_output #!FileCoercion
 		Array[File] metrics_csv = metrics_csv_output #!FileCoercion
-		Array[File] checkpoint_tar = checkpoint_tar_output #!FileCoercion
+		Array[File] checkpoint_tar_gz = checkpoint_tar_gz_output #!FileCoercion
 		Array[File] posterior_probability = posterior_probability_output #!FileCoercion
 
 		# AnnData counts
@@ -144,7 +144,7 @@ task remove_technical_artifacts {
 			--output ~{sample_id}.cellbender. \
 			--fpr ~{cellbender_fpr}
 
-		mv ckpt.tar "~{sample_id}.cellbender_ckpt.tar"
+		mv ckpt.tar.gz "~{sample_id}.cellbender_ckpt.tar.gz"
 
 		upload_outputs \
 			-b ~{billing_project} \
@@ -157,7 +157,7 @@ task remove_technical_artifacts {
 			-o "~{sample_id}.cellbender.pdf" \
 			-o "~{sample_id}.cellbender.log" \
 			-o "~{sample_id}.cellbender_metrics.csv" \
-			-o "~{sample_id}.cellbender_ckpt.tar" \
+			-o "~{sample_id}.cellbender_ckpt.tar.gz" \
 			-o "~{sample_id}.cellbend_posterior.h5"
 	>>>
 
@@ -169,7 +169,7 @@ task remove_technical_artifacts {
 		String graph_pdf = "~{raw_data_path}/~{sample_id}.cellbender.pdf"
 		String log = "~{raw_data_path}/~{sample_id}.cellbender.log"
 		String metrics_csv = "~{raw_data_path}/~{sample_id}.cellbender_metrics.csv"
-		String checkpoint_tar = "~{raw_data_path}/~{sample_id}.cellbender_ckpt.tar"
+		String checkpoint_tar_gz = "~{raw_data_path}/~{sample_id}.cellbender_ckpt.tar.gz"
 		String posterior_probability = "~{raw_data_path}/~{sample_id}.cellbend_posterior.h5"
 	}
 
