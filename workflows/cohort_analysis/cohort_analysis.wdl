@@ -367,9 +367,6 @@ task plot_groups_and_features {
 	command <<<
 		set -euo pipefail
 
-		# Python script saves plots into this dir
-		mkdir plots
-
 		python3 /opt/scripts/main/plot_feats_and_groups.py \
 			--adata-input ~{cell_annotated_adata_object} \
 			--group ~{sep=',' groups} \
