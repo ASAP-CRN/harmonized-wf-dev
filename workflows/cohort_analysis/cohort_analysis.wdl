@@ -252,11 +252,11 @@ task merge_and_plot_qc_metrics {
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.merged_adata_object.h5ad" \
-			-o "plots/~{cohort_id}.n_genes_by_counts.violin.png" \
-			-o "plots/~{cohort_id}.total_counts.violin.png" \
-			-o "plots/~{cohort_id}.pct_counts_mt.violin.png" \
-			-o "plots/~{cohort_id}.pct_counts_rb.violin.png" \
-			-o "plots/~{cohort_id}.doublet_score.violin.png"
+			-o plots/"~{cohort_id}.n_genes_by_counts.violin.png" \
+			-o plots/"~{cohort_id}.total_counts.violin.png" \
+			-o plots/"~{cohort_id}.pct_counts_mt.violin.png" \
+			-o plots/"~{cohort_id}.pct_counts_rb.violin.png" \
+			-o plots/"~{cohort_id}.doublet_score.violin.png"
 	>>>
 
 	output {
@@ -374,20 +374,20 @@ task plot_groups_and_features {
 			--feature ~{sep=',' features} \
 			--output-feature-umap-plot-prefix "~{cohort_id}"
 
-		mv "plots/umap~{cohort_id}_features_umap.png" "plots/~{cohort_id}_features_umap.png"
-		mv "plots/umap~{cohort_id}_groups_umap.png" "plots/~{cohort_id}_groups_umap.png"
+		mv "plots/umap~{cohort_id}_groups_umap.png" "plots/~{cohort_id}.groups.umap.png"
+		mv "plots/umap~{cohort_id}_features_umap.png" "plots/~{cohort_id}.features.umap.png"
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o plots/"~{cohort_id}_features_umap.png" \
-			-o plots/"~{cohort_id}_groups_umap.png"
+			-o plots/"~{cohort_id}.groups.umap.png" \
+			-o plots/"~{cohort_id}.features.umap.png"
 	>>>
 
 	output {
-		String groups_umap_plot_png = "~{raw_data_path}/~{cohort_id}_groups_umap.png"
-		String features_umap_plot_png = "~{raw_data_path}/~{cohort_id}_features_umap.png"
+		String groups_umap_plot_png = "~{raw_data_path}/~{cohort_id}.groups.umap.png"
+		String features_umap_plot_png = "~{raw_data_path}/~{cohort_id}.features.umap.png"
 	}
 
 	runtime {
