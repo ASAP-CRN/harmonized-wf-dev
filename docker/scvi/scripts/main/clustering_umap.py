@@ -70,6 +70,10 @@ scanpy.tl.leiden(adata, resolution=0.4)
 
 scanpy.tl.umap(adata)
 
+# Export figures
+#scanpy.pl.umap(adata, color=, size=0, save='_major_cell_type.png')
+#scanpy.pl.umap(adata, color=, size=0, save='_major_cell_type.pdf')
+
 
 # TODO - write_h5ad option compression='gzip' is giving an error
 #adata.write_h5ad(filename=args.adata_output, compression='gzip')
