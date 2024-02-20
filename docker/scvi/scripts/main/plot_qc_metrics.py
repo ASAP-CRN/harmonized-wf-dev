@@ -32,12 +32,12 @@ parser.add_argument(
 	type=str,
     help='Newline-delimited paths to the set of input adata objects (file-of-filenames)'
 )
-parser.add_argument(
-    '--project-name',
-	dest='project_name',
-	type=str,
-    help='Project name'
-)
+# parser.add_argument(
+#     '--project-name',
+# 	dest='project_name',
+# 	type=str,
+#     help='Project name'
+# )
 
 parser.add_argument(
     '--adata-output',

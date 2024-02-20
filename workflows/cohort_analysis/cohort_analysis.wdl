@@ -235,35 +235,37 @@ task merge_and_plot_qc_metrics {
 			realpath "${adata_objects}" >> adata_objects_paths.txt
 		done < ~{write_lines(preprocessed_adata_objects)}
 
-		# Python script saves plots into this dir
-		mkdir plots
-
 		python3 /opt/scripts/main/plot_qc_metrics.py \
 			--adata-objects-fofn adata_objects_paths.txt \
-			--project-name ~{cohort_id} \
 			--adata-output ~{cohort_id}.merged_adata_object.h5ad
+
+		mv "plots/violin_n_genes_by_counts.png" "plots/~{cohort_id}.n_genes_by_counts.violin.png"
+		mv "plots/violin_total_counts.png" "plots/~{cohort_id}.total_counts.violin.png"
+		mv "plots/violin_pct_counts_mt.png" "plots/~{cohort_id}.pct_counts_mt.violin.png"
+		mv "plots/violin_pct_counts_rb.png" "plots/~{cohort_id}.pct_counts_rb.violin.png"
+		mv "plots/violin_doublet_score.png" "plots/~{cohort_id}.doublet_score.violin.png"
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.merged_adata_object.h5ad" \
-			-o plots/violin_n_genes_by_counts.png \
-			-o plots/violin_total_counts.png \
-			-o plots/violin_pct_counts_mt.png \
-			-o plots/violin_pct_counts_rb.png \
-			-o plots/violin_doublet_score.png
+			-o "plots/~{cohort_id}.n_genes_by_counts.violin.png" \
+			-o "plots/~{cohort_id}.total_counts.violin.png" \
+			-o "plots/~{cohort_id}.pct_counts_mt.violin.png" \
+			-o "plots/~{cohort_id}.pct_counts_rb.violin.png" \
+			-o "plots/~{cohort_id}.doublet_score.violin.png"
 	>>>
 
 	output {
 		String merged_adata_object = "~{raw_data_path}/~{cohort_id}.merged_adata_object.h5ad"
 
 		Array[String] qc_plots_png = [
-			"~{raw_data_path}/violin_n_genes_by_counts.png",
-			"~{raw_data_path}/violin_total_counts.png",
-			"~{raw_data_path}/violin_pct_counts_mt.png",
-			"~{raw_data_path}/violin_pct_counts_rb.png",
-			"~{raw_data_path}/violin_doublet_score.png"
+			"~{raw_data_path}/~{cohort_id}.n_genes_by_counts.violin.png",
+			"~{raw_data_path}/~{cohort_id}.total_counts.violin.png",
+			"~{raw_data_path}/~{cohort_id}.pct_counts_mt.violin.png",
+			"~{raw_data_path}/~{cohort_id}.pct_counts_rb.violin.png",
+			"~{raw_data_path}/~{cohort_id}.doublet_score.violin.png"
 		]
 	}
 
