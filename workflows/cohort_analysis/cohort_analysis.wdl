@@ -128,7 +128,6 @@ workflow cohort_analysis {
 		],
 		merge_and_plot_qc_metrics.qc_plots_png,
 		[
-			cluster_data.cellassign_model,
 			cluster_data.cell_types_csv,
 			cluster_data.cell_annotated_adata_object,
 			cluster_data.cell_annotated_metadata
@@ -159,7 +158,6 @@ workflow cohort_analysis {
 		File integrated_adata_object = cluster_data.integrated_adata_object
 		File scvi_model = cluster_data.scvi_model
 		File umap_cluster_adata_object = cluster_data.umap_cluster_adata_object
-		File cellassign_model = cluster_data.cellassign_model
 		File cell_types_csv = cluster_data.cell_types_csv
 		File cell_annotated_adata_object = cluster_data.cell_annotated_adata_object
 		File cell_annotated_metadata = cluster_data.cell_annotated_metadata

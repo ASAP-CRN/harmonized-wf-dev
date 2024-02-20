@@ -30,12 +30,6 @@ parser.add_argument(
     help='Key in AnnData object for batch information'
 )
 parser.add_argument(
-    '--output-cellassign-dir',
-    dest='cellassign_model_dir',
-    type=str,
-    help='Output folder to write cellAssign model to'
-)
-parser.add_argument(
     '--output-cell-types-file',
     dest='cell_type_output',
     type=str,
@@ -105,8 +99,5 @@ predictions.to_csv(args.cell_type_output, index=False) # # pred_file = "cellassi
 # 9. write_h5ad 
 adata.write_h5ad(filename=args.adata_output)
 
-# 10. save model
-model.save(args.cellassign_model_dir, overwrite=True) #model_dir = "cellassign_model"
-
-# 11. save metadata
+# 10. save metadata
 adata.obs.to_csv(args.output_metadata_file, index=True) # metadata_file = "metadata.csv"

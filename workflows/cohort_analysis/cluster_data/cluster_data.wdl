@@ -58,7 +58,6 @@ workflow cluster_data {
 		File integrated_adata_object = integrate_sample_data.integrated_adata_object #!FileCoercion
 		File scvi_model = integrate_sample_data.scvi_model #!FileCoercion
 		File umap_cluster_adata_object = cluster_cells.umap_cluster_adata_object #!FileCoercion
-		File cellassign_model = annotate_cells.cellassign_model #!FileCoercion
 		File cell_types_csv = annotate_cells.cell_types_csv #!FileCoercion
 		File cell_annotated_adata_object = annotate_cells.cell_annotated_adata_object #!FileCoercion
 		File cell_annotated_metadata = annotate_cells.cell_annotated_metadata #!FileCoercion
@@ -203,25 +202,20 @@ task annotate_cells {
 			--adata-input ~{cluster_adata_object} \
 			--marker-genes ~{cell_type_markers_list} \
 			--batch-key "batch_id" \
-			--output-cellassign-dir cellassign_model \
 			--output-cell-types-file ~{cohort_id}.cell_types.csv \
 			--adata-output ~{cluster_adata_object_basename}.annotate_cells.h5ad \
 			--output-metadata-file ~{cohort_id}.annotate_cells.metadata.csv
-
-		mv cellassign_model/model.pt "cellassign_model/~{cohort_id}.cellassign_model.pt"
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o cellassign_model/"~{cohort_id}.cellassign_model.pt" \
 			-o "~{cohort_id}.cell_types.csv" \
 			-o "~{cluster_adata_object_basename}.annotate_cells.h5ad" \
 			-o "~{cohort_id}.annotate_cells.metadata.csv"
 	>>>
 
 	output {
-		String cellassign_model = "~{raw_data_path}/~{cohort_id}.cellassign_model.pt"
 		String cell_types_csv = "~{raw_data_path}/~{cohort_id}.cell_types.csv"
 		String cell_annotated_adata_object = "~{raw_data_path}/~{cluster_adata_object_basename}.annotate_cells.h5ad"
 		String cell_annotated_metadata = "~{raw_data_path}/~{cohort_id}.annotate_cells.metadata.csv"
