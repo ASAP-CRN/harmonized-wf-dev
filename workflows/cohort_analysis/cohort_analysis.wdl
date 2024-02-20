@@ -108,7 +108,7 @@ workflow cohort_analysis {
 		select_all([filter_and_normalize.normalized_adata_object]),
 		[
 			cluster_data.integrated_adata_object,
-			cluster_data.scvi_model,
+			cluster_data.scvi_model_tar_gz,
 			cluster_data.umap_cluster_adata_object
 		]
 	]) #!StringCoercion
@@ -156,7 +156,7 @@ workflow cohort_analysis {
 
 		# Clustering output
 		File integrated_adata_object = cluster_data.integrated_adata_object
-		File scvi_model = cluster_data.scvi_model
+		File scvi_model_tar_gz = cluster_data.scvi_model_tar_gz
 		File umap_cluster_adata_object = cluster_data.umap_cluster_adata_object
 		File cell_types_csv = cluster_data.cell_types_csv
 		File cell_annotated_adata_object = cluster_data.cell_annotated_adata_object

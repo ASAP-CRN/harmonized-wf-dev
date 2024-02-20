@@ -199,7 +199,7 @@ workflow harmonized_pmdbs_analysis {
 
 		# Clustering outputs
 		Array[File?] project_integrated_adata_object = project_cohort_analysis.integrated_adata_object
-		Array[File?] project_scvi_model = project_cohort_analysis.scvi_model
+		Array[File?] project_scvi_model_tar_gz = project_cohort_analysis.scvi_model_tar_gz
 		Array[File?] project_umap_cluster_adata_object = project_cohort_analysis.umap_cluster_adata_object
 		Array[File?] project_cell_types_csv = project_cohort_analysis.cell_types_csv
 		Array[File?] project_cell_annotated_adata_object = project_cohort_analysis.cell_annotated_adata_object
@@ -222,7 +222,7 @@ workflow harmonized_pmdbs_analysis {
 
 		# Clustering outputs
 		File? cohort_integrated_adata_object = cross_team_cohort_analysis.integrated_adata_object
-		File? cohort_scvi_model = cross_team_cohort_analysis.scvi_model
+		File? cohort_scvi_model_tar_gz = cross_team_cohort_analysis.scvi_model_tar_gz
 		File? cohort_umap_cluster_adata_object = cross_team_cohort_analysis.umap_cluster_adata_object
 		File? cohort_cell_types_csv = cross_team_cohort_analysis.cell_types_csv
 		File? cohort_cell_annotated_adata_object = cross_team_cohort_analysis.cell_annotated_adata_object

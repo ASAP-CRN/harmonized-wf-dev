@@ -56,7 +56,7 @@ workflow cluster_data {
 
 	output {
 		File integrated_adata_object = integrate_sample_data.integrated_adata_object #!FileCoercion
-		File scvi_model = integrate_sample_data.scvi_model #!FileCoercion
+		File scvi_model_tar_gz = integrate_sample_data.scvi_model_tar_gz #!FileCoercion
 		File umap_cluster_adata_object = cluster_cells.umap_cluster_adata_object #!FileCoercion
 		File cell_types_csv = annotate_cells.cell_types_csv #!FileCoercion
 		File cell_annotated_adata_object = annotate_cells.cell_annotated_adata_object #!FileCoercion
@@ -92,21 +92,22 @@ task integrate_sample_data {
 			--batch-key "batch_id" \
 			--adata-input ~{normalized_adata_object} \
 			--adata-output ~{cohort_id}.adata_object.scvi_integrated.h5ad \
-			--output-scvi-dir scvi_model
+			--output-scvi-dir ~{cohort_id}_scvi_model
 
-		mv scvi_model/model.pt "scvi_model/~{cohort_id}.scvi_model.pt"
+		# Model name cannot be changed because scvi models serialization expects a path containing a model.pt object
+		tar -czvf "~{cohort_id}_scvi_model.tar.gz" "~{cohort_id}_scvi_model"
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.adata_object.scvi_integrated.h5ad" \
-			-o scvi_model/"~{cohort_id}.scvi_model.pt"
+			-o "~{cohort_id}_scvi_model.tar.gz"
 	>>>
 
 	output {
 		String integrated_adata_object = "~{raw_data_path}/~{cohort_id}.adata_object.scvi_integrated.h5ad"
-		String scvi_model = "~{raw_data_path}/~{cohort_id}.scvi_model.pt"
+		String scvi_model_tar_gz = "~{raw_data_path}/~{cohort_id}_scvi_model.tar.gz"
 	}
 
 	runtime {
@@ -197,7 +198,7 @@ task annotate_cells {
 
 		nvidia-smi
 
-		# Note: This is not annotating the "clusters" but rather, the cells based on marker gene expression
+		# This is not annotating the "clusters" but rather, the cells based on marker gene expression
 		python3 /opt/scripts/main/annotate_cells.py \
 			--adata-input ~{cluster_adata_object} \
 			--marker-genes ~{cell_type_markers_list} \
