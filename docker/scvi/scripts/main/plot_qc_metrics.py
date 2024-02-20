@@ -30,7 +30,7 @@ parser.add_argument(
     '--adata-objects-fofn',
 	dest='adata_objects_fofn',
 	type=str,
-    help='Newline-delimited paths to the set of input adata objects (file-of-filenames)'
+    help='Newline-delimited TSV of sample names and paths to the set of input adata objects (file-of-filenames)'
 )
 # parser.add_argument(
 #     '--project-name',
@@ -74,32 +74,29 @@ adatas = {}
 top_genes = {}
 
 
-# TODO:  change how we get sample names / file names to aggregate?
 #  note that the sample id should be the official ASAP_samples 
 with open(args.adata_objects_fofn, 'r') as file:
-    file_contents = file.read()
+    for sample in file:
+        # Check that sample line is not empty
+        if sample.strip():
+            columns = sample.strip().split('\t')
+            sample_name, file_path = columns
+            raw = scanpy.read_h5ad(file_path)
+            # code below if memory issues with concatenating all the ge
+            # adata = raw.copy()
+            # scanpy.pp.normalize_total(adata, target_sum=1e4)
+            # scanpy.pp.log1p(adata)
+            # scanpy.pp.highly_variable_genes(adata, flavor='seurat', n_top_genes=8000)
 
-# Remove empty elements in list, this will cause an error when reading in
-samples = list(filter(None, file_contents.split('\n')))
-
-for sample in samples:
-    raw = scanpy.read_h5ad(sample)
-    # code below if memory issues with concatenating all the ge
-    # adata = raw.copy()
-    # scanpy.pp.normalize_total(adata, target_sum=1e4)
-    # scanpy.pp.log1p(adata)
-    # scanpy.pp.highly_variable_genes(adata, flavor='seurat', n_top_genes=8000)
-
-    # # ranked_genes = adata.var[adata.var.highly_variable].dispersions_norm.argsort().to_dict()   
-    # for k,v in ranked_genes.items():
-    #     if k in top_genes:
-    #         top_genes[k] += v
-    #     else:
-    #         top_genes[k] = v
-    
-    # raw = minify_adata(raw)
-    sample_name = sample.split(".")[0]
-    adatas[sample_name] = raw
+            # # ranked_genes = adata.var[adata.var.highly_variable].dispersions_norm.argsort().to_dict()   
+            # for k,v in ranked_genes.items():
+            #     if k in top_genes:
+            #         top_genes[k] += v
+            #     else:
+            #         top_genes[k] = v
+            
+            # raw = minify_adata(raw)
+            adatas[sample_name] = raw
 
 # we could subset to the top_genes here before concat if we have memory issues (e.g. whole dataset harmonization.)
 adata = anndata.concat(

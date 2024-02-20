@@ -232,11 +232,13 @@ task merge_and_plot_qc_metrics {
 		set -euo pipefail
 
 		while read -r adata_objects || [[ -n "${adata_objects}" ]]; do 
-			realpath "${adata_objects}" >> adata_objects_paths.txt
+			adata_path=$(realpath "${adata_objects}")
+			sample=$(basename "${adata_path}" ".adata_object.h5ad")
+			echo -e "${sample}\t${adata_path}" >> adata_samples_paths.tsv
 		done < ~{write_lines(preprocessed_adata_objects)}
 
 		python3 /opt/scripts/main/plot_qc_metrics.py \
-			--adata-objects-fofn adata_objects_paths.txt \
+			--adata-objects-fofn adata_samples_paths.tsv \
 			--adata-output ~{cohort_id}.merged_adata_object.h5ad
 
 		mv "plots/violin_n_genes_by_counts.png" "plots/~{cohort_id}.n_genes_by_counts.violin.png"
