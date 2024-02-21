@@ -22,3 +22,6 @@ ENV CUDA_VERSION "${CUDA_VERSION}"
 RUN apt-get -qq update && \
 	apt-get -qq install \
 		time
+
+COPY --from=scripts /opt/scripts /opt/scripts
+ENV PATH "${PATH}:/opt/scripts"
