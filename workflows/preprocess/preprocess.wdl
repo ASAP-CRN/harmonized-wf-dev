@@ -3,7 +3,6 @@ version 1.0
 # Generate a preprocessed AnnData object
 
 import "../structs.wdl"
-import "../common/check_output_files_exist.wdl" as CheckOutputFilesExist
 
 workflow preprocess {
 	input {
@@ -38,9 +37,11 @@ workflow preprocess {
 		String cellbender_count_output = "~{cellbender_raw_data_path}/~{sample_object.sample_id}.cellbender.h5"
 	}
 
-	call CheckOutputFilesExist.check_output_files_exist {
+	# For each sample, outputs an array of true/false: [cellranger_counts_complete, remove_technical_artifacts_complete]
+	call check_output_files_exist {
 		input:
-			output_files = [cellranger_count_output, cellbender_count_output], #!StringCoercion
+			cellranger_count_output_files = cellranger_count_output,
+			remove_technical_artifacts_output_files = cellbender_count_output,
 			billing_project = billing_project,
 			zones = zones
 	}
@@ -51,6 +52,7 @@ workflow preprocess {
 		Array[String] project_sample_id = [project_id, sample.sample_id]
 
 		String cellranger_count_complete = check_output_files_exist.sample_complete[index][0]
+		String cellbender_remove_background_complete = check_output_files_exist.sample_complete[index][1]
 
 		String cellranger_raw_counts = "~{cellranger_raw_data_path}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
 		String cellranger_filtered_counts = "~{cellranger_raw_data_path}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
@@ -78,8 +80,6 @@ workflow preprocess {
 		File filtered_counts_output = select_first([cellranger_count.filtered_counts, cellranger_filtered_counts]) #!FileCoercion
 		File molecule_info_output = select_first([cellranger_count.molecule_info, cellranger_molecule_info]) #!FileCoercion
 		File metrics_summary_csv_output = select_first([cellranger_count.metrics_summary_csv, cellranger_metrics_summary_csv]) #!FileCoercion
-
-		String cellbender_remove_background_complete = check_output_files_exist.sample_complete[index][1]
 
 		String cellbender_report_html = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender_report.html"
 		String cellbender_removed_background_counts = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender.h5"
@@ -152,6 +152,51 @@ workflow preprocess {
 
 		# AnnData counts
 		Array[File] adata_object = counts_to_adata.preprocessed_adata_object #!FileCoercion
+	}
+}
+
+task check_output_files_exist {
+	input {
+		Array[String] cellranger_count_output_files
+		Array[String] remove_technical_artifacts_output_files
+
+		String billing_project
+		String zones
+	}
+
+	command <<<
+		set -euo pipefail
+
+		while read -r output_files || [[ -n "${output_files}" ]]; do
+			cellranger_counts_file=$(echo "${output_files}" | cut -f 1)
+			cellbender_counts_file=$(echo "${output_files}" | cut -f 2)
+
+			if gsutil -u ~{billing_project} ls "${cellranger_counts_file}"; then
+				if gsutil -u ~{billing_project} ls "${cellbender_counts_file}"; then
+					# If we find both the cellranger and cellbender outputs, don't rerun anything
+					echo -e "true\ttrue" >> sample_complete.tsv
+				else
+					# If we find the raw counts but not the cellbender counts, just rerun cellbender
+					echo -e "true\tfalse" >> sample_complete.tsv
+				fi
+			else
+				# If we don't find cellranger output, we must also need to run (or rerun) preprocessing
+				echo -e "false\tfalse" >> sample_complete.tsv
+			fi
+		done < <(paste ~{write_lines(cellranger_count_output_files)} ~{write_lines(remove_technical_artifacts_output_files)})
+	>>>
+
+	output {
+		Array[Array[String]] sample_complete = read_tsv("sample_complete.tsv")
+	}
+
+	runtime {
+		docker: "gcr.io/google.com/cloudsdktool/google-cloud-cli:444.0.0-slim"
+		cpu: 2
+		memory: "4 GB"
+		disks: "local-disk 20 HDD"
+		preemptible: 3
+		zones: zones
 	}
 }
 
