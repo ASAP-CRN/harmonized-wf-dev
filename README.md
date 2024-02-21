@@ -163,7 +163,7 @@ asap-staging-data-{cohort,team-xxyy}
     ├── ${cohort_id}.merged_adata_object.h5ad
     ├── ${cohort_id}.merged_adata_object_filtered.h5ad
     ├── ${cohort_id}.merged_adata_object_filtered_normalized.h5ad
-    ├── ${cohort_id}.scvi_model_tar_gz
+    ├── ${cohort_id}.scvi_model.tar.gz
     ├── ${sampleA_id}.filtered_feature_bc_matrix.h5
     ├── ${sampleA_id}.metrics_summary.csv
     ├── ${sampleA_id}.molecule_info.h5
