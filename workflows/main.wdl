@@ -123,21 +123,21 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[Array[String]]] project_sample_ids = preprocess.project_sample_ids
 
 		# Cellranger
-		Array[Array[File]] raw_counts = preprocess.raw_counts
-		Array[Array[File]] filtered_counts = preprocess.filtered_counts
-		Array[Array[File]] molecule_info = preprocess.molecule_info
-		Array[Array[File]] metrics_summary_csv = preprocess.metrics_summary_csv
+		Array[Array[File]] cellranger_raw_counts = preprocess.raw_counts
+		Array[Array[File]] cellranger_filtered_counts = preprocess.filtered_counts
+		Array[Array[File]] cellranger_molecule_info = preprocess.molecule_info
+		Array[Array[File]] cellranger_metrics_summary_csv = preprocess.metrics_summary_csv
 
 		# Preprocess
-		Array[Array[File]] report_html = preprocess.report_html
-		Array[Array[File]] removed_background_counts = preprocess.removed_background_counts
-		Array[Array[File]] filtered_removed_background_counts = preprocess.filtered_removed_background_counts
-		Array[Array[File]] cell_barcodes_csv = preprocess.cell_barcodes_csv
-		Array[Array[File]] graph_pdf = preprocess.graph_pdf
-		Array[Array[File]] log = preprocess.log
-		Array[Array[File]] metrics_csv = preprocess.metrics_csv
-		Array[Array[File]] checkpoint_tar_gz = preprocess.checkpoint_tar_gz
-		Array[Array[File]] posterior_probability = preprocess.posterior_probability
+		Array[Array[File]] cellbender_report_html = preprocess.report_html
+		Array[Array[File]] cellbender_removed_background_counts = preprocess.removed_background_counts
+		Array[Array[File]] cellbender_filtered_removed_background_counts = preprocess.filtered_removed_background_counts
+		Array[Array[File]] cellbender_cell_barcodes_csv = preprocess.cell_barcodes_csv
+		Array[Array[File]] cellbender_graph_pdf = preprocess.graph_pdf
+		Array[Array[File]] cellbender_log = preprocess.log
+		Array[Array[File]] cellbender_metrics_csv = preprocess.metrics_csv
+		Array[Array[File]] cellbender_checkpoint_tar_gz = preprocess.checkpoint_tar_gz
+		Array[Array[File]] cellbender_posterior_probability = preprocess.posterior_probability
 		Array[Array[File]] adata_object = preprocess.adata_object
 
 		# Project cohort analysis outputs
