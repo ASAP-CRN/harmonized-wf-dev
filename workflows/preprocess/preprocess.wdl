@@ -10,7 +10,7 @@ workflow preprocess {
 		String project_id
 		Array[Sample] samples
 
-		Array[File] raw_counts
+		File cellranger_reference_data
 
 		Float cellbender_fpr
 
@@ -21,22 +21,26 @@ workflow preprocess {
 		String zones
 	}
 
+	# Task and subworkflow versions
 	String workflow_name = "preprocess"
+	String cellranger_task_version = "1.1.0"
 	String workflow_version = "1.0.0"
 
 	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version]]
 
 	String workflow_raw_data_path_prefix = "~{raw_data_path_prefix}/~{workflow_name}"
+	String cellranger_raw_data_path = "~{workflow_raw_data_path_prefix}/cellranger/~{cellranger_task_version}"
 	String cellbender_raw_data_path = "~{workflow_raw_data_path_prefix}/remove_technical_artifacts/~{workflow_version}"
 	String adata_raw_data_path = "~{workflow_raw_data_path_prefix}/counts_to_adata/~{workflow_version}"
 
 	scatter (sample_object in samples) {
+		String cellranger_count_output = "~{cellranger_raw_data_path}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
 		String cellbender_count_output = "~{cellbender_raw_data_path}/~{sample_object.sample_id}.cellbender.h5"
 	}
 
-	call CheckOutputFilesExist.check_output_files_exist as check_cellbender_outputs_exist {
+	call CheckOutputFilesExist.check_output_files_exist {
 		input:
-			output_files = cellbender_count_output,
+			output_files = [cellranger_count_output, cellbender_count_output], #!StringCoercion
 			billing_project = billing_project,
 			zones = zones
 	}
@@ -46,7 +50,36 @@ workflow preprocess {
 
 		Array[String] project_sample_id = [project_id, sample.sample_id]
 
-		String cellbender_remove_background_complete = check_cellbender_outputs_exist.sample_complete[index][0]
+		String cellranger_count_complete = check_output_files_exist.sample_complete[index][0]
+
+		String cellranger_raw_counts = "~{cellranger_raw_data_path}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
+		String cellranger_filtered_counts = "~{cellranger_raw_data_path}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
+		String cellranger_molecule_info = "~{cellranger_raw_data_path}/~{sample.sample_id}.molecule_info.h5"
+		String cellranger_metrics_summary_csv = "~{cellranger_raw_data_path}/~{sample.sample_id}.metrics_summary.csv"
+
+		if (cellranger_count_complete == "false") {
+			call cellranger_count {
+				input:
+					sample_id = sample.sample_id,
+					fastq_R1s = sample.fastq_R1s,
+					fastq_R2s = sample.fastq_R2s,
+					fastq_I1s = sample.fastq_I1s,
+					fastq_I2s = sample.fastq_I2s,
+					cellranger_reference_data = cellranger_reference_data,
+					raw_data_path = cellranger_raw_data_path,
+					workflow_info = workflow_info,
+					billing_project = billing_project,
+					container_registry = container_registry,
+					zones = zones
+			}
+		}
+
+		File raw_counts_output = select_first([cellranger_count.raw_counts, cellranger_raw_counts]) #!FileCoercion
+		File filtered_counts_output = select_first([cellranger_count.filtered_counts, cellranger_filtered_counts]) #!FileCoercion
+		File molecule_info_output = select_first([cellranger_count.molecule_info, cellranger_molecule_info]) #!FileCoercion
+		File metrics_summary_csv_output = select_first([cellranger_count.metrics_summary_csv, cellranger_metrics_summary_csv]) #!FileCoercion
+
+		String cellbender_remove_background_complete = check_output_files_exist.sample_complete[index][1]
 
 		String cellbender_report_html = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender_report.html"
 		String cellbender_removed_background_counts = "~{cellbender_raw_data_path}/~{sample.sample_id}.cellbender.h5"
@@ -62,7 +95,7 @@ workflow preprocess {
 			call remove_technical_artifacts {
 				input:
 					sample_id = sample.sample_id,
-					raw_counts = raw_counts[index],
+					raw_counts = raw_counts_output,
 					cellbender_fpr = cellbender_fpr,
 					raw_data_path = cellbender_raw_data_path,
 					workflow_info = workflow_info,
@@ -100,6 +133,12 @@ workflow preprocess {
 		# Sample list
 		Array[Array[String]] project_sample_ids = project_sample_id
 
+		# Cellranger
+		Array[File] raw_counts = raw_counts_output #!FileCoercion
+		Array[File] filtered_counts = filtered_counts_output #!FileCoercion
+		Array[File] molecule_info = molecule_info_output #!FileCoercion
+		Array[File] metrics_summary_csv = metrics_summary_csv_output #!FileCoercion
+
 		# Remove technical artifacts - Cellbender
 		Array[File] report_html = report_html_output
 		Array[File] removed_background_counts = removed_background_counts_output #!FileCoercion
@@ -113,6 +152,99 @@ workflow preprocess {
 
 		# AnnData counts
 		Array[File] adata_object = counts_to_adata.preprocessed_adata_object #!FileCoercion
+	}
+}
+
+task cellranger_count {
+	input {
+		String sample_id
+
+		Array[File] fastq_R1s
+		Array[File] fastq_R2s
+		Array[File] fastq_I1s
+		Array[File] fastq_I2s
+
+		File cellranger_reference_data
+
+		String raw_data_path
+		Array[Array[String]] workflow_info
+		String billing_project
+		String container_registry
+		String zones
+	}
+
+	Int threads = 16
+	Int mem_gb = 24
+	Int disk_size = ceil((size(fastq_R1s, "GB") + size(fastq_R2s, "GB") + size(fastq_I1s, "GB") + size(fastq_I2s, "GB") + size(cellranger_reference_data, "GB")) * 4 + 50)
+
+	command <<<
+		set -euo pipefail
+
+		# Unpack refdata
+		mkdir cellranger_refdata
+		tar \
+			-zxvf ~{cellranger_reference_data} \
+			-C cellranger_refdata \
+			--strip-components 1
+
+		# Ensure fastqs are in the same directory
+		mkdir fastqs
+		while read -r fastq || [[ -n "${fastq}" ]]; do
+			if [[ -n "${fastq}" ]]; then
+				validated_fastq_name=$(fix_fastq_names --fastq "${fastq}" --sample-id "~{sample_id}")
+				if [[ -e "fastqs/${validated_fastq_name}" ]]; then
+					echo "[ERROR] Something's gone wrong with fastq renaming; trying to create fastq [${validated_fastq_name}] but it already exists. Exiting."
+					exit 1
+				else
+					ln -s "${fastq}" "fastqs/${validated_fastq_name}"
+				fi
+			fi
+		done < <(cat \
+			~{write_lines(fastq_R1s)} \
+			~{write_lines(fastq_R2s)} \
+			~{write_lines(fastq_I1s)} \
+			~{write_lines(fastq_I2s)})
+
+		cellranger --version
+
+		/usr/bin/time \
+		cellranger count \
+			--id=~{sample_id} \
+			--transcriptome="$(pwd)/cellranger_refdata" \
+			--fastqs="$(pwd)/fastqs" \
+			--localcores ~{threads} \
+			--localmem ~{mem_gb - 4}
+
+		# Rename outputs to include sample ID
+		mv ~{sample_id}/outs/raw_feature_bc_matrix.h5 ~{sample_id}.raw_feature_bc_matrix.h5
+		mv ~{sample_id}/outs/filtered_feature_bc_matrix.h5 ~{sample_id}.filtered_feature_bc_matrix.h5
+		mv ~{sample_id}/outs/molecule_info.h5 ~{sample_id}.molecule_info.h5
+		mv ~{sample_id}/outs/metrics_summary.csv ~{sample_id}.metrics_summary.csv
+
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{sample_id}.raw_feature_bc_matrix.h5" \
+			-o "~{sample_id}.filtered_feature_bc_matrix.h5" \
+			-o "~{sample_id}.molecule_info.h5" \
+			-o "~{sample_id}.metrics_summary.csv"
+	>>>
+
+	output {
+		String raw_counts = "~{raw_data_path}/~{sample_id}.raw_feature_bc_matrix.h5"
+		String filtered_counts = "~{raw_data_path}/~{sample_id}.filtered_feature_bc_matrix.h5"
+		String molecule_info = "~{raw_data_path}/~{sample_id}.molecule_info.h5"
+		String metrics_summary_csv = "~{raw_data_path}/~{sample_id}.metrics_summary.csv"
+	}
+
+	runtime {
+		docker: "~{container_registry}/cellranger:7.1.0"
+		cpu: threads
+		memory: "~{mem_gb} GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
+		zones: zones
 	}
 }
 
