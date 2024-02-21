@@ -359,7 +359,7 @@ task remove_technical_artifacts {
 		bootDiskSizeGb: 40
 		zones: zones
 		gpuType: "nvidia-tesla-t4"
-		gpuCount: 2
+		gpuCount: 1
 	}
 }
 
