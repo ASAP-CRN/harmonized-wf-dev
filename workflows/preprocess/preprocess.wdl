@@ -35,6 +35,7 @@ workflow preprocess {
 	scatter (sample_object in samples) {
 		String cellranger_count_output = "~{cellranger_raw_data_path}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"
 		String cellbender_count_output = "~{cellbender_raw_data_path}/~{sample_object.sample_id}.cellbender.h5"
+		String adata_object_output = "~{adata_raw_data_path}/~{sample_object.sample_id}.adata_object.h5ad"
 	}
 
 	# For each sample, outputs an array of true/false: [cellranger_counts_complete, remove_technical_artifacts_complete]
@@ -42,6 +43,7 @@ workflow preprocess {
 		input:
 			cellranger_count_output_files = cellranger_count_output,
 			remove_technical_artifacts_output_files = cellbender_count_output,
+			adata_object_output_files = adata_object_output,
 			billing_project = billing_project,
 			zones = zones
 	}
@@ -51,8 +53,9 @@ workflow preprocess {
 
 		Array[String] project_sample_id = [project_id, sample.sample_id]
 
-		String cellranger_count_complete = check_output_files_exist.sample_complete[index][0]
-		String cellbender_remove_background_complete = check_output_files_exist.sample_complete[index][1]
+		String cellranger_count_complete = check_output_files_exist.sample_preprocessing_complete[index][0]
+		String cellbender_remove_background_complete = check_output_files_exist.sample_preprocessing_complete[index][1]
+		String adata_object_complete = check_output_files_exist.sample_preprocessing_complete[index][2]
 
 		String cellranger_raw_counts = "~{cellranger_raw_data_path}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
 		String cellranger_filtered_counts = "~{cellranger_raw_data_path}/~{sample.sample_id}.filtered_feature_bc_matrix.h5"
@@ -115,18 +118,24 @@ workflow preprocess {
 		File checkpoint_tar_gz_output = select_first([remove_technical_artifacts.checkpoint_tar_gz, cellbender_checkpoint_tar_gz]) #!FileCoercion
 		File posterior_probability_output = select_first([remove_technical_artifacts.posterior_probability, cellbender_posterior_probability]) #!FileCoercion
 
-		call counts_to_adata {
-			input:
-				sample_id = sample.sample_id,
-				batch = select_first([sample.batch]),
-				project_id = project_id,
-				cellbender_counts = removed_background_counts_output,
-				raw_data_path = adata_raw_data_path,
-				workflow_info = workflow_info,
-				billing_project = billing_project,
-				container_registry = container_registry,
-				zones = zones
+		String preprocessed_adata_object = "~{cellranger_raw_data_path}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
+
+		if (adata_object_complete == "false") {
+			call counts_to_adata {
+				input:
+					sample_id = sample.sample_id,
+					batch = select_first([sample.batch]),
+					project_id = project_id,
+					cellbender_counts = removed_background_counts_output,
+					raw_data_path = adata_raw_data_path,
+					workflow_info = workflow_info,
+					billing_project = billing_project,
+					container_registry = container_registry,
+					zones = zones
+			}
 		}
+
+		File preprocessed_adata_object_output = select_first([counts_to_adata.adata_object, preprocessed_adata_object]) #!FileCoercion
 	}
 
 	output {
@@ -151,7 +160,7 @@ workflow preprocess {
 		Array[File] posterior_probability = posterior_probability_output #!FileCoercion
 
 		# AnnData counts
-		Array[File] adata_object = counts_to_adata.preprocessed_adata_object #!FileCoercion
+		Array[File] adata_object = preprocessed_adata_object_output #!FileCoercion
 	}
 }
 
@@ -159,6 +168,7 @@ task check_output_files_exist {
 	input {
 		Array[String] cellranger_count_output_files
 		Array[String] remove_technical_artifacts_output_files
+		Array[String] adata_object_output_files
 
 		String billing_project
 		String zones
@@ -170,24 +180,30 @@ task check_output_files_exist {
 		while read -r output_files || [[ -n "${output_files}" ]]; do
 			cellranger_counts_file=$(echo "${output_files}" | cut -f 1)
 			cellbender_counts_file=$(echo "${output_files}" | cut -f 2)
+			adata_object_file=$(echo "${output_files}" | cut -f 3)
 
 			if gsutil -u ~{billing_project} ls "${cellranger_counts_file}"; then
 				if gsutil -u ~{billing_project} ls "${cellbender_counts_file}"; then
-					# If we find both the cellranger and cellbender outputs, don't rerun anything
-					echo -e "true\ttrue" >> sample_complete.tsv
+					if gsutil -u ~{billing_project} ls "${adata_object_file}"; then
+						# If we find all outputs, don't rerun anything
+						echo -e "true\ttrue\ttrue" >> sample_preprocessing_complete.tsv
+					else
+						# If we find cellranger and cellbender outputs, but don't find adata outputs, just rerun counts_to_adata
+						echo -e "true\ttrue\tfalse" >> sample_preprocessing_complete.tsv
+					fi
 				else
-					# If we find the raw counts but not the cellbender counts, just rerun cellbender
-					echo -e "true\tfalse" >> sample_complete.tsv
+					# If we find cellranger, but not cellbender outputs, it does not matter if adata objects exist, so run (or rerun) both cellbender and counts_to_adata
+					echo -e "true\tfalse\tfalse" >> sample_preprocessing_complete.tsv
 				fi
 			else
 				# If we don't find cellranger output, we must also need to run (or rerun) preprocessing
-				echo -e "false\tfalse" >> sample_complete.tsv
+				echo -e "false\tfalse\tfalse" >> sample_preprocessing_complete.tsv
 			fi
-		done < <(paste ~{write_lines(cellranger_count_output_files)} ~{write_lines(remove_technical_artifacts_output_files)})
+		done < <(paste ~{write_lines(cellranger_count_output_files)} ~{write_lines(remove_technical_artifacts_output_files)} ~{write_lines(adata_object_output_files)})
 	>>>
 
 	output {
-		Array[Array[String]] sample_complete = read_tsv("sample_complete.tsv")
+		Array[Array[String]] sample_preprocessing_complete = read_tsv("sample_preprocessing_complete.tsv")
 	}
 
 	runtime {
@@ -400,7 +416,7 @@ task counts_to_adata {
 	>>>
 
 	output {
-		String preprocessed_adata_object = "~{raw_data_path}/~{sample_id}.adata_object.h5ad"
+		String adata_object = "~{raw_data_path}/~{sample_id}.adata_object.h5ad"
 	}
 
 	runtime {
