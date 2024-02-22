@@ -422,7 +422,7 @@ task counts_to_adata {
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
 		cpu: 4
-		memory: "8 GB"
+		memory: "16 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
