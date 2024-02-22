@@ -369,7 +369,7 @@ task remove_technical_artifacts {
 	runtime {
 		docker: "~{container_registry}/cellbender:0.3.0"
 		cpu: 8
-		memory: "32 GB"
+		memory: "48 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
