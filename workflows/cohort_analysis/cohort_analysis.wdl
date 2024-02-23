@@ -224,8 +224,8 @@ task merge_and_plot_qc_metrics {
 		String zones
 	}
 
-	Int threads = 2
-	Int mem_gb = ceil(0.02 * n_samples + threads * 2 + 20)
+	Int threads = 4
+	Int mem_gb = ceil(0.02 * n_samples + threads * 2 + 50)
 	Int disk_size = ceil(size(preprocessed_adata_objects, "GB") * 2 + 20)
 
 	command <<<
@@ -299,7 +299,6 @@ task filter_and_normalize {
 	}
 
 	String merged_adata_object_basename = basename(merged_adata_object, ".h5ad")
-	Int threads = 2
 	Int disk_size = ceil(size(merged_adata_object, "GB") * 4 + 20)
 
 	command <<<
@@ -338,7 +337,7 @@ task filter_and_normalize {
 
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
-		cpu: threads
+		cpu: 4
 		memory: "16 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
