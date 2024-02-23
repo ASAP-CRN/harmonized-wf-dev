@@ -225,7 +225,7 @@ task merge_and_plot_qc_metrics {
 	}
 
 	Int threads = 4
-	Int mem_gb = ceil(0.02 * n_samples + threads * 2 + 50)
+	Int mem_gb = ceil(0.02 * n_samples + threads * 4 + 50)
 	Int disk_size = ceil(size(preprocessed_adata_objects, "GB") * 2 + 20)
 
 	command <<<
