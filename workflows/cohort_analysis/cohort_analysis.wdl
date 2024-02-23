@@ -224,9 +224,9 @@ task merge_and_plot_qc_metrics {
 		String zones
 	}
 
-	Int threads = 4
-	Int mem_gb = ceil(0.02 * n_samples + threads * 4 + 50)
-	Int disk_size = ceil(size(preprocessed_adata_objects, "GB") * 2 + 20)
+	Int threads = 8
+	Int mem_gb = ceil(0.02 * n_samples + threads * 2 + 80)
+	Int disk_size = ceil(size(preprocessed_adata_objects, "GB") * 3 + 50)
 
 	command <<<
 		set -euo pipefail
