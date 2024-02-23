@@ -118,7 +118,7 @@ workflow preprocess {
 		File checkpoint_tar_gz_output = select_first([remove_technical_artifacts.checkpoint_tar_gz, cellbender_checkpoint_tar_gz]) #!FileCoercion
 		File posterior_probability_output = select_first([remove_technical_artifacts.posterior_probability, cellbender_posterior_probability]) #!FileCoercion
 
-		String preprocessed_adata_object = "~{cellranger_raw_data_path}/~{sample.sample_id}.raw_feature_bc_matrix.h5"
+		String preprocessed_adata_object = "~{adata_raw_data_path}/~{sample.sample_id}.adata_object.h5ad"
 
 		if (adata_object_complete == "false") {
 			call counts_to_adata {
