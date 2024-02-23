@@ -78,8 +78,8 @@ task integrate_sample_data {
 		String zones
 	}
 
-	Int threads = 8
-	Int mem_gb = threads * 2
+	Int threads = 16
+	Int mem_gb = threads * 4
 	Int disk_size = ceil(size(normalized_adata_object, "GB") * 3 + 50)
 
 	command <<<
@@ -139,8 +139,8 @@ task cluster_cells {
 	}
 
 	String integrated_adata_object_basename = basename(integrated_adata_object, ".h5ad")
-	Int threads = 2
-	Int mem_gb = threads * 2
+	Int threads = 8
+	Int mem_gb = threads * 4
 	Int disk_size = ceil(size([integrated_adata_object, cell_type_markers_list], "GB") * 6 + 50)
 
 	command <<<
@@ -188,8 +188,8 @@ task annotate_cells {
 	}
 
 	String cluster_adata_object_basename = basename(cluster_adata_object, ".h5ad")
-	Int threads = 2
-	Int mem_gb = threads * 2
+	Int threads = 8
+	Int mem_gb = threads * 4
 	Int disk_size = ceil(size([cluster_adata_object, cell_type_markers_list], "GB") * 2 + 20)
 
 	command <<<
