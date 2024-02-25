@@ -237,7 +237,7 @@ task merge_and_plot_qc_metrics {
 			echo -e "${sample}\t${adata_path}" >> adata_samples_paths.tsv
 		done < ~{write_lines(preprocessed_adata_objects)}
 
-		/usr/bin/time -v python3 /opt/scripts/main/plot_qc_metrics.py \
+		python3 /opt/scripts/main/plot_qc_metrics.py \
 			--adata-objects-fofn adata_samples_paths.tsv \
 			--adata-output ~{cohort_id}.merged_adata_object.h5ad
 
@@ -304,14 +304,14 @@ task filter_and_normalize {
 	command <<<
 		set -euo pipefail
 
-		/usr/bin/time -v python3 /opt/scripts/main/filter.py \
+		python3 /opt/scripts/main/filter.py \
 			--adata-input ~{merged_adata_object} \
 			--adata-output ~{merged_adata_object_basename}_filtered.h5ad
 
 		# TODO see whether this is still required given the change to python
 		# If any cells remain after filtering, the data is normalized and variable genes are identified
 		if [[ -s "~{merged_adata_object_basename}_filtered.h5ad" ]]; then
-			/usr/bin/time -v python3 /opt/scripts/main/process.py \
+			python3 /opt/scripts/main/process.py \
 				--adata-input ~{merged_adata_object_basename}_filtered.h5ad \
 				--batch-key "batch_id" \
 				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad \
@@ -366,7 +366,7 @@ task plot_groups_and_features {
 	command <<<
 		set -euo pipefail
 
-		/usr/bin/time -v python3 /opt/scripts/main/plot_feats_and_groups.py \
+		python3 /opt/scripts/main/plot_feats_and_groups.py \
 			--adata-input ~{cell_annotated_adata_object} \
 			--group ~{sep=',' groups} \
 			--output-group-umap-plot-prefix "~{cohort_id}" \
