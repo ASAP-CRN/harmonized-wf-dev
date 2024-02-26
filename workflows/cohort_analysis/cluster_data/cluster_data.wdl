@@ -140,7 +140,7 @@ task cluster_cells {
 
 	String integrated_adata_object_basename = basename(integrated_adata_object, ".h5ad")
 	Int threads = 20
-	Int mem_gb = threads * 4
+	Int mem_gb = threads * 3
 	Int disk_size = ceil(size([integrated_adata_object, cell_type_markers_list], "GB") * 6 + 50)
 
 	command <<<
