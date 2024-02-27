@@ -338,7 +338,7 @@ task filter_and_normalize {
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
 		cpu: 8
-		memory: "200 GB"
+		memory: "250 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
@@ -392,7 +392,7 @@ task plot_groups_and_features {
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
 		cpu: 2
-		memory: "32 GB"
+		memory: "48 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
