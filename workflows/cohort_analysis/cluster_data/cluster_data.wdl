@@ -78,8 +78,6 @@ task integrate_sample_data {
 		String zones
 	}
 
-	Int threads = 4
-	Int mem_gb = threads * 12
 	Int disk_size = ceil(size(normalized_adata_object, "GB") * 3 + 50)
 
 	command <<<
@@ -112,8 +110,8 @@ task integrate_sample_data {
 
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
-		cpu: threads
-		memory: "~{mem_gb} GB"
+		cpu: 2
+		memory: "32 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
@@ -139,8 +137,6 @@ task cluster_cells {
 	}
 
 	String integrated_adata_object_basename = basename(integrated_adata_object, ".h5ad")
-	Int threads = 20
-	Int mem_gb = threads * 3
 	Int disk_size = ceil(size([integrated_adata_object, cell_type_markers_list], "GB") * 6 + 50)
 
 	command <<<
@@ -164,8 +160,8 @@ task cluster_cells {
 
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
-		cpu: threads
-		memory: "~{mem_gb} GB"
+		cpu: 16
+		memory: "48 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
@@ -188,8 +184,6 @@ task annotate_cells {
 	}
 
 	String cluster_adata_object_basename = basename(cluster_adata_object, ".h5ad")
-	Int threads = 4
-	Int mem_gb = threads * 12
 	Int disk_size = ceil(size([cluster_adata_object, cell_type_markers_list], "GB") * 2 + 20)
 
 	command <<<
@@ -223,8 +217,8 @@ task annotate_cells {
 
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
-		cpu: threads
-		memory: "~{mem_gb} GB"
+		cpu: 2
+		memory: "32 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
