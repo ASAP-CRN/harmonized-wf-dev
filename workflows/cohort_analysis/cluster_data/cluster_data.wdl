@@ -111,7 +111,7 @@ task integrate_sample_data {
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
 		cpu: 2
-		memory: "48 GB"
+		memory: "64 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
@@ -161,7 +161,7 @@ task cluster_cells {
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
 		cpu: 16
-		memory: "64 GB"
+		memory: "80 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
@@ -218,7 +218,7 @@ task annotate_cells {
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
 		cpu: 2
-		memory: "48 GB"
+		memory: "64 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
