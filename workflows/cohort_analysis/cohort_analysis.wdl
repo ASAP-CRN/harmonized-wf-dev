@@ -392,7 +392,7 @@ task plot_groups_and_features {
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
 		cpu: 2
-		memory: "48 GB"
+		memory: "64 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
