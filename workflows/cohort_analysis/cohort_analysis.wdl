@@ -338,7 +338,7 @@ task filter_and_normalize {
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
 		cpu: 8
-		memory: "350 GB"
+		memory: "450 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
