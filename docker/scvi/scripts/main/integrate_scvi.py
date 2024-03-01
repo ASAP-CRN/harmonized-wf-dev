@@ -1,3 +1,4 @@
+import os
 import argparse
 import scvi
 import anndata as ad
@@ -77,6 +78,8 @@ model = scvi.model.SCVI(
     gene_likelihood=gene_likelihood,
 )
 
+num_cpus = os.cpu_count() - 1
+scvi.settings.dl_num_workers = num_cpus
 model.train(
     train_size=train_size,
     max_epochs=scvi_epochs,
