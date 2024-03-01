@@ -1,5 +1,6 @@
 # TODO:  implement a function that takes in a scvi model and adata and annotates the clusters
 #     refer to utily/sctype.r
+import os
 import argparse
 import pandas as pd
 import numpy as np
@@ -76,6 +77,8 @@ scvi.external.CellAssign.setup_anndata(
 )
 
 #  5. model.train()
+num_cpus = os.cpu_count() - 1
+scvi.settings.dl_num_workers = num_cpus
 model = scvi.external.CellAssign(bdata, markers)
 plan_args = {'lr_factor': 0.05, 'lr_patience': 20, 'reduce_lr_on_plateau': True}
 model.train(

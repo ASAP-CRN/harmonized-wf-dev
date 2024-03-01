@@ -217,7 +217,7 @@ task annotate_cells {
 
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
-		cpu: 2
+		cpu: 16
 		memory: "100 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
