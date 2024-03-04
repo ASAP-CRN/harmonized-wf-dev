@@ -69,4 +69,4 @@ adata.obs['batch_id'] = args.project+args.batch
 
 # drop the celbender obs? 'background_fraction', 'cell_probability', 'cell_size', 'droplet_efficiency',
 
-adata.write_h5ad(filename=args.adata_output, compression='gzip')
+adata.write_h5ad(filename=args.adata_output)
