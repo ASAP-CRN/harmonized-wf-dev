@@ -224,7 +224,7 @@ task merge_and_plot_qc_metrics {
 		String zones
 	}
 
-	Int threads = 8
+	Int threads = 16
 	Int mem_gb = ceil(0.02 * n_samples + threads * 4 + 200)
 	Int disk_size = ceil(size(preprocessed_adata_objects, "GB") * 3 + 50)
 
@@ -337,7 +337,7 @@ task filter_and_normalize {
 
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
-		cpu: 8
+		cpu: 16
 		memory: "400 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
@@ -391,7 +391,7 @@ task plot_groups_and_features {
 
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0"
-		cpu: 2
+		cpu: 16
 		memory: "100 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3

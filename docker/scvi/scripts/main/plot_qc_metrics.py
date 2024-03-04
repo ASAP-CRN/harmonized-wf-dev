@@ -6,39 +6,12 @@ import anndata
 parser = argparse.ArgumentParser(
     description='Call doublets'
 )
-# parser.add_argument(
-#     '--working-dir',
-#     dest='working_dir',
-#     type=str,
-#     help='Working directory',
-#     default='/data/CARD_singlecell/harmony-rna/'
-# )
-# parser.add_argument(
-#     '--script-dir',
-#     dest='script_dir',
-#     type=str,
-#     help='Directory containing workflow scripts',
-#     default='scripts'
-# )
-# parser.add_argument(
-#     '--threads',
-#     dest='threads',
-#     type=int,
-#     help='Number of threads to use for processing'
-# )
 parser.add_argument(
     '--adata-objects-fofn',
 	dest='adata_objects_fofn',
 	type=str,
     help='Newline-delimited TSV of sample names and paths to the set of input adata objects (file-of-filenames)'
 )
-# parser.add_argument(
-#     '--project-name',
-# 	dest='project_name',
-# 	type=str,
-#     help='Project name'
-# )
-
 parser.add_argument(
     '--adata-output',
 	dest='adata_output',
@@ -48,6 +21,9 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+
+# Set CPUs to use for parallel computing
+scanpy._settings.ScanpyConfig.n_jobs = -1
 
 scanpy.settings.verbosity = 1
 scanpy.settings.figdir = 'plots/'

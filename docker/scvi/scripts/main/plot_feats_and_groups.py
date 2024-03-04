@@ -5,25 +5,12 @@ import scanpy as sc
 parser = argparse.ArgumentParser(
     description='Plot groups'
 )
-# parser.add_argument(
-#     '--working-dir',
-#     dest='working_dir',
-#     type=str,
-#     help='Working directory',
-#     default='/data/CARD_singlecell/harmony-rna/'
-# )
 parser.add_argument(
     '--adata-input',
     dest='adata_input',
     type=str,
     help='AnnData object for a dataset'
 )
-# parser.add_argument(
-#     '--metadata',
-#     dest='metadata',
-#     type=str,
-#     help='Metadata file output by sctype (annotate_clusters)'
-# )
 parser.add_argument(
     '--group',
     dest='group',
@@ -50,6 +37,11 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
+
+
+# Set CPUs to use for parallel computing
+sc._settings.ScanpyConfig.n_jobs = -1
+scvi.settings.dl_num_workers = -1
 
 # Set working directory and load packages
 sc.settings.verbosity = 1

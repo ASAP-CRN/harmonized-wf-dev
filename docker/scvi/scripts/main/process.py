@@ -37,6 +37,10 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+
+# Set CPUs to use for parallel computing
+scanpy._settings.ScanpyConfig.n_jobs = -1
+
 adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 
 # TODO: load the top_genes from the qc plotting step and subset... to the top 8k genes
