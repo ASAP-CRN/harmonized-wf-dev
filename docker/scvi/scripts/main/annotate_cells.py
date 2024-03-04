@@ -103,7 +103,7 @@ predictions = bdata.obs[['sample', 'cellassign_types']].reset_index().rename(col
 predictions.to_csv(args.cell_type_output, index=False) # # pred_file = "cellassign_predictions.csv"
 
 # 9. write_h5ad 
-adata.write_h5ad(filename=args.adata_output)
+adata.write_h5ad(filename=args.adata_output, compression='gzip')
 
 # 10. save metadata
 adata.obs.to_csv(args.output_metadata_file, index=True) # metadata_file = "metadata.csv"

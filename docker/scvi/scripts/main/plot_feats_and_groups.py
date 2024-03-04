@@ -41,7 +41,6 @@ args = parser.parse_args()
 
 # Set CPUs to use for parallel computing
 sc._settings.ScanpyConfig.n_jobs = -1
-scvi.settings.dl_num_workers = -1
 
 # Set working directory and load packages
 sc.settings.verbosity = 1

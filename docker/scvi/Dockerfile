@@ -46,9 +46,6 @@ ENV PATH "${PATH}:/opt/Python-${PYTHON3_VERSION}"
 
 RUN ln -s /opt/Python-${PYTHON3_VERSION}/python /opt/Python-${PYTHON3_VERSION}/python3
 
-# Note: this builds JAX against CUDA version 12020 but CUDA version 12010 is installed in the next step for scvi-tools
-RUN python3 -m pip install jaxlib==0.4.19+cuda12.cudnn89 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-
 COPY ./requirements.txt /opt/requirements.txt
 RUN python3 -m pip install -r /opt/requirements.txt
 

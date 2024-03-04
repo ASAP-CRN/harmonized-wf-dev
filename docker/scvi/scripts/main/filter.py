@@ -37,4 +37,4 @@ muon.pp.filter_obs(adata, 'total_counts', lambda x: (x >= 500) & (x <= 100000))
 muon.pp.filter_obs(adata, 'n_genes_by_counts', lambda x: (x >= 300) & (x <= 10000))
 
 # save the filtered adata
-adata.write_h5ad(filename=args.adata_output)
+adata.write_h5ad(filename=args.adata_output, compression='gzip')

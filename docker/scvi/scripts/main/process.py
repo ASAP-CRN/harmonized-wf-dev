@@ -67,5 +67,4 @@ scanpy.pp.highly_variable_genes(
     n_top_genes=args.n_top_genes
 )
 
-#  write_h5ad option compression='gzip' is giving an error
-adata.write_h5ad(filename=args.adata_output)
+adata.write_h5ad(filename=args.adata_output, compression='gzip')
