@@ -50,7 +50,7 @@ COPY ./requirements.txt /opt/requirements.txt
 RUN python3 -m pip install -r /opt/requirements.txt
 
 # CUDA-enabled jaxlib is needed
-RUN python3 -m pip install jaxlib==0.4.25+cuda12.cudnn89 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+RUN python3 -m pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
 # Add override scripts
 COPY scripts/main /opt/scripts/main
