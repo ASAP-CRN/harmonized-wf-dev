@@ -118,7 +118,7 @@ task integrate_sample_data {
 		zones: zones
 		gpuType: "nvidia-tesla-t4"
 		gpuCount: 1
-		nvidiaDriverVersion: "530.30.02" #!UnknownRuntimeKey
+		nvidiaDriverVersion: "545.23.08" #!UnknownRuntimeKey
 	}
 }
 
@@ -225,6 +225,6 @@ task annotate_cells {
 		zones: zones
 		gpuType: "nvidia-tesla-t4"
 		gpuCount: 1
-		nvidiaDriverVersion: "530.30.02" #!UnknownRuntimeKey
+		nvidiaDriverVersion: "545.23.08" #!UnknownRuntimeKey
 	}
 }
