@@ -83,7 +83,7 @@ done
 
 # Try syncing staging data to production
 for team in "${TEAMS[@]}"; do
-  staging_bucket=gs://asap-staging-data-${team}
+  staging_bucket=gs://asap-dev-data-${team}
   production_bucket=gs://asap-curated-data-${team}
 
   log "Promoting [${team}] data to production"
