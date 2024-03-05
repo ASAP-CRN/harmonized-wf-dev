@@ -91,10 +91,6 @@ for team in "${TEAMS[@]}"; do
   log "\tProduction bucket:\t[${production_bucket}]"
 
   gsync \
-    "${staging_bucket}/preprocess" \
-    "${production_bucket}/preprocess"
-
-  gsync \
-    "${staging_bucket}/cohort_analysis" \
-    "${production_bucket}/cohort_analysis"
+    "${staging_bucket}" \
+    "${production_bucket}"
 done
