@@ -47,8 +47,6 @@ args = parser.parse_args()
 
 # Set CPUs to use for parallel computing
 scanpy._settings.ScanpyConfig.n_jobs = -1
-num_cpus = os.cpu_count() - 1
-scvi.settings.dl_num_workers = num_cpus
 
 ## parameters
 n_latent = 10
