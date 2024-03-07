@@ -224,8 +224,8 @@ task merge_and_plot_qc_metrics {
 		String zones
 	}
 
-	Int threads = 16
-	Int mem_gb = ceil(0.02 * n_samples + threads * 4 + 200)
+	Int threads = 2
+	Int mem_gb = ceil(0.02 * n_samples + threads * 32 + 200)
 	Int disk_size = ceil(size(preprocessed_adata_objects, "GB") * 3 + 50)
 
 	command <<<
