@@ -110,7 +110,7 @@ task integrate_sample_data {
 
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0_1"
-		cpu: 16
+		cpu: 2
 		memory: "100 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
@@ -217,7 +217,7 @@ task annotate_cells {
 
 	runtime {
 		docker: "~{container_registry}/scvi:1.1.0_1"
-		cpu: 16
+		cpu: 2
 		memory: "100 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
