@@ -50,6 +50,10 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+
+# Set CPUs to use for parallel computing
+scanpy._settings.ScanpyConfig.n_jobs = -1
+
 # 0. load adata
 adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 
@@ -77,8 +81,6 @@ scvi.external.CellAssign.setup_anndata(
 )
 
 #  5. model.train()
-num_cpus = os.cpu_count() - 1
-scvi.settings.dl_num_workers = num_cpus
 model = scvi.external.CellAssign(bdata, markers)
 plan_args = {'lr_factor': 0.05, 'lr_patience': 20, 'reduce_lr_on_plateau': True}
 model.train(
@@ -100,7 +102,7 @@ predictions = bdata.obs[['sample', 'cellassign_types']].reset_index().rename(col
 predictions.to_csv(args.cell_type_output, index=False) # # pred_file = "cellassign_predictions.csv"
 
 # 9. write_h5ad 
-adata.write_h5ad(filename=args.adata_output)
+adata.write_h5ad(filename=args.adata_output, compression='gzip')
 
 # 10. save metadata
 adata.obs.to_csv(args.output_metadata_file, index=True) # metadata_file = "metadata.csv"

@@ -38,8 +38,6 @@ workflow cohort_analysis {
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
 
-	Int n_samples = length(preprocessed_adata_objects)
-
 	call write_cohort_sample_list {
 		input:
 			cohort_id = cohort_id,
@@ -55,7 +53,6 @@ workflow cohort_analysis {
 		input:
 			cohort_id = cohort_id,
 			preprocessed_adata_objects = preprocessed_adata_objects,
-			n_samples = n_samples,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
@@ -215,7 +212,6 @@ task merge_and_plot_qc_metrics {
 	input {
 		String cohort_id
 		Array[File] preprocessed_adata_objects
-		Int n_samples
 
 		String raw_data_path
 		Array[Array[String]] workflow_info
@@ -224,8 +220,7 @@ task merge_and_plot_qc_metrics {
 		String zones
 	}
 
-	Int threads = 8
-	Int mem_gb = ceil(0.02 * n_samples + threads * 4 + 200)
+	Int mem_gb = ceil(size(preprocessed_adata_objects, "GB") * 2.4 + 20)
 	Int disk_size = ceil(size(preprocessed_adata_objects, "GB") * 3 + 50)
 
 	command <<<
@@ -272,8 +267,8 @@ task merge_and_plot_qc_metrics {
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.1.0"
-		cpu: threads
+		docker: "~{container_registry}/scvi:1.1.0_1"
+		cpu: 2
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
@@ -299,6 +294,7 @@ task filter_and_normalize {
 	}
 
 	String merged_adata_object_basename = basename(merged_adata_object, ".h5ad")
+	Int mem_gb = ceil(size(merged_adata_object, "GB") * 2.9 + 20)
 	Int disk_size = ceil(size(merged_adata_object, "GB") * 4 + 20)
 
 	command <<<
@@ -336,9 +332,9 @@ task filter_and_normalize {
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.1.0"
-		cpu: 8
-		memory: "400 GB"
+		docker: "~{container_registry}/scvi:1.1.0_1"
+		cpu: 4
+		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
@@ -361,6 +357,7 @@ task plot_groups_and_features {
 		String zones
 	}
 
+	Int mem_gb = ceil(size(cell_annotated_adata_object, "GB") * 1.1 + 10)
 	Int disk_size = ceil(size(cell_annotated_adata_object, "GB") * 4 + 20)
 
 	command <<<
@@ -390,9 +387,9 @@ task plot_groups_and_features {
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.1.0"
+		docker: "~{container_registry}/scvi:1.1.0_1"
 		cpu: 2
-		memory: "100 GB"
+		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40

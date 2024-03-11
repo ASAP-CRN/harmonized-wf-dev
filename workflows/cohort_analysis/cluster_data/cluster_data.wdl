@@ -78,6 +78,7 @@ task integrate_sample_data {
 		String zones
 	}
 
+	Int mem_gb = ceil(size(normalized_adata_object, "GB") * 1.4 + 20)
 	Int disk_size = ceil(size(normalized_adata_object, "GB") * 3 + 50)
 
 	command <<<
@@ -109,16 +110,16 @@ task integrate_sample_data {
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.1.0"
-		cpu: 16
-		memory: "100 GB"
+		docker: "~{container_registry}/scvi:1.1.0_1"
+		cpu: 2
+		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
 		zones: zones
 		gpuType: "nvidia-tesla-t4"
 		gpuCount: 1
-		nvidiaDriverVersion: "530.30.02" #!UnknownRuntimeKey
+		nvidiaDriverVersion: "545.23.08" #!UnknownRuntimeKey
 	}
 }
 
@@ -137,6 +138,7 @@ task cluster_cells {
 	}
 
 	String integrated_adata_object_basename = basename(integrated_adata_object, ".h5ad")
+	Int mem_gb = ceil(size(integrated_adata_object, "GB") * 2.3 + 20)
 	Int disk_size = ceil(size([integrated_adata_object, cell_type_markers_list], "GB") * 6 + 50)
 
 	command <<<
@@ -159,9 +161,9 @@ task cluster_cells {
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.1.0"
+		docker: "~{container_registry}/scvi:1.1.0_1"
 		cpu: 16
-		memory: "150 GB"
+		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
@@ -184,6 +186,7 @@ task annotate_cells {
 	}
 
 	String cluster_adata_object_basename = basename(cluster_adata_object, ".h5ad")
+	Int mem_gb = ceil(size(cluster_adata_object, "GB") * 1.3 + 10)
 	Int disk_size = ceil(size([cluster_adata_object, cell_type_markers_list], "GB") * 2 + 20)
 
 	command <<<
@@ -216,15 +219,15 @@ task annotate_cells {
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.1.0"
-		cpu: 16
-		memory: "100 GB"
+		docker: "~{container_registry}/scvi:1.1.0_1"
+		cpu: 2
+		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
 		zones: zones
 		gpuType: "nvidia-tesla-t4"
 		gpuCount: 1
-		nvidiaDriverVersion: "530.30.02" #!UnknownRuntimeKey
+		nvidiaDriverVersion: "545.23.08" #!UnknownRuntimeKey
 	}
 }

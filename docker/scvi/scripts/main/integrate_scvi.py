@@ -44,6 +44,10 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+
+# Set CPUs to use for parallel computing
+scanpy._settings.ScanpyConfig.n_jobs = -1
+
 ## parameters
 n_latent = 10
 n_layers = 2
@@ -78,8 +82,6 @@ model = scvi.model.SCVI(
     gene_likelihood=gene_likelihood,
 )
 
-num_cpus = os.cpu_count() - 1
-scvi.settings.dl_num_workers = num_cpus
 model.train(
     train_size=train_size,
     max_epochs=scvi_epochs,
@@ -97,6 +99,4 @@ adata.obsm[args.latent_key] = model.get_latent_representation() # type: ignore
 # artifacts
 model.save(args.output_scvi_dir, overwrite=True)
 
-# TODO - write_h5ad option compression='gzip' is giving an error
-#adata.write_h5ad(filename=args.adata_output, compression='gzip')
-adata.write_h5ad(filename=args.adata_output)
+adata.write_h5ad(filename=args.adata_output, compression='gzip')
