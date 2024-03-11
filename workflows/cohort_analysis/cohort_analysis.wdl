@@ -18,9 +18,6 @@ workflow cohort_analysis {
 
 		String scvi_latent_key
 
-		String clustering_method
-		Int clustering_algorithm
-		Float clustering_resolution
 		File cell_type_markers_list
 
 		Array[String] groups
@@ -41,8 +38,6 @@ workflow cohort_analysis {
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
 
-	Int n_samples = length(preprocessed_adata_objects)
-
 	call write_cohort_sample_list {
 		input:
 			cohort_id = cohort_id,
@@ -58,7 +53,6 @@ workflow cohort_analysis {
 		input:
 			cohort_id = cohort_id,
 			preprocessed_adata_objects = preprocessed_adata_objects,
-			n_samples = n_samples,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
@@ -82,9 +76,6 @@ workflow cohort_analysis {
 			cohort_id = cohort_id,
 			normalized_adata_object = select_first([filter_and_normalize.normalized_adata_object]), #!FileCoercion
 			scvi_latent_key = scvi_latent_key,
-			clustering_method = clustering_method,
-			clustering_algorithm = clustering_algorithm,
-			clustering_resolution = clustering_resolution,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
@@ -96,6 +87,7 @@ workflow cohort_analysis {
 	call plot_groups_and_features {
 		input:
 			cohort_id = cohort_id,
+			cell_annotated_adata_object = cluster_data.cell_annotated_adata_object,
 			groups = groups,
 			features = features,
 			raw_data_path = raw_data_path,
@@ -113,7 +105,8 @@ workflow cohort_analysis {
 		select_all([filter_and_normalize.normalized_adata_object]),
 		[
 			cluster_data.integrated_adata_object,
-			cluster_data.scvi_model
+			cluster_data.scvi_model_tar_gz,
+			cluster_data.umap_cluster_adata_object
 		]
 	]) #!StringCoercion
 
@@ -132,12 +125,9 @@ workflow cohort_analysis {
 		],
 		merge_and_plot_qc_metrics.qc_plots_png,
 		[
-			select_first([cluster_data.umap_cluster_adata_object, cluster_data.mde_cluster_adata_object])
-		],
-		select_all([cluster_data.major_cell_type_plot_pdf, cluster_data.major_cell_type_plot_png]),
-		[
-			cluster_data.cellassign_model,
-			cluster_data.cell_types_csv
+			cluster_data.cell_types_csv,
+			cluster_data.cell_annotated_adata_object,
+			cluster_data.cell_annotated_metadata
 		],
 		[
 			plot_groups_and_features.groups_umap_plot_png,
@@ -163,13 +153,11 @@ workflow cohort_analysis {
 
 		# Clustering output
 		File integrated_adata_object = cluster_data.integrated_adata_object
-		File scvi_model = cluster_data.scvi_model
-		File? umap_cluster_adata_object = cluster_data.umap_cluster_adata_object
-		File? mde_cluster_adata_object = cluster_data.mde_cluster_adata_object
-		File? major_cell_type_plot_pdf = cluster_data.major_cell_type_plot_pdf
-		File? major_cell_type_plot_png = cluster_data.major_cell_type_plot_png
-		File cellassign_model = cluster_data.cellassign_model
+		File scvi_model_tar_gz = cluster_data.scvi_model_tar_gz
+		File umap_cluster_adata_object = cluster_data.umap_cluster_adata_object
 		File cell_types_csv = cluster_data.cell_types_csv
+		File cell_annotated_adata_object = cluster_data.cell_annotated_adata_object
+		File cell_annotated_metadata = cluster_data.cell_annotated_metadata
 
 		# Groups and features plots
 		File groups_umap_plot_png = plot_groups_and_features.groups_umap_plot_png #!FileCoercion
@@ -224,7 +212,6 @@ task merge_and_plot_qc_metrics {
 	input {
 		String cohort_id
 		Array[File] preprocessed_adata_objects
-		Int n_samples
 
 		String raw_data_path
 		Array[Array[String]] workflow_info
@@ -233,57 +220,59 @@ task merge_and_plot_qc_metrics {
 		String zones
 	}
 
-	Int threads = 2
-	Int mem_gb = ceil(0.02 * n_samples + threads * 2 + 20)
-	Int disk_size = ceil(size(preprocessed_adata_objects, "GB") * 2 + 20)
+	Int mem_gb = ceil(size(preprocessed_adata_objects, "GB") * 2.4 + 20)
+	Int disk_size = ceil(size(preprocessed_adata_objects, "GB") * 3 + 50)
 
 	command <<<
 		set -euo pipefail
 
 		while read -r adata_objects || [[ -n "${adata_objects}" ]]; do 
-			realpath "${adata_objects}" >> adata_objects_paths.txt
+			adata_path=$(realpath "${adata_objects}")
+			sample=$(basename "${adata_path}" ".adata_object.h5ad")
+			echo -e "${sample}\t${adata_path}" >> adata_samples_paths.tsv
 		done < ~{write_lines(preprocessed_adata_objects)}
 
 		python3 /opt/scripts/main/plot_qc_metrics.py \
-			--working-dir "$(pwd)" \
-			--script-dir /opt/scripts \
-			--threads ~{threads} \
-			--adata-objects-fofn adata_objects_paths.txt \
-			--project-name ~{cohort_id} \
-			--adata-output ~{cohort_id}.merged_adata_object.h5ad.gz
+			--adata-objects-fofn adata_samples_paths.tsv \
+			--adata-output ~{cohort_id}.merged_adata_object.h5ad
 
-		# TODO - double check file name and type for all plots
+		mv "plots/violin_n_genes_by_counts.png" "plots/~{cohort_id}.n_genes_by_counts.violin.png"
+		mv "plots/violin_total_counts.png" "plots/~{cohort_id}.total_counts.violin.png"
+		mv "plots/violin_pct_counts_mt.png" "plots/~{cohort_id}.pct_counts_mt.violin.png"
+		mv "plots/violin_pct_counts_rb.png" "plots/~{cohort_id}.pct_counts_rb.violin.png"
+		mv "plots/violin_doublet_score.png" "plots/~{cohort_id}.doublet_score.violin.png"
+
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}.merged_adata_object.h5ad.gz" \
-			-o violin_n_genes_by_counts.png \
-			-o violin_total_counts.png \
-			-o violin_pct_counts_mt.png \
-			-o violin_pct_counts_rb.png \
-			-o violin_doublet_score.png
+			-o "~{cohort_id}.merged_adata_object.h5ad" \
+			-o plots/"~{cohort_id}.n_genes_by_counts.violin.png" \
+			-o plots/"~{cohort_id}.total_counts.violin.png" \
+			-o plots/"~{cohort_id}.pct_counts_mt.violin.png" \
+			-o plots/"~{cohort_id}.pct_counts_rb.violin.png" \
+			-o plots/"~{cohort_id}.doublet_score.violin.png"
 	>>>
 
 	output {
-		String merged_adata_object = "~{raw_data_path}/~{cohort_id}.merged_adata_object.h5ad.gz"
+		String merged_adata_object = "~{raw_data_path}/~{cohort_id}.merged_adata_object.h5ad"
 
 		Array[String] qc_plots_png = [
-			"~{raw_data_path}/violin_n_genes_by_counts.png",
-			"~{raw_data_path}/violin_total_counts.png",
-			"~{raw_data_path}/violin_pct_counts_mt.png",
-			"~{raw_data_path}/violin_pct_counts_rb.png",
-			"~{raw_data_path}/violin_doublet_score.png"
+			"~{raw_data_path}/~{cohort_id}.n_genes_by_counts.violin.png",
+			"~{raw_data_path}/~{cohort_id}.total_counts.violin.png",
+			"~{raw_data_path}/~{cohort_id}.pct_counts_mt.violin.png",
+			"~{raw_data_path}/~{cohort_id}.pct_counts_rb.violin.png",
+			"~{raw_data_path}/~{cohort_id}.doublet_score.violin.png"
 		]
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.0.4"
-		cpu: threads
+		docker: "~{container_registry}/scvi:1.1.0_1"
+		cpu: 2
 		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
-		bootDiskSizeGb: 20
+		bootDiskSizeGb: 40
 		zones: zones
 	}
 }
@@ -304,8 +293,8 @@ task filter_and_normalize {
 		String? my_none
 	}
 
-	String merged_adata_object_basename = basename(merged_adata_object, ".h5ad.gz")
-	Int threads = 2
+	String merged_adata_object_basename = basename(merged_adata_object, ".h5ad")
+	Int mem_gb = ceil(size(merged_adata_object, "GB") * 2.9 + 20)
 	Int disk_size = ceil(size(merged_adata_object, "GB") * 4 + 20)
 
 	command <<<
@@ -313,23 +302,23 @@ task filter_and_normalize {
 
 		python3 /opt/scripts/main/filter.py \
 			--adata-input ~{merged_adata_object} \
-			--adata-output ~{merged_adata_object_basename}_filtered.h5ad.gz
+			--adata-output ~{merged_adata_object_basename}_filtered.h5ad
 
 		# TODO see whether this is still required given the change to python
 		# If any cells remain after filtering, the data is normalized and variable genes are identified
-		if [[ -s "~{merged_adata_object_basename}_filtered.h5ad.gz" ]]; then
+		if [[ -s "~{merged_adata_object_basename}_filtered.h5ad" ]]; then
 			python3 /opt/scripts/main/process.py \
-				--working-dir "$(pwd)" \
-				--adata-input ~{merged_adata_object_basename}_filtered.h5ad.gz \
-				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad.gz \
+				--adata-input ~{merged_adata_object_basename}_filtered.h5ad \
+				--batch-key "batch_id" \
+				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad \
 				--n-top-genes ~{n_top_genes}
 
 			upload_outputs \
 				-b ~{billing_project} \
 				-d ~{raw_data_path} \
 				-i ~{write_tsv(workflow_info)} \
-				-o "~{merged_adata_object_basename}_filtered.h5ad.gz" \
-				-o "~{merged_adata_object_basename}_filtered_normalized.h5ad.gz"
+				-o "~{merged_adata_object_basename}_filtered.h5ad" \
+				-o "~{merged_adata_object_basename}_filtered_normalized.h5ad"
 
 			echo true > cells_remaining_post_filter.txt
 		else
@@ -338,17 +327,17 @@ task filter_and_normalize {
 	>>>
 
 	output {
-		String? filtered_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered.h5ad.gz" else my_none
-		String? normalized_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered_normalized.h5ad.gz" else my_none
+		String? filtered_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered.h5ad" else my_none
+		String? normalized_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered_normalized.h5ad" else my_none
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.0.4"
-		cpu: threads
-		memory: "12 GB"
+		docker: "~{container_registry}/scvi:1.1.0_1"
+		cpu: 4
+		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
-		bootDiskSizeGb: 20
+		bootDiskSizeGb: 40
 		zones: zones
 	}
 }
@@ -356,6 +345,7 @@ task filter_and_normalize {
 task plot_groups_and_features {
 	input {
 		String cohort_id
+		File cell_annotated_adata_object
 
 		Array[String] groups
 		Array[String] features
@@ -367,36 +357,42 @@ task plot_groups_and_features {
 		String zones
 	}
 
+	Int mem_gb = ceil(size(cell_annotated_adata_object, "GB") * 1.1 + 10)
+	Int disk_size = ceil(size(cell_annotated_adata_object, "GB") * 4 + 20)
+
 	command <<<
 		set -euo pipefail
 
 		python3 /opt/scripts/main/plot_feats_and_groups.py \
-			--working-dir "$(pwd)" \
+			--adata-input ~{cell_annotated_adata_object} \
 			--group ~{sep=',' groups} \
 			--output-group-umap-plot-prefix "~{cohort_id}" \
 			--feature ~{sep=',' features} \
 			--output-feature-umap-plot-prefix "~{cohort_id}"
 
+		mv "plots/umap~{cohort_id}_groups_umap.png" "plots/~{cohort_id}.groups.umap.png"
+		mv "plots/umap~{cohort_id}_features_umap.png" "plots/~{cohort_id}.features.umap.png"
+
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}_features_umap.png" \
-			-o "~{cohort_id}_groups_umap.png"
+			-o plots/"~{cohort_id}.groups.umap.png" \
+			-o plots/"~{cohort_id}.features.umap.png"
 	>>>
 
 	output {
-		String groups_umap_plot_png = "~{raw_data_path}/~{cohort_id}_groups_umap.png"
-		String features_umap_plot_png = "~{raw_data_path}/~{cohort_id}_features_umap.png"
+		String groups_umap_plot_png = "~{raw_data_path}/~{cohort_id}.groups.umap.png"
+		String features_umap_plot_png = "~{raw_data_path}/~{cohort_id}.features.umap.png"
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.0.4"
+		docker: "~{container_registry}/scvi:1.1.0_1"
 		cpu: 2
-		memory: "4 GB"
-		disks: "local-disk 10 HDD"
+		memory: "~{mem_gb} GB"
+		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
-		bootDiskSizeGb: 20
+		bootDiskSizeGb: 40
 		zones: zones
 	}
 }

@@ -1,5 +1,6 @@
 # TODO:  implement a function that takes in a scvi model and adata and annotates the clusters
 #     refer to utily/sctype.r
+import os
 import argparse
 import pandas as pd
 import numpy as np
@@ -24,10 +25,10 @@ parser.add_argument(
     help='Path to marker_genes .csv file'
 )
 parser.add_argument(
-    '--output-cellassign',
-    dest='cellassign_model',
+    '--batch-key',
+    dest='batch_key',
     type=str,
-    help='Output file to write cellAssign model to'
+    help='Key in AnnData object for batch information'
 )
 parser.add_argument(
     '--output-cell-types-file',
@@ -41,8 +42,17 @@ parser.add_argument(
     type=str,
     help='Output file to save AnnData object to'
 )
-
+parser.add_argument(
+    '--output-metadata-file',
+	dest='output_metadata_file',
+	type=str,
+    help='Output file to write metadata to'
+)
 args = parser.parse_args()
+
+
+# Set CPUs to use for parallel computing
+scanpy._settings.ScanpyConfig.n_jobs = -1
 
 # 0. load adata
 adata = scanpy.read_h5ad(args.adata_input) # type: ignore
@@ -59,15 +69,15 @@ bdata = adata[:, adata.var.index.isin(markers.index)].copy()
 #  3. get size_factor and noise
 lib_size = bdata.X.sum(1) # type: ignore
 bdata.obs['size_factor'] = lib_size / np.mean(lib_size)
-noise = ['doublet_score', 'pct_counts_mt', 'pct_counts_rb'] #, 'S.Score', 'G2M.Score']
+# noise = ['doublet_score', 'pct_counts_mt', 'pct_counts_rb'] #, 'S.Score', 'G2M.Score']
 
 #  4. model = CellAssign(bdata, marker_genes)
 scvi.external.CellAssign.setup_anndata(
-    adata,
+    bdata,
     size_factor_key='size_factor',
-    batch_key='sample',
+    batch_key=args.batch_key,
     layer='counts',
-    continuous_covariate_keys=noise
+    # continuous_covariate_keys=noise
 )
 
 #  5. model.train()
@@ -91,6 +101,8 @@ adata.obs['cell_type'] = bdata.obs['cellassign_types']
 predictions = bdata.obs[['sample', 'cellassign_types']].reset_index().rename(columns={'index': 'cells'})
 predictions.to_csv(args.cell_type_output, index=False) # # pred_file = "cellassign_predictions.csv"
 
-adata.write_h5ad(filename=args.adata_output, compression='gzip') 
+# 9. write_h5ad 
+adata.write_h5ad(filename=args.adata_output, compression='gzip')
 
-model.save(args.cellassign_model, overwrite=True) #model_dir = "cellassign_model"
+# 10. save metadata
+adata.obs.to_csv(args.output_metadata_file, index=True) # metadata_file = "metadata.csv"

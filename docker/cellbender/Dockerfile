@@ -1,7 +1,7 @@
+ARG CELLBENDER_VERSION
 FROM us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images/util:1.1.0 as scripts
-
-# Start from nvidia-docker image with drivers pre-installed to use a GPU
-FROM nvcr.io/nvidia/cuda:11.7.1-base-ubuntu18.04
+FROM us.gcr.io/broad-dsde-methods/cellbender:${CELLBENDER_VERSION}
+ENV CELLBENDER_VERSION "${CELLBENDER_VERSION}"
 
 MAINTAINER Karen Fang <karen@dnastack.com>
 
@@ -10,51 +10,18 @@ ENV IMAGE_NAME "${IMAGE_NAME}"
 ARG IMAGE_TAG
 ENV IMAGE_TAG "${IMAGE_TAG}"
 
-ENV DEBIAN_FRONTEND noninteractive
+ARG GCLOUD_CLI_VERSION
+ENV GCLOUD_CLI_VERSION "${GCLOUD_CLI_VERSION}"
+ARG PYTHON_VERSION
+ENV PYTHON_VERSION "${PYTHON_VERSION}"
+ARG MINICONDA_VERSION
+ENV MINICONDA_VERSION "${MINICONDA_VERSION}"
+ARG CUDA_VERSION
+ENV CUDA_VERSION "${CUDA_VERSION}"
 
 RUN apt-get -qq update && \
 	apt-get -qq install \
-		build-essential \
-		wget \
-		time \
-		curl \
-		zlib1g-dev \
-		libncursesw5-dev \
-		libssl-dev \
-		libsqlite3-dev \
-		tk-dev \
-		libgdbm-dev \
-		libc6-dev \
-		libbz2-dev \
-		libffi-dev \
-		liblzma-dev \
-		ca-certificates
-
-ARG PYTHON3_VERSION
-ENV PYTHON3_VERSION "${PYTHON3_VERSION}"
-RUN curl -O https://www.python.org/ftp/python/${PYTHON3_VERSION}/Python-${PYTHON3_VERSION}.tar.xz && \
-	tar -xvf Python-${PYTHON3_VERSION}.tar.xz --directory /opt/ && \
-	rm Python-${PYTHON3_VERSION}.tar.xz
-RUN cd /opt/Python-${PYTHON3_VERSION} && \
-	./configure && \
-	make && \
-	make altinstall
-
-ENV PATH "${PATH}:/opt/Python-${PYTHON3_VERSION}"
-
-COPY ./requirements.txt /opt/requirements.txt
-RUN python -m pip install -r /opt/requirements.txt
-
-# gcloud sdk; needed to upload output files
-ARG GCLOUD_CLI_VERSION
-ENV GCLOUD_CLI_VERSION "${GCLOUD_CLI_VERSION}"
-RUN wget "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-${GCLOUD_CLI_VERSION}-linux-x86_64.tar.gz" \
-	&& tar -zxvf "google-cloud-cli-${GCLOUD_CLI_VERSION}-linux-x86_64.tar.gz" --directory /opt \
-	&& rm "google-cloud-cli-${GCLOUD_CLI_VERSION}-linux-x86_64.tar.gz"
-
-ENV PATH "${PATH}:/opt/google-cloud-sdk/bin"
-
-COPY ./scripts /opt/scripts
+		time
 
 COPY --from=scripts /opt/scripts /opt/scripts
 ENV PATH "${PATH}:/opt/scripts"

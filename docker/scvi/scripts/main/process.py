@@ -1,24 +1,25 @@
 import argparse
-import pandas as pd
 import scanpy
-from utility.helpers import score_cell_cycle
+import sys
+sys.path.append('/opt/scripts/utility')
+from helpers import score_cell_cycle
 
 
 parser = argparse.ArgumentParser(
     description='Normalize seurat objects'
 )
-parser.add_argument(
-	'--working-dir',
-	dest='working_dir',
-	type=str,
-    help='Working directory',
-	default='/data/CARD_singlecell/harmony-rna/'
-)
+
 parser.add_argument(
 	'--adata-input',
 	dest='adata_input',
 	type=str,
     help='AnnData object for a dataset'
+)
+parser.add_argument(
+    '--batch-key',
+    dest='batch_key',
+    type=str,
+    help='Key in AnnData object for batch information'
 )
 parser.add_argument(
 	'--adata-output',
@@ -29,12 +30,16 @@ parser.add_argument(
 parser.add_argument(
     '--n-top-genes',
     dest='n_top_genes',
-    type=str,
+    type=int,
     help='number of HVG genes to keep',
     default=8000
 )
 
 args = parser.parse_args()
+
+
+# Set CPUs to use for parallel computing
+scanpy._settings.ScanpyConfig.n_jobs = -1
 
 adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 
@@ -49,16 +54,17 @@ adata.layers['counts'] = adata.X.copy() # type: ignore
 scanpy.pp.normalize_total(adata, target_sum=1e4)
 scanpy.pp.log1p(adata)
 
+# get cell cycle scores
 score_cell_cycle(adata, organism="human")
 
 # sc.tl.score_genes_cell_cycle(adata, s_genes=s_genes, g2m_genes=g2m_genes)
 scanpy.pp.highly_variable_genes(
     adata, 
-    batch_key='sample', 
+    batch_key=args.batch_key, 
     subset=True, 
     flavor='seurat_v3', 
     layer='counts', 
     n_top_genes=args.n_top_genes
 )
 
-adata.write_h5ad(filename=args.adata_output, compression='gzip') 
+adata.write_h5ad(filename=args.adata_output, compression='gzip')

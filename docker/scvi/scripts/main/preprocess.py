@@ -1,24 +1,10 @@
 import argparse
-import os
+import sys
 import scanpy
 
 
 parser = argparse.ArgumentParser(
     description='Preprocess'
-)
-parser.add_argument(
-	'--working-dir',
-	dest='working_dir',
-	type=str,
-    help='Working directory',
-	default='/data/CARD_singlecell/harmony-rna/'
-)
-parser.add_argument(
-	'--script-dir',
-	dest='script_dir',
-	type=str,
-    help='Directory containing workflow scripts',
-	default='scripts'
 )
 parser.add_argument(
 	'--adata-input',
@@ -44,7 +30,7 @@ parser.add_argument(
 	dest='project',
 	type=str,
     help='Project ID'
-)                  
+)     
 parser.add_argument(
 	'--adata-output',
 	dest='adata_output',
@@ -54,8 +40,12 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-os.setwd(args.working_dir)
-from utility.helpers import anndata_from_h5, get_solo_results
+
+sys.path.append('/opt/scripts/utility')
+from helpers import anndata_from_h5, get_solo_results
+
+# Set CPUs to use for parallel computing
+scanpy._settings.ScanpyConfig.n_jobs = -1
 
 # load the data from cellbender output
 adata = anndata_from_h5(args.adata_input)
@@ -75,9 +65,8 @@ adata.obs.drop('predicted_doublet', axis=1, inplace=True)
 adata.obs['sample'] = args.sample_id
 adata.obs['batch'] = args.batch
 adata.obs['project'] = args.project
-adata.obs['batch_id'] = args.project+args.batch #
-
+adata.obs['batch_id'] = args.project+args.batch
 
 # drop the celbender obs? 'background_fraction', 'cell_probability', 'cell_size', 'droplet_efficiency',
 
-adata.write_h5ad(filename=args.adata_output, compression='gzip') 
+adata.write_h5ad(filename=args.adata_output)

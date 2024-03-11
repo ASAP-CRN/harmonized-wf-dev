@@ -1,6 +1,8 @@
+import os
 import argparse
 import scvi
 import anndata as ad
+import scanpy
 
 
 parser = argparse.ArgumentParser(
@@ -32,15 +34,19 @@ parser.add_argument(
     help='Output file to save AnnData object to'
 )
 parser.add_argument(
-    '--output-scvi',
-    dest='output_scvi',
+    '--output-scvi-dir',
+    dest='output_scvi_dir',
     type=str,
-    help='Output file to save `scvi` model'
+    help='Output folder to save `scvi` model'
 )
 
 # TODO: optional scvi arguments
 
 args = parser.parse_args()
+
+
+# Set CPUs to use for parallel computing
+scanpy._settings.ScanpyConfig.n_jobs = -1
 
 ## parameters
 n_latent = 10
@@ -91,6 +97,6 @@ adata.obsm[args.latent_key] = model.get_latent_representation() # type: ignore
 # TODO: impliment
 
 # artifacts
-model.save(args.output_scvi)
+model.save(args.output_scvi_dir, overwrite=True)
 
-adata.write_h5ad(filename=args.adata_output, compression='gzip') 
+adata.write_h5ad(filename=args.adata_output, compression='gzip')
