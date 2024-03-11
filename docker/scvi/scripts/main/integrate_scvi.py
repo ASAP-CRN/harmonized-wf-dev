@@ -1,3 +1,4 @@
+import os
 import argparse
 import scvi
 import anndata as ad
@@ -42,6 +43,10 @@ parser.add_argument(
 # TODO: optional scvi arguments
 
 args = parser.parse_args()
+
+
+# Set CPUs to use for parallel computing
+scanpy._settings.ScanpyConfig.n_jobs = -1
 
 ## parameters
 n_latent = 10
@@ -94,6 +99,4 @@ adata.obsm[args.latent_key] = model.get_latent_representation() # type: ignore
 # artifacts
 model.save(args.output_scvi_dir, overwrite=True)
 
-# TODO - write_h5ad option compression='gzip' is giving an error
-#adata.write_h5ad(filename=args.adata_output, compression='gzip')
-adata.write_h5ad(filename=args.adata_output)
+adata.write_h5ad(filename=args.adata_output, compression='gzip')

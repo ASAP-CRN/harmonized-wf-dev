@@ -1,5 +1,6 @@
 # TODO:  implement a function that takes in a scvi model and adata and annotates the clusters
 #     refer to utily/sctype.r
+import os
 import argparse
 import pandas as pd
 import numpy as np
@@ -49,6 +50,10 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+
+# Set CPUs to use for parallel computing
+scanpy._settings.ScanpyConfig.n_jobs = -1
+
 # 0. load adata
 adata = scanpy.read_h5ad(args.adata_input) # type: ignore
 
@@ -97,7 +102,7 @@ predictions = bdata.obs[['sample', 'cellassign_types']].reset_index().rename(col
 predictions.to_csv(args.cell_type_output, index=False) # # pred_file = "cellassign_predictions.csv"
 
 # 9. write_h5ad 
-adata.write_h5ad(filename=args.adata_output)
+adata.write_h5ad(filename=args.adata_output, compression='gzip')
 
 # 10. save metadata
 adata.obs.to_csv(args.output_metadata_file, index=True) # metadata_file = "metadata.csv"

@@ -368,8 +368,8 @@ task remove_technical_artifacts {
 
 	runtime {
 		docker: "~{container_registry}/cellbender:0.3.0"
-		cpu: 8
-		memory: "32 GB"
+		cpu: 4
+		memory: "64 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
 		bootDiskSizeGb: 40
@@ -400,8 +400,6 @@ task counts_to_adata {
 		set -euo pipefail
 
 		python3 /opt/scripts/main/preprocess.py \
-			--working-dir "$(pwd)" \
-			--script-dir /opt/scripts \
 			--adata-input ~{cellbender_counts} \
 			--sample-id ~{sample_id} \
 			--batch ~{batch} \
@@ -420,8 +418,8 @@ task counts_to_adata {
 	}
 
 	runtime {
-		docker: "~{container_registry}/scvi:1.1.0"
-		cpu: 4
+		docker: "~{container_registry}/scvi:1.1.0_1"
+		cpu: 2
 		memory: "16 GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
