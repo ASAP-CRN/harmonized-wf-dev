@@ -15,7 +15,7 @@ Repo for testing and developing a common postmortem-derived brain sequencing (PM
 
 Worfklows are defined in [the `workflows` directory](workflows).
 
-This workflow is set up to implement the [Harmony RNA snakemake workflow](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/main) in WDL. The WDL version of the workflow aims to maintain backwards compatibility with the snakemake scripts. Scripts used by the WDL workflow were modified from the Harmony RNA snakemake repo; originals may be found [here](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/5384b546f02b6e68f154f77d25667fed03759870/scripts), and their modified versions in [the docker/multiome/scripts directory](docker/multiome/scripts).
+This workflow is set up to implement the [Harmony RNA snakemake workflow](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/main) in WDL. The WDL version of the workflow aims to maintain backwards compatibility with the snakemake scripts. Scripts used by the WDL workflow were modified from the Harmony RNA snakemake repo; originals may be found [here](https://github.com/DNAstack/Harmony-RNA-Workflow/tree/5384b546f02b6e68f154f77d25667fed03759870/scripts), and their modified R versions in [the docker/multiome/scripts directory](docker/multiome/scripts). Python versions can be found [the docker/scvi/scripts directory](docker/scvi/scripts).
 
 ![Workflow diagram](workflows/workflow_diagram.svg "Workflow diagram")
 
@@ -45,16 +45,15 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | String | cohort_id | Name of the cohort; used to name output files during cross-team cohort analysis. |
 | Array[[Project](#project)] | projects | The project ID, set of samples and their associated reads and metadata, output bucket locations, and whether or not to run project-level cohort analysis. |
 | File | cellranger_reference_data | Cellranger transcriptome reference data; see https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest. |
-| Float? | soup_rate | Dataset contamination rate fraction; used to remove mRNA contamination from the RNAseq data. [0.2] |
-| Boolean? | regenerate_preprocessed_seurat_objects | Regenerate the preprocessed Seurat objects, even if these files already exist. [false] |
-| Boolean? | run_cross_team_cohort_analysis | Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial seurat object(s)) will run for samples. [false] |
+| Float? | cellbender_fpr | Cellbender false positive rate for signal removal. [0.0] |
+| Boolean? | run_cross_team_cohort_analysis | Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial adata object(s)) will run for samples. [false] |
 | String | cohort_raw_data_bucket | Bucket to upload cross-team cohort intermediate files to. |
 | String | cohort_staging_data_bucket | Bucket to upload cross-team cohort analysis outputs to. |
-| Int? | clustering_algorithm | Clustering algorithm to use. [3] |
-| Float? | clustering_resolution | Clustering resolution to use during clustering. [0.3] |
-| File | cell_type_markers_list | RDS file containing a list of major cell type markers; used to annotate clusters. |
-| Array[String]? | groups | Groups to produce umap plots for. ['sample', 'batch', 'seurat_clusters'] |
-| Array[String]? | features | Features to produce umap plots for. ['doublet_scores', 'nCount_RNA', 'nFeature_RNA', 'percent.mt', 'percent.rb'] |
+| Int? | n_top_genes | Number of HVG genes to keep. [8000] |
+| String? | scvi_latent_key | Latent key to save the scVI latent to. ['X_scvi'] |
+| File | cell_type_markers_list | CSV file containing a list of major cell type markers; used to annotate cells. |
+| Array[String]? | groups | Groups to produce umap plots for. ['sample', 'batch', 'cell_type'] |
+| Array[String]? | features | Features to produce umap plots for. ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score', 'S_score', 'G2M_score'] |
 | String | container_registry | Container registry where workflow Docker images are hosted. |
 
 ## Structs
@@ -129,9 +128,12 @@ asap-raw-data-{cohort,team-xxyy}
         ├── cellranger
         │   └── ${cellranger_task_version}
         │       └── <cellranger output>
-        └── counts_to_seurat
-            └── ${counts_to_seurat_task_version}
-                └── <counts_to_seurat output>
+        ├── remove_technical_artifacts
+        │   └── ${preprocess_workflow_version}
+        │       └── <remove_technical_artifacts output>
+        └── counts_to_adata
+            └── ${preprocess_workflow_version}
+                └── <counts_to_adata output>
 ```
 
 ### Staging data (intermediate workflow objects and final workflow outputs for the latest run of the workflow)
@@ -143,48 +145,68 @@ Data may be synced using [the `promote_staging_data` script](#promoting-staging-
 ```bash
 asap-staging-data-{cohort,team-xxyy}
 ├── cohort_analysis
-│   ├── ${cohort_id}.batch_group_umap.png
-│   ├── ${cohort_id}.double_scores_feature_umap.png
-│   ├── ${cohort_id}.final_metadata.csv
-│   ├── ${cohort_id}.major_type_module_umap.png
-│   ├── ${cohort_id}.nCount_RNA_feature_umap.png
-│   ├── ${cohort_id}.nFeature_RNA_feature_umap.png
-│   ├── ${cohort_id}.percent.mt_feature_umap.png
-│   ├── ${cohort_id}.percent.rb_feature_umap.png
-│   ├── ${cohort_id}.qc.umis_genes_plot.png
-│   ├── ${cohort_id}.qc.violin_plots.png
-│   ├── ${cohort_id}.sample_group_umap.png
+│   ├── ${cohort_id}.adata_object.scvi_integrated.umap_cluster.annotate_cells.h5ad
+│   ├── ${cohort_id}.annotate_cells.metadata.csv
+│   ├── ${cohort_id}.cell_types.csv
 │   ├── ${cohort_id}.sample_list.tsv
-│   ├── ${cohort_id}.seurat_clusters_group_umap.png
-│   ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_cluster_07.rds
+│   ├── ${cohort_id}.features.umap.png
+│   ├── ${cohort_id}.groups.umap.png
+│   ├── ${cohort_id}.doublet_score.violin.png
+│   ├── ${cohort_id}.n_genes_by_counts.violin.png
+│   ├── ${cohort_id}.pct_counts_mt.violin.png
+│   ├── ${cohort_id}.pct_counts_rb.violin.png
+│   ├── ${cohort_id}.total_counts.violin.png
 │   └── MANIFEST.tsv
 └── preprocess
-    ├── ${cohort_id}.seurat_object.harmony_integrated_04.rds
-    ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_05.rds
-    ├── ${cohort_id}.seurat_object.harmony_integrated_neighbors_umap_06.rds
-    ├── ${cohort_id}.unfiltered_metadata.csv
+    ├── ${cohort_id}.adata_object.scvi_integrated.h5ad
+    ├── ${cohort_id}.adata_object.scvi_integrated.umap_cluster.h5ad
+    ├── ${cohort_id}.merged_adata_object.h5ad
+    ├── ${cohort_id}.merged_adata_object_filtered.h5ad
+    ├── ${cohort_id}.merged_adata_object_filtered_normalized.h5ad
+    ├── ${cohort_id}.scvi_model.tar.gz
     ├── ${sampleA_id}.filtered_feature_bc_matrix.h5
     ├── ${sampleA_id}.metrics_summary.csv
     ├── ${sampleA_id}.molecule_info.h5
     ├── ${sampleA_id}.raw_feature_bc_matrix.h5
-    ├── ${sampleA_id}.seurat_object.preprocessed_01.rds
-    ├── ${sampleA_id}.seurat_object.preprocessed_filtered_02.rds
-    ├── ${sampleA_id}.seurat_object.preprocessed_filtered_normalized_03.rds
+    ├── ${sampleA_id}.cellbender_report.html
+    ├── ${sampleA_id}.cellbender_metrics.csv
+    ├── ${sampleA_id}.cellbender_filtered.h5
+    ├── ${sampleA_id}.cellbender_ckpt.tar.gz
+    ├── ${sampleA_id}.cellbender_cell_barcodes.csv
+    ├── ${sampleA_id}.cellbender.pdf
+    ├── ${sampleA_id}.cellbender.log
+    ├── ${sampleA_id}.cellbender.h5
+    ├── ${sampleA_id}.cellbend_posterior.h5
+    ├── ${sampleA_id}.adata_object.h5ad
     ├── ${sampleB_id}.filtered_feature_bc_matrix.h5
     ├── ${sampleB_id}.metrics_summary.csv
     ├── ${sampleB_id}.molecule_info.h5
     ├── ${sampleB_id}.raw_feature_bc_matrix.h5
-    ├── ${sampleB_id}.seurat_object.preprocessed_01.rds
-    ├── ${sampleB_id}.seurat_object.preprocessed_filtered_02.rds
-    ├── ${sampleB_id}.seurat_object.preprocessed_filtered_normalized_03.rds
+    ├── ${sampleB_id}.cellbender_report.html
+    ├── ${sampleB_id}.cellbender_metrics.csv
+    ├── ${sampleB_id}.cellbender_filtered.h5
+    ├── ${sampleB_id}.cellbender_ckpt.tar.gz
+    ├── ${sampleB_id}.cellbender_cell_barcodes.csv
+    ├── ${sampleB_id}.cellbender.pdf
+    ├── ${sampleB_id}.cellbender.log
+    ├── ${sampleB_id}.cellbender.h5
+    ├── ${sampleB_id}.cellbend_posterior.h5
+    ├── ${sampleB_id}.adata_object.h5ad
     ├── ...
     ├── ${sampleN_id}.filtered_feature_bc_matrix.h5
     ├── ${sampleN_id}.metrics_summary.csv
     ├── ${sampleN_id}.molecule_info.h5
     ├── ${sampleN_id}.raw_feature_bc_matrix.h5
-    ├── ${sampleN_id}.seurat_object.preprocessed_01.rds
-    ├── ${sampleN_id}.seurat_object.preprocessed_filtered_02.rds
-    ├── ${sampleN_id}.seurat_object.preprocessed_filtered_normalized_03.rds
+    ├── ${sampleN_id}.cellbender_report.html
+    ├── ${sampleN_id}.cellbender_metrics.csv
+    ├── ${sampleN_id}.cellbender_filtered.h5
+    ├── ${sampleN_id}.cellbender_ckpt.tar.gz
+    ├── ${sampleN_id}.cellbender_cell_barcodes.csv
+    ├── ${sampleN_id}.cellbender.pdf
+    ├── ${sampleN_id}.cellbender.log
+    ├── ${sampleN_id}.cellbender.h5
+    ├── ${sampleN_id}.cellbend_posterior.h5
+    ├── ${sampleN_id}.adata_object.h5ad
     └── MANIFEST.tsv
 ```
 
@@ -226,7 +248,7 @@ Docker images are defined in [the `docker` directory](docker). Each image must m
 Example directory structure:
 ```bash
 docker
-├── multiome
+├── scvi
 │   ├── build.env
 │   └── Dockerfile
 └── samtools
@@ -251,7 +273,7 @@ Docker images can be build using the [`build_docker_images`](util/build_docker_i
 
 ```bash
 # Build a single image
-./util/build_docker_images -d docker/multiome
+./util/build_docker_images -d docker/scvi
 
 # Build all images in the `docker` directory
 ./util/build_docker_images -d docker

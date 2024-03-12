@@ -16,7 +16,7 @@ RUN git clone https://github.com/shahrozeabbas/Harmony-RNA-Workflow.git
 RUN cd /opt/Harmony-RNA-Workflow \
 	&& git checkout "${SCRIPTS_REPO_HASH}"
 
-FROM util:1.1.0 as scripts
+FROM us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images/util:1.1.0 as scripts
 
 FROM continuumio/miniconda3:23.5.2-0
 

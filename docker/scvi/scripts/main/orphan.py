@@ -1,12 +1,5 @@
-
-
-
-
-
-
 from pathlib import Path
 import os
-
 import anndata as ad
 import scanpy as sc
 

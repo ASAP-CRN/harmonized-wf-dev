@@ -52,6 +52,9 @@ gsync() {
 
 ALL_TEAMS=(cohort team-hafler team-hardy team-jakobsson team-lee team-scherzer team-sulzer team-voet team-wood)
 
+# Default to dry run if promotion is not selected
+DRY_RUN_ARG="-n"
+
 while getopts "ht:alp" OPTION; do
   case $OPTION in
     h) usage; exit ;;
@@ -62,9 +65,6 @@ while getopts "ht:alp" OPTION; do
     \?) usage; exit ;;
   esac
 done
-
-# Default to dry run if promotion is not selected
-DRY_RUN_ARG=${DRY_RUN_ARG:--n}
 
 if [[ -z "${TEAMS:-}" ]]; then
   usage
@@ -83,7 +83,7 @@ done
 
 # Try syncing staging data to production
 for team in "${TEAMS[@]}"; do
-  staging_bucket=gs://asap-staging-data-${team}
+  staging_bucket=gs://asap-dev-data-${team}
   production_bucket=gs://asap-curated-data-${team}
 
   log "Promoting [${team}] data to production"
@@ -91,10 +91,6 @@ for team in "${TEAMS[@]}"; do
   log "\tProduction bucket:\t[${production_bucket}]"
 
   gsync \
-    "${staging_bucket}/preprocess" \
-    "${production_bucket}/preprocess"
-
-  gsync \
-    "${staging_bucket}/cohort_analysis" \
-    "${production_bucket}/cohort_analysis"
+    "${staging_bucket}" \
+    "${production_bucket}"
 done

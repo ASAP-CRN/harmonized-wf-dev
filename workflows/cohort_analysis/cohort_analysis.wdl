@@ -2,7 +2,6 @@ version 1.0
 
 # Run steps in the cohort analysis
 
-import "run_quality_control/run_quality_control.wdl" as RunQualityControl
 import "cluster_data/cluster_data.wdl" as ClusterData
 import "../common/upload_final_outputs.wdl" as UploadFinalOutputs
 
@@ -10,15 +9,15 @@ workflow cohort_analysis {
 	input {
 		String cohort_id
 		Array[Array[String]] project_sample_ids
-		Array[File] preprocessed_seurat_objects
+		Array[File] preprocessed_adata_objects
 
 		# If provided, these files will be uploaded to the staging bucket alongside other intermediate files made by this workflow
 		Array[String] preprocessing_output_file_paths = []
 
-		Array[String] group_by_vars
+		Int n_top_genes
 
-		Int clustering_algorithm
-		Float clustering_resolution
+		String scvi_latent_key
+
 		File cell_type_markers_list
 
 		Array[String] groups
@@ -29,7 +28,6 @@ workflow cohort_analysis {
 		Array[String] staging_data_buckets
 		String billing_project
 		String container_registry
-		Int multiome_container_revision
 		String zones
 	}
 
@@ -39,8 +37,6 @@ workflow cohort_analysis {
 	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version]]
 
 	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
-
-	Int n_samples = length(preprocessed_seurat_objects)
 
 	call write_cohort_sample_list {
 		input:
@@ -53,75 +49,64 @@ workflow cohort_analysis {
 			zones = zones
 	}
 
-	call RunQualityControl.run_quality_control {
+	call merge_and_plot_qc_metrics {
 		input:
 			cohort_id = cohort_id,
-			preprocessed_seurat_objects = preprocessed_seurat_objects,
-			n_samples = n_samples,
+			preprocessed_adata_objects = preprocessed_adata_objects,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision,
 			zones = zones
 	}
 
-	scatter (preprocessed_seurat_object in preprocessed_seurat_objects) {
-		# Filter sample data by nCount_RNA, nFeature_RNA, percent.mt, percent.rb; remove doublets
-		# If cells remain after filtering, normalize and scale data
-		call filter_and_normalize {
-			input:
-				preprocessed_seurat_object = preprocessed_seurat_object,
-				unfiltered_metadata = run_quality_control.unfiltered_metadata,
-				raw_data_path = raw_data_path,
-				workflow_info = workflow_info,
-				billing_project = billing_project,
-				container_registry = container_registry,
-				multiome_container_revision = multiome_container_revision,
-				zones = zones
-		}
+	call filter_and_normalize {
+		input:
+			merged_adata_object = merge_and_plot_qc_metrics.merged_adata_object, #!FileCoercion
+			n_top_genes = n_top_genes,
+			raw_data_path = raw_data_path,
+			workflow_info = workflow_info,
+			billing_project = billing_project,
+			container_registry = container_registry,
+			zones = zones
 	}
 
 	call ClusterData.cluster_data {
 		input:
 			cohort_id = cohort_id,
-			normalized_seurat_objects = select_all(filter_and_normalize.normalized_seurat_object), #!FileCoercion
-			group_by_vars = group_by_vars,
-			clustering_algorithm = clustering_algorithm,
-			clustering_resolution = clustering_resolution,
+			normalized_adata_object = select_first([filter_and_normalize.normalized_adata_object]), #!FileCoercion
+			scvi_latent_key = scvi_latent_key,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision,
 			zones = zones
 	}
 
 	call plot_groups_and_features {
 		input:
 			cohort_id = cohort_id,
-			metadata = cluster_data.metadata,
+			cell_annotated_adata_object = cluster_data.cell_annotated_adata_object,
 			groups = groups,
 			features = features,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
 			container_registry = container_registry,
-			multiome_container_revision = multiome_container_revision,
 			zones = zones
 	}
 
 	Array[String] cohort_analysis_intermediate_output_paths = flatten([
 		[
-			run_quality_control.unfiltered_metadata
+			merge_and_plot_qc_metrics.merged_adata_object
 		],
-		select_all(filter_and_normalize.filtered_seurat_object),
-		select_all(filter_and_normalize.normalized_seurat_object),
+		select_all([filter_and_normalize.filtered_adata_object]),
+		select_all([filter_and_normalize.normalized_adata_object]),
 		[
-			cluster_data.integrated_seurat_object,
-			cluster_data.neighbors_seurat_object,
-			cluster_data.umap_seurat_object
+			cluster_data.integrated_adata_object,
+			cluster_data.scvi_model_tar_gz,
+			cluster_data.umap_cluster_adata_object
 		]
 	]) #!StringCoercion
 
@@ -136,16 +121,18 @@ workflow cohort_analysis {
 
 	Array[String] cohort_analysis_final_output_paths = flatten([
 		[
-			write_cohort_sample_list.cohort_sample_list,
+			write_cohort_sample_list.cohort_sample_list
 		],
-		run_quality_control.qc_plots_png,
+		merge_and_plot_qc_metrics.qc_plots_png,
 		[
-			cluster_data.cluster_seurat_object,
-			cluster_data.major_cell_type_plot_png,
-			cluster_data.metadata
+			cluster_data.cell_types_csv,
+			cluster_data.cell_annotated_adata_object,
+			cluster_data.cell_annotated_metadata
 		],
-		plot_groups_and_features.group_umap_plots_png,
-		plot_groups_and_features.feature_umap_plots_png
+		[
+			plot_groups_and_features.groups_umap_plot_png,
+			plot_groups_and_features.features_umap_plot_png
+		]
 	]) #!StringCoercion
 
 	call UploadFinalOutputs.upload_final_outputs as upload_cohort_analysis_files {
@@ -160,24 +147,21 @@ workflow cohort_analysis {
 	output {
 		File cohort_sample_list = write_cohort_sample_list.cohort_sample_list #!FileCoercion
 
-		# QC plots
-		Array[File] qc_plots_pdf = run_quality_control.qc_plots_pdf
-		Array[File] qc_plots_png = run_quality_control.qc_plots_png
+		# Merged adata objects and QC plots
+		File merged_adata_object = merge_and_plot_qc_metrics.merged_adata_object #!FileCoercion
+		Array[File] qc_plots_png = merge_and_plot_qc_metrics.qc_plots_png #!FileCoercion
 
-		# Clustering and sctyping output
-		File integrated_seurat_object = cluster_data.integrated_seurat_object
-		File neighbors_seurat_object = cluster_data.neighbors_seurat_object
-		File umap_seurat_object = cluster_data.umap_seurat_object
-		File cluster_seurat_object = cluster_data.cluster_seurat_object
-		File major_cell_type_plot_pdf = cluster_data.major_cell_type_plot_pdf
-		File major_cell_type_plot_png = cluster_data.major_cell_type_plot_png
-		File metadata = cluster_data.metadata
+		# Clustering output
+		File integrated_adata_object = cluster_data.integrated_adata_object
+		File scvi_model_tar_gz = cluster_data.scvi_model_tar_gz
+		File umap_cluster_adata_object = cluster_data.umap_cluster_adata_object
+		File cell_types_csv = cluster_data.cell_types_csv
+		File cell_annotated_adata_object = cluster_data.cell_annotated_adata_object
+		File cell_annotated_metadata = cluster_data.cell_annotated_metadata
 
-		# Group and feature plots for final metadata
-		Array[File] group_umap_plots_pdf = plot_groups_and_features.group_umap_plots_pdf #!FileCoercion
-		Array[File] group_umap_plots_png = plot_groups_and_features.group_umap_plots_png #!FileCoercion
-		Array[File] feature_umap_plots_pdf = plot_groups_and_features.feature_umap_plots_pdf #!FileCoercion
-		Array[File] feature_umap_plots_png = plot_groups_and_features.feature_umap_plots_png #!FileCoercion
+		# Groups and features plots
+		File groups_umap_plot_png = plot_groups_and_features.groups_umap_plot_png #!FileCoercion
+		File features_umap_plot_png = plot_groups_and_features.features_umap_plot_png #!FileCoercion
 
 		Array[File] preprocess_manifest_tsvs = upload_preprocess_files.manifests #!FileCoercion
 		Array[File] cohort_analysis_manifest_tsvs = upload_cohort_analysis_files.manifests #!FileCoercion
@@ -224,55 +208,117 @@ task write_cohort_sample_list {
 	}
 }
 
-task filter_and_normalize {
+task merge_and_plot_qc_metrics {
 	input {
-		File preprocessed_seurat_object
-		File unfiltered_metadata
+		String cohort_id
+		Array[File] preprocessed_adata_objects
 
 		String raw_data_path
 		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
-		Int multiome_container_revision
+		String zones
+	}
+
+	Int mem_gb = ceil(size(preprocessed_adata_objects, "GB") * 2.4 + 20)
+	Int disk_size = ceil(size(preprocessed_adata_objects, "GB") * 3 + 50)
+
+	command <<<
+		set -euo pipefail
+
+		while read -r adata_objects || [[ -n "${adata_objects}" ]]; do 
+			adata_path=$(realpath "${adata_objects}")
+			sample=$(basename "${adata_path}" ".adata_object.h5ad")
+			echo -e "${sample}\t${adata_path}" >> adata_samples_paths.tsv
+		done < ~{write_lines(preprocessed_adata_objects)}
+
+		python3 /opt/scripts/main/plot_qc_metrics.py \
+			--adata-objects-fofn adata_samples_paths.tsv \
+			--adata-output ~{cohort_id}.merged_adata_object.h5ad
+
+		mv "plots/violin_n_genes_by_counts.png" "plots/~{cohort_id}.n_genes_by_counts.violin.png"
+		mv "plots/violin_total_counts.png" "plots/~{cohort_id}.total_counts.violin.png"
+		mv "plots/violin_pct_counts_mt.png" "plots/~{cohort_id}.pct_counts_mt.violin.png"
+		mv "plots/violin_pct_counts_rb.png" "plots/~{cohort_id}.pct_counts_rb.violin.png"
+		mv "plots/violin_doublet_score.png" "plots/~{cohort_id}.doublet_score.violin.png"
+
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o "~{cohort_id}.merged_adata_object.h5ad" \
+			-o plots/"~{cohort_id}.n_genes_by_counts.violin.png" \
+			-o plots/"~{cohort_id}.total_counts.violin.png" \
+			-o plots/"~{cohort_id}.pct_counts_mt.violin.png" \
+			-o plots/"~{cohort_id}.pct_counts_rb.violin.png" \
+			-o plots/"~{cohort_id}.doublet_score.violin.png"
+	>>>
+
+	output {
+		String merged_adata_object = "~{raw_data_path}/~{cohort_id}.merged_adata_object.h5ad"
+
+		Array[String] qc_plots_png = [
+			"~{raw_data_path}/~{cohort_id}.n_genes_by_counts.violin.png",
+			"~{raw_data_path}/~{cohort_id}.total_counts.violin.png",
+			"~{raw_data_path}/~{cohort_id}.pct_counts_mt.violin.png",
+			"~{raw_data_path}/~{cohort_id}.pct_counts_rb.violin.png",
+			"~{raw_data_path}/~{cohort_id}.doublet_score.violin.png"
+		]
+	}
+
+	runtime {
+		docker: "~{container_registry}/scvi:1.1.0_1"
+		cpu: 2
+		memory: "~{mem_gb} GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
+		bootDiskSizeGb: 40
+		zones: zones
+	}
+}
+
+task filter_and_normalize {
+	input {
+		File merged_adata_object
+
+		Int n_top_genes
+
+		String raw_data_path
+		Array[Array[String]] workflow_info
+		String billing_project
+		String container_registry
 		String zones
 
 		# Purposefully unset
 		String? my_none
 	}
 
-	Int threads = 2
-	String seurat_object_basename = basename(preprocessed_seurat_object, "_01.rds")
-	Int disk_size = ceil(size(preprocessed_seurat_object, "GB") * 4 + 20)
+	String merged_adata_object_basename = basename(merged_adata_object, ".h5ad")
+	Int mem_gb = ceil(size(merged_adata_object, "GB") * 2.9 + 20)
+	Int disk_size = ceil(size(merged_adata_object, "GB") * 4 + 20)
 
 	command <<<
 		set -euo pipefail
 
-		# Filter cells
-		/usr/bin/time \
-		Rscript /opt/scripts/main/filter.R \
-			--working-dir "$(pwd)" \
-			--script-dir /opt/scripts \
-			--seurat-object ~{preprocessed_seurat_object} \
-			--metadata ~{unfiltered_metadata} \
-			--output-seurat-object ~{seurat_object_basename}_filtered_02.rds
+		python3 /opt/scripts/main/filter.py \
+			--adata-input ~{merged_adata_object} \
+			--adata-output ~{merged_adata_object_basename}_filtered.h5ad
 
-		# If any cells remain after filtering, the data is normalized and scaled
-		if [[ -s "~{seurat_object_basename}_filtered_02.rds" ]]; then
-			# Normalize and scale filtered cells
-			/usr/bin/time \
-			Rscript /opt/scripts/main/process.R \
-				--working-dir "$(pwd)" \
-				--script-dir /opt/scripts \
-				--threads ~{threads} \
-				--seurat-object ~{seurat_object_basename}_filtered_02.rds \
-				--output-seurat-object ~{seurat_object_basename}_filtered_normalized_03.rds
+		# TODO see whether this is still required given the change to python
+		# If any cells remain after filtering, the data is normalized and variable genes are identified
+		if [[ -s "~{merged_adata_object_basename}_filtered.h5ad" ]]; then
+			python3 /opt/scripts/main/process.py \
+				--adata-input ~{merged_adata_object_basename}_filtered.h5ad \
+				--batch-key "batch_id" \
+				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad \
+				--n-top-genes ~{n_top_genes}
 
 			upload_outputs \
 				-b ~{billing_project} \
 				-d ~{raw_data_path} \
 				-i ~{write_tsv(workflow_info)} \
-				-o "~{seurat_object_basename}_filtered_02.rds" \
-				-o "~{seurat_object_basename}_filtered_normalized_03.rds"
+				-o "~{merged_adata_object_basename}_filtered.h5ad" \
+				-o "~{merged_adata_object_basename}_filtered_normalized.h5ad"
 
 			echo true > cells_remaining_post_filter.txt
 		else
@@ -281,17 +327,17 @@ task filter_and_normalize {
 	>>>
 
 	output {
-		String? filtered_seurat_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{seurat_object_basename}_filtered_02.rds" else my_none
-		String? normalized_seurat_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{seurat_object_basename}_filtered_normalized_03.rds" else my_none
+		String? filtered_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered.h5ad" else my_none
+		String? normalized_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered_normalized.h5ad" else my_none
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
-		cpu: threads
-		memory: "12 GB"
+		docker: "~{container_registry}/scvi:1.1.0_1"
+		cpu: 4
+		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
-		bootDiskSizeGb: 20
+		bootDiskSizeGb: 40
 		zones: zones
 	}
 }
@@ -299,7 +345,7 @@ task filter_and_normalize {
 task plot_groups_and_features {
 	input {
 		String cohort_id
-		File metadata
+		File cell_annotated_adata_object
 
 		Array[String] groups
 		Array[String] features
@@ -308,90 +354,45 @@ task plot_groups_and_features {
 		Array[Array[String]] workflow_info
 		String billing_project
 		String container_registry
-		Int multiome_container_revision
 		String zones
 	}
 
-	Int disk_size = ceil(size(metadata, "GB") * 4 + 20)
+	Int mem_gb = ceil(size(cell_annotated_adata_object, "GB") * 1.1 + 10)
+	Int disk_size = ceil(size(cell_annotated_adata_object, "GB") * 4 + 20)
 
 	command <<<
 		set -euo pipefail
 
-		# Plot groups
-		declare -a group_plots_pdf group_plots_png
-		while read -r group || [[ -n "${group}" ]]; do
-			/usr/bin/time \
-			Rscript /opt/scripts/main/plot_groups.R \
-				--working-dir "$(pwd)" \
-				--metadata ~{metadata} \
-				--group "${group}" \
-				--output-group-umap-plot-prefix "~{cohort_id}.${group}_group_umap"
+		python3 /opt/scripts/main/plot_feats_and_groups.py \
+			--adata-input ~{cell_annotated_adata_object} \
+			--group ~{sep=',' groups} \
+			--output-group-umap-plot-prefix "~{cohort_id}" \
+			--feature ~{sep=',' features} \
+			--output-feature-umap-plot-prefix "~{cohort_id}"
 
-			group_plots_pdf+=("~{cohort_id}.${group}_group_umap.pdf")
-			group_plots_png+=("~{cohort_id}.${group}_group_umap.png")
-		done < ~{write_lines(groups)}
+		mv "plots/umap~{cohort_id}_groups_umap.png" "plots/~{cohort_id}.groups.umap.png"
+		mv "plots/umap~{cohort_id}_features_umap.png" "plots/~{cohort_id}.features.umap.png"
 
-		# shellcheck disable=SC2068
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			${group_plots_pdf[@]/#/-o } \
-			${group_plots_png[@]/#/-o }
-
-		echo "${group_plots_pdf[@]/#/~{raw_data_path}/}" \
-		| tr ' ' '\n' \
-		> group_plot_pdf_locs.txt
-
-		echo "${group_plots_png[@]/#/~{raw_data_path}/}" \
-		| tr ' ' '\n' \
-		> group_plot_png_locs.txt
-
-		# Plot features
-		declare -a feature_plots_pdf feature_plots_png
-		while read -r feature || [[ -n "${feature}" ]]; do
-			/usr/bin/time \
-			Rscript /opt/scripts/main/plot_features.R \
-				--working-dir "$(pwd)" \
-				--metadata ~{metadata} \
-				--feature "${feature}" \
-				--output-feature-umap-plot-prefix "~{cohort_id}.${feature}_feature_umap"
-
-			feature_plots_pdf+=("~{cohort_id}.${feature}_feature_umap.pdf")
-			feature_plots_png+=("~{cohort_id}.${feature}_feature_umap.png")
-		done < ~{write_lines(features)}
-
-		# shellcheck disable=SC2068
-		upload_outputs \
-			-b ~{billing_project} \
-			-d ~{raw_data_path} \
-			-i ~{write_tsv(workflow_info)} \
-			${feature_plots_pdf[@]/#/-o } \
-			${feature_plots_png[@]/#/-o }
-
-		echo "${feature_plots_pdf[@]/#/~{raw_data_path}/}" \
-		| tr ' ' '\n' \
-		> feature_plot_pdf_locs.txt
-
-		echo "${feature_plots_png[@]/#/~{raw_data_path}/}" \
-		| tr ' ' '\n' \
-		> feature_plot_png_locs.txt
+			-o plots/"~{cohort_id}.groups.umap.png" \
+			-o plots/"~{cohort_id}.features.umap.png"
 	>>>
 
 	output {
-		Array[String] group_umap_plots_pdf = read_lines("group_plot_pdf_locs.txt")
-		Array[String] group_umap_plots_png = read_lines("group_plot_png_locs.txt")
-		Array[String] feature_umap_plots_pdf = read_lines("feature_plot_pdf_locs.txt")
-		Array[String] feature_umap_plots_png = read_lines("feature_plot_png_locs.txt")
+		String groups_umap_plot_png = "~{raw_data_path}/~{cohort_id}.groups.umap.png"
+		String features_umap_plot_png = "~{raw_data_path}/~{cohort_id}.features.umap.png"
 	}
 
 	runtime {
-		docker: "~{container_registry}/multiome:4a7fd84_~{multiome_container_revision}"
+		docker: "~{container_registry}/scvi:1.1.0_1"
 		cpu: 2
-		memory: "4 GB"
+		memory: "~{mem_gb} GB"
 		disks: "local-disk ~{disk_size} HDD"
 		preemptible: 3
-		bootDiskSizeGb: 20
+		bootDiskSizeGb: 40
 		zones: zones
 	}
 }

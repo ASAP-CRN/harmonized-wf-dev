@@ -1,0 +1,10 @@
+argparse==1.4.0
+scvi-tools==1.1.0.post2
+scanpy==1.9.8
+muon==0.1.5
+pathlib==1.0.1
+tables==3.9.2
+scrublet==0.2.3
+pymde==0.1.18
+scikit-misc==0.3.1
+leidenalg==0.10.2
