@@ -67,7 +67,6 @@ workflow harmonized_pmdbs_analysis {
 			preprocess.graph_pdf,
 			preprocess.log,
 			preprocess.metrics_csv,
-			preprocess.checkpoint_tar_gz,
 			preprocess.posterior_probability,
 			preprocess.adata_object
 		]) #!StringCoercion
@@ -136,7 +135,6 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]] cellbender_graph_pdf = preprocess.graph_pdf
 		Array[Array[File]] cellbender_log = preprocess.log
 		Array[Array[File]] cellbender_metrics_csv = preprocess.metrics_csv
-		Array[Array[File]] cellbender_checkpoint_tar_gz = preprocess.checkpoint_tar_gz
 		Array[Array[File]] cellbender_posterior_probability = preprocess.posterior_probability
 		Array[Array[File]] adata_object = preprocess.adata_object
 
