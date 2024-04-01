@@ -35,9 +35,6 @@ workflow cluster_data {
 			integrated_adata_object = integrate_sample_data.integrated_adata_object, #!FileCoercion
 			scvi_latent_key =scvi_latent_key,
 			cell_type_markers_list = cell_type_markers_list,
-			raw_data_path = raw_data_path,
-			workflow_info = workflow_info,
-			billing_project = billing_project,
 			container_registry = container_registry,
 			zones = zones
 	}
@@ -55,9 +52,9 @@ workflow cluster_data {
 	}
 
 	output {
-		File integrated_adata_object = integrate_sample_data.integrated_adata_object #!FileCoercion
+		File integrated_adata_object = integrate_sample_data.integrated_adata_object
 		File scvi_model_tar_gz = integrate_sample_data.scvi_model_tar_gz #!FileCoercion
-		File umap_cluster_adata_object = cluster_cells.umap_cluster_adata_object #!FileCoercion
+		File umap_cluster_adata_object = cluster_cells.umap_cluster_adata_object
 		File cell_types_csv = annotate_cells.cell_types_csv #!FileCoercion
 		File cell_annotated_adata_object = annotate_cells.cell_annotated_adata_object #!FileCoercion
 		File cell_annotated_metadata = annotate_cells.cell_annotated_metadata #!FileCoercion
@@ -100,12 +97,11 @@ task integrate_sample_data {
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}.adata_object.scvi_integrated.h5ad" \
 			-o "~{cohort_id}_scvi_model.tar.gz"
 	>>>
 
 	output {
-		String integrated_adata_object = "~{raw_data_path}/~{cohort_id}.adata_object.scvi_integrated.h5ad"
+		File integrated_adata_object = "~{cohort_id}.adata_object.scvi_integrated.h5ad"
 		String scvi_model_tar_gz = "~{raw_data_path}/~{cohort_id}_scvi_model.tar.gz"
 	}
 
@@ -130,9 +126,6 @@ task cluster_cells {
 		String scvi_latent_key
 		File cell_type_markers_list
 
-		String raw_data_path
-		Array[Array[String]] workflow_info
-		String billing_project
 		String container_registry
 		String zones
 	}
@@ -148,16 +141,10 @@ task cluster_cells {
 			--adata-input ~{integrated_adata_object} \
 			--adata-output ~{integrated_adata_object_basename}.umap_cluster.h5ad \
 			--latent-key ~{scvi_latent_key}
-
-		upload_outputs \
-			-b ~{billing_project} \
-			-d ~{raw_data_path} \
-			-i ~{write_tsv(workflow_info)} \
-			-o "~{integrated_adata_object_basename}.umap_cluster.h5ad"
 	>>>
 
 	output {
-		String umap_cluster_adata_object = "~{raw_data_path}/~{integrated_adata_object_basename}.umap_cluster.h5ad"
+		File umap_cluster_adata_object = "~{integrated_adata_object_basename}.umap_cluster.h5ad"
 	}
 
 	runtime {
