@@ -359,7 +359,6 @@ task remove_technical_artifacts {
 		String log = "~{raw_data_path}/~{sample_id}.cellbender.log"
 		String metrics_csv = "~{raw_data_path}/~{sample_id}.cellbender_metrics.csv"
 		String posterior_probability = "~{raw_data_path}/~{sample_id}.cellbend_posterior.h5"
-		File checkpoint_tar_gz = "~{sample_id}.cellbender_ckpt.tar.gz"
 	}
 
 	runtime {
