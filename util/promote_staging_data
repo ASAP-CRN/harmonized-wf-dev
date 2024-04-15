@@ -20,6 +20,7 @@ cat << EOF
     $(tput bold)-a$(tput sgr0)  Promote all teams' data
     $(tput bold)-l$(tput sgr0)  List available teams
     $(tput bold)-p$(tput sgr0)  Promote data. If this option is not selected, data that would be copied or deleted is printed out, but files are not actually changed (dry run)
+    $(tput bold)-s$(tput sgr0)  Staging bucket type; options are 'dev' or 'uat' ['dev']
 
 EOF
 }
@@ -54,14 +55,17 @@ ALL_TEAMS=(cohort team-hafler team-hardy team-jakobsson team-lee team-scherzer t
 
 # Default to dry run if promotion is not selected
 DRY_RUN_ARG="-n"
+# Default to dev staging buckets
+STAGING_BUCKET_TYPE='dev'
 
-while getopts "ht:alp" OPTION; do
+while getopts "ht:alps:" OPTION; do
   case $OPTION in
     h) usage; exit ;;
     t) read -ra TEAMS <<< "$(echo "${OPTARG}" | tr ',' ' ')" ;;
     a) TEAMS=( "${ALL_TEAMS[@]}" ) ;;
     l) list_teams; exit ;;
     p) DRY_RUN_ARG="" ;;
+    s) STAGING_BUCKET_TYPE=${OPTARG} ;;
     \?) usage; exit ;;
   esac
 done
@@ -70,6 +74,12 @@ if [[ -z "${TEAMS:-}" ]]; then
   usage
   list_teams
   exit
+fi
+
+if [[ "${STAGING_BUCKET_TYPE}" != "dev" ]] | [[ "${STAGING_BUCKET_TYPE}" != "uat" ]] ; then
+  usage
+  err "Staging bucket type must be 'dev' or 'uat'"
+  exit 1
 fi
 
 # Confirm that the teams provided are valid
@@ -83,7 +93,7 @@ done
 
 # Try syncing staging data to production
 for team in "${TEAMS[@]}"; do
-  staging_bucket=gs://asap-dev-data-${team}
+  staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
   production_bucket=gs://asap-curated-data-${team}
 
   log "Promoting [${team}] data to production"
