@@ -226,7 +226,7 @@ The script defaults to a dry run, printing out the files that would be copied or
 -a  Promote all teams' data
 -l  List available teams
 -p  Promote data. If this option is not selected, data that would be copied or deleted is printed out, but files are not actually changed (dry run)
--s  Staging bucket type; options are 'dev' or 'uat' ['dev']
+-s  Staging bucket type; options are 'uat' or 'dev' ['uat']
 ```
 
 ### Usage
@@ -239,10 +239,10 @@ The script defaults to a dry run, printing out the files that would be copied or
 ./util/promote_staging_data -t team-hafler,team-lee,cohort
 
 # Promote data for team-hafler, team-hardy, team-jakobsson, team-lee, team-scherzer, team-sulzer, and cohort
-./util/promote_staging_data -a -p
+./util/promote_staging_data -a -p -s dev
 
 # Print out the files that would be copied or deleted from the staging bucket to the curated bucket for unembargoed cohort (team-hafler, team-lee, and team-jakobsson)
-./util/promote_staging_data -t cohort -s uat
+./util/promote_staging_data -t cohort
 ```
 
 # Docker images
