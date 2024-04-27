@@ -282,8 +282,8 @@ task filter_and_normalize {
 	}
 
 	String merged_adata_object_basename = basename(merged_adata_object, ".h5ad")
-	Int mem_gb = ceil(size(merged_adata_object, "GB") * 5 + 20)
-	Int disk_size = ceil(size(merged_adata_object, "GB") * 4 + 20)
+	Int mem_gb = ceil(size(merged_adata_object, "GB") * 8 + 20)
+	Int disk_size = ceil(size(merged_adata_object, "GB") * 5 + 20)
 
 	command <<<
 		set -euo pipefail
