@@ -94,13 +94,7 @@ workflow cohort_analysis {
 			zones = zones
 	}
 
-	Array[String] cohort_analysis_intermediate_output_paths = flatten([
-		select_all([filter_and_normalize.filtered_adata_object]),
-		select_all([filter_and_normalize.normalized_adata_object]),
-		[
-			cluster_data.scvi_model_tar_gz
-		]
-	]) #!StringCoercion
+	Array[String] cohort_analysis_intermediate_output_paths = [cluster_data.scvi_model_tar_gz] #!StringCoercion
 
 	call UploadFinalOutputs.upload_final_outputs as upload_preprocess_files {
 		input:
@@ -139,9 +133,11 @@ workflow cohort_analysis {
 	output {
 		File cohort_sample_list = write_cohort_sample_list.cohort_sample_list #!FileCoercion
 
-		# Merged adata objects and QC plots
+		# Merged adata objects, filtered and normalized adata objects, QC plots
 		File merged_adata_object = merge_and_plot_qc_metrics.merged_adata_object
 		Array[File] qc_plots_png = merge_and_plot_qc_metrics.qc_plots_png #!FileCoercion
+		File? filtered_adata_object = filter_and_normalize.filtered_adata_object
+		File? normalized_adata_object = filter_and_normalize.normalized_adata_object
 
 		# Clustering output
 		File integrated_adata_object = cluster_data.integrated_adata_object
@@ -282,7 +278,7 @@ task filter_and_normalize {
 	}
 
 	String merged_adata_object_basename = basename(merged_adata_object, ".h5ad")
-	Int mem_gb = ceil(size(merged_adata_object, "GB") * 2.9 + 20)
+	Int mem_gb = ceil(size(merged_adata_object, "GB") * 18 + 20)
 	Int disk_size = ceil(size(merged_adata_object, "GB") * 4 + 20)
 
 	command <<<
@@ -338,7 +334,7 @@ task plot_groups_and_features {
 		String zones
 	}
 
-	Int mem_gb = ceil(size(cell_annotated_adata_object, "GB") * 1.1 + 10)
+	Int mem_gb = ceil(size(cell_annotated_adata_object, "GB") * 5 + 20)
 	Int disk_size = ceil(size(cell_annotated_adata_object, "GB") * 4 + 20)
 
 	command <<<

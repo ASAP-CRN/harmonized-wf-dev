@@ -142,9 +142,11 @@ workflow harmonized_pmdbs_analysis {
 		## List of samples included in the cohort
 		Array[File?] project_cohort_sample_list = project_cohort_analysis.cohort_sample_list
 
-		## Merged adata objects and QC plots
+		# Merged adata objects, filtered and normalized adata objects, QC plots
 		Array[File?] project_merged_adata_object = project_cohort_analysis.merged_adata_object
 		Array[Array[File]?] project_qc_plots_png = project_cohort_analysis.qc_plots_png
+		Array[File?] project_filtered_adata_object = project_cohort_analysis.filtered_adata_object
+		Array[File?] project_normalized_adata_object = project_cohort_analysis.normalized_adata_object
 
 		# Clustering outputs
 		Array[File?] project_integrated_adata_object = project_cohort_analysis.integrated_adata_object
@@ -165,9 +167,11 @@ workflow harmonized_pmdbs_analysis {
 		## List of samples included in the cohort
 		File? cohort_sample_list = cross_team_cohort_analysis.cohort_sample_list
 
-		## QC plots
+		# Merged adata objects, filtered and normalized adata objects, QC plots
 		File? cohort_merged_adata_object = cross_team_cohort_analysis.merged_adata_object
 		Array[File]? cohort_qc_plots_png = cross_team_cohort_analysis.qc_plots_png
+		File? cohort_filtered_adata_object = cross_team_cohort_analysis.filtered_adata_object
+		File? cohort_normalized_adata_object = cross_team_cohort_analysis.normalized_adata_object
 
 		# Clustering outputs
 		File? cohort_integrated_adata_object = cross_team_cohort_analysis.integrated_adata_object
