@@ -94,13 +94,7 @@ workflow cohort_analysis {
 			zones = zones
 	}
 
-	Array[String] cohort_analysis_intermediate_output_paths = flatten([
-		select_all([filter_and_normalize.filtered_adata_object]),
-		select_all([filter_and_normalize.normalized_adata_object]),
-		[
-			cluster_data.scvi_model_tar_gz
-		]
-	]) #!StringCoercion
+	Array[String] cohort_analysis_intermediate_output_paths = [cluster_data.scvi_model_tar_gz] #!StringCoercion
 
 	call UploadFinalOutputs.upload_final_outputs as upload_preprocess_files {
 		input:
@@ -139,9 +133,11 @@ workflow cohort_analysis {
 	output {
 		File cohort_sample_list = write_cohort_sample_list.cohort_sample_list #!FileCoercion
 
-		# Merged adata objects and QC plots
+		# Merged adata objects, filtered and normalized adata objects, QC plots
 		File merged_adata_object = merge_and_plot_qc_metrics.merged_adata_object
 		Array[File] qc_plots_png = merge_and_plot_qc_metrics.qc_plots_png #!FileCoercion
+		File? filtered_adata_object = filter_and_normalize.filtered_adata_object
+		File? normalized_adata_object = filter_and_normalize.normalized_adata_object
 
 		# Clustering output
 		File integrated_adata_object = cluster_data.integrated_adata_object
