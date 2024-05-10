@@ -49,7 +49,7 @@ args = parser.parse_args()
 scanpy._settings.ScanpyConfig.n_jobs = -1
 
 ## parameters
-n_latent = 10
+n_latent = 30
 n_layers = 2
 train_size = 0.85
 scvi_epochs = 200
