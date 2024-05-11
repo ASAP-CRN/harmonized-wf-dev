@@ -1,12 +1,10 @@
-import os
 import argparse
-import scvi
-import anndata as ad
 import scanpy
 import numpy as np
 from scib_metrics.benchmark import Benchmarker, BioConservation
 from scib_metrics.nearest_neighbors import NeighborsResults
 import faiss
+from pathlib import Path
 
 parser = argparse.ArgumentParser(description="Run scVI integration")
 parser.add_argument(
@@ -73,8 +71,13 @@ def faiss_brute_force_nn(X: np.ndarray, k: int):
 
 adata = scanpy.read_h5ad(args.adata_input)  # type: ignore
 
+# these should be there...
 if "X_pca" not in adata.obsm:
     scanpy.pp.pca(adata, n_comps=30)
+
+if "X_pca_harmony" not in adata.obsm:
+    scanpy.external.pp.harmony_integrate(adata, "sample")
+
 
 adata.obsm["Unintegrated"] = adata.obsm["X_pca"]
 
@@ -84,7 +87,7 @@ bm = Benchmarker(
     adata,
     batch_key="sample",
     label_key="cell_type",
-    embedding_obsm_keys=["Unintegrated", "X_scvi"],
+    embedding_obsm_keys=["Unintegrated", "X_scvi", "X_pca_harmony"],
     pre_integrated_embedding_obsm_key="X_pca",
     bio_conservation_metrics=biocons,
     n_jobs=-1,
@@ -92,6 +95,10 @@ bm = Benchmarker(
 bm.prepare(neighbor_computer=faiss_brute_force_nn)
 bm.benchmark()
 
-bm.plot_results_table(min_max_scale=False, save_dir=args.scib_report_dir)
+report_dir = Path.cwd() / args.scib_report_dir
+if not report_dir.exists():
+    report_dir.mkdir(parents=True, exist_ok=True)
+
+bm.plot_results_table(min_max_scale=False, save_dir=report_dir)
 df = bm.get_results(min_max_scale=False)
-df.to_csv(os.path.join(args.scib_report_dir, "results.csv"), index=False)
+df.to_csv((report_dir / "results.csv"), index=False)
