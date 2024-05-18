@@ -4,7 +4,7 @@ import sys
 import pandas as pd
 
 sys.path.append("/opt/scripts/utility")
-from helpers import score_cell_cycle
+from helpers import score_cell_cycle, get_validation_metrics
 
 
 parser = argparse.ArgumentParser(description="Normalize seurat objects")
@@ -38,6 +38,19 @@ parser.add_argument(
     default="resources/celltype_marker_table.csv",
     help="Path to marker_genes .csv file",
 )
+parser.add_argument(
+    "--output-validation-file",
+    dest="output_validation_file",
+    type=str,
+    help="Output file to write validation metrics to",
+)
+parser.add_argument(
+    "--output-validation-file",
+    dest="output_validation_file",
+    type=str,
+    help="Output file to write validation metrics to",
+)
+
 
 args = parser.parse_args()
 
@@ -120,3 +133,8 @@ adata = adata[:, hvgs_full]
 scanpy.pp.pca(adata, n_comps=30)
 
 adata.write_h5ad(filename=args.adata_output, compression="gzip")
+
+#######  validation metrics
+val_metrics = get_validation_metrics(adata, "feature_selection")
+# log the validation metrics
+val_metrics.to_csv(args.output_validation_file, index=True)

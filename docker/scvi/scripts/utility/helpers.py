@@ -9,7 +9,13 @@ from typing import Dict, Optional
 
 from scipy.stats import multinomial
 from sklearn.neighbors import NearestNeighbors
-from sklearn.metrics import accuracy_score, roc_auc_score, average_precision_score, roc_curve, precision_recall_curve
+from sklearn.metrics import (
+    accuracy_score,
+    roc_auc_score,
+    average_precision_score,
+    roc_curve,
+    precision_recall_curve,
+)
 from scipy.special import softmax
 from scvi.external import SOLO
 from scvi.model import SCVI
@@ -21,6 +27,28 @@ import seaborn as sns
 import scanpy as sc
 
 matplotlib.use("Agg")
+
+
+def get_validation_metrics(adata: ad.AnnData, step: str):
+    """Log validation metrics for adata object."""
+    n_samples = adata.obs["sample"].nunique()
+    n_cells = adata.n_obs
+    n_genes = adata.n_vars
+    n_doublets = adata.obs["predicted_doublet"].sum()
+
+    # create a dataframe with the metrics plus the column step= "concatenation"
+    val_metrics = pd.DataFrame(
+        {
+            "step": [step],
+            "n_samples": [n_samples],
+            "n_cells": [n_cells],
+            "n_genes": [n_genes],
+            "n_doublets": [n_doublets],
+        }
+    )
+
+    return val_metrics
+
 
 def minify_adata(adata: ad.AnnData):
     """Minify the adata object to save space."""
@@ -42,6 +70,7 @@ def minify_adata(adata: ad.AnnData):
 
 # copied from cellbender.remove_background.downstream which only works with python 3.7
 """Functions for downstream work with outputs of remove-background."""
+
 
 def dict_from_h5(file: str) -> Dict[str, np.ndarray]:
     """Read in everything from an h5 file and put into a dictionary.
@@ -215,7 +244,6 @@ def _fill_adata_slots_automatically(adata, d):
             print("Unable to load data into AnnData: ", key, value, type(value))
 
 
-
 # from calico/solo repo
 def get_solo_results(
     solo: SOLO,
@@ -225,9 +253,7 @@ def get_solo_results(
     expected_number_of_doublets: Optional[int] = None,
     gen_report: bool = False,
 ):
-    """ 
-    
-    """
+    """ """
 
     num_cells, num_genes = adata.shape
 
@@ -263,7 +289,11 @@ def get_solo_results(
 
     # write predictions
     # softmax predictions
-    softmax_predictions = pd.DataFrame( softmax(logit_predictions, axis=1), columns = logit_predictions.columns, index=logit_predictions.index)
+    softmax_predictions = pd.DataFrame(
+        softmax(logit_predictions, axis=1),
+        columns=logit_predictions.columns,
+        index=logit_predictions.index,
+    )
 
     doublet_score = softmax_predictions.loc[:, "doublet"]
 
@@ -344,7 +374,7 @@ def get_solo_results(
         ax.set_ylabel("pytPrecision")
         ax.legend()
         # plt.savefig(os.path.join(args.out_dir, "precision_recall.pdf"))
-         # plt.show()
+        # plt.show()
         ret_figs.append(fig)
 
         # plot distributions
@@ -375,9 +405,7 @@ def get_solo_results(
             s=8,
             cmap="GnBu",
         )
-        plt.colorbar(
-                cax, ax=ax, pad=0.01, fraction=0.08, aspect=30, location="right"
-            )
+        plt.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30, location="right")
         ax.set_xlabel("UMAP 1")
         ax.set_ylabel("UMAP 2")
         ax.set_title("SOLO doublet_score")
@@ -460,8 +488,6 @@ def knn_smooth_pred_class(
     return smooth_pred_class
 
 
-
-
 # copied from scib: https://github.com/theislab/scib/blob/main/scib/preprocessing.py
 # Cell Cycle
 def score_cell_cycle(adata, organism="mouse"):
@@ -504,8 +530,6 @@ def score_cell_cycle(adata, organism="mouse"):
         ],
     }
 
-
-
     with open(cc_files[organism][0]) as f:
         s_genes = [x.strip() for x in f.readlines() if x.strip() in adata.var.index]
     with open(cc_files[organism][1]) as f:
@@ -519,4 +543,3 @@ def score_cell_cycle(adata, organism="mouse"):
         )
 
     sc.tl.score_genes_cell_cycle(adata, s_genes=s_genes, g2m_genes=g2m_genes)
-
