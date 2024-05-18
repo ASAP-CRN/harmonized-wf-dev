@@ -11,13 +11,14 @@
 
 # python3 /opt/scripts/main/plot_qc_metrics.py \
 # 			--adata-objects-fofn "adata_objects_paths.txt" \
-# 			--adata-output "artifacts/asap-cohort.merged_adata_object_filtered.h5ad"
+# 			--adata-output "artifacts/asap-cohort.merged_adata_object.h5ad"
+			# --output-validation-file "testing/output_validation.csv" 
 
 
-# python3 /opt/scripts/main/filter.py \
-#     --adata-input "testing/02_test_merged_adata.h5ad"  \
-#     --adata-output "testing/03_test_merged_adata_filtered.h5ad" \
-# 	--batch-key "batch_id"
+python3 /opt/scripts/main/filter.py \
+    --adata-input "artifacts/asap-cohort.merged_adata_object.h5ad" \
+    --adata-output "artifacts/asap-cohort.merged_adata_object_filtered.h5ad" \
+	--output-validation-file "artifacts/asap-cohort.output_validation.csv" 
 
 
 python3 /opt/scripts/main/process.py \
@@ -25,7 +26,8 @@ python3 /opt/scripts/main/process.py \
 				--adata-output "artifacts/asap-cohort.merged_adata_object_filtered_normalized.h5ad" \
                 --marker-genes "testing/celltype_marker_table.csv" \
 				--n-top-genes 3000 \
-                --batch-key "sample"
+                --batch-key "sample" \
+                --output-validation-file "artifacts/asap-cohort.output_validation.csv" 
 
 
 python3 /opt/scripts/main/integrate_scvi.py \

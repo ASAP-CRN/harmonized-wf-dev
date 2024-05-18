@@ -2,7 +2,9 @@ import argparse
 import scanpy
 import anndata
 import pandas as pd
+import sys
 
+sys.path.append("/opt/scripts/utility")
 from helpers import get_validation_metrics
 
 parser = argparse.ArgumentParser(description="Call doublets")

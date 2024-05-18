@@ -29,12 +29,26 @@ import scanpy as sc
 matplotlib.use("Agg")
 
 
+def update_validation_metrics(adata: ad.AnnData, step: str, val_metrics: pd.DataFrame):
+    """Update the validation metrics dataframe with new metrics for adata object."""
+    new_metrics = get_validation_metrics(adata, step)
+    val_metrics = pd.concat([val_metrics, new_metrics], ignore_index=True)
+    return val_metrics
+
+
 def get_validation_metrics(adata: ad.AnnData, step: str):
     """Log validation metrics for adata object."""
     n_samples = adata.obs["sample"].nunique()
     n_cells = adata.n_obs
     n_genes = adata.n_vars
-    n_doublets = adata.obs["predicted_doublet"].sum()
+
+    # fractional metrics
+    n_mito_contaminated = (adata.obs["pct_counts_mt"] > 10).sum()
+    n_predicted_doublet = (adata.obs["doublet_score"] >= 0.2).sum()
+    n_low_counts = (adata.obs["total_counts"] < 500).sum()
+    n_high_counts = (adata.obs["total_counts"] > 100000).sum()
+    n_low_genes = (adata.obs["n_genes_by_counts"] < 300).sum()
+    n_high_genes = (adata.obs["n_genes_by_counts"] > 10000).sum()
 
     # create a dataframe with the metrics plus the column step= "concatenation"
     val_metrics = pd.DataFrame(
@@ -43,7 +57,12 @@ def get_validation_metrics(adata: ad.AnnData, step: str):
             "n_samples": [n_samples],
             "n_cells": [n_cells],
             "n_genes": [n_genes],
-            "n_doublets": [n_doublets],
+            "n_mito_contaminated": [n_mito_contaminated],
+            "n_predicted_doublet": [n_predicted_doublet],
+            "n_low_counts": [n_low_counts],
+            "n_high_counts": [n_high_counts],
+            "n_low_genes": [n_low_genes],
+            "n_high_genes": [n_high_genes],
         }
     )
 

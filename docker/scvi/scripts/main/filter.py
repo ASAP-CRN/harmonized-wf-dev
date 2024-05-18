@@ -2,8 +2,12 @@
 import muon
 import scanpy
 import argparse
+import pandas as pd
+import pandas as pd
+import sys
 
-from helpers import get_validation_metrics
+sys.path.append("/opt/scripts/utility")
+from helpers import update_validation_metrics
 
 parser = argparse.ArgumentParser(description="Filter")
 parser.add_argument(
@@ -43,6 +47,9 @@ adata.write_h5ad(filename=args.adata_output, compression="gzip")
 
 
 #######  validation metrics
-val_metrics = get_validation_metrics(adata, "filter")
+val_metrics = pd.read_csv(args.output_validation_file)
+
+output_metrics = update_validation_metrics(adata, "filter", val_metrics)
+
 # log the validation metrics
-val_metrics.to_csv(args.output_validation_file, index=True)
+output_metrics.to_csv(args.output_validation_file, index=True)
