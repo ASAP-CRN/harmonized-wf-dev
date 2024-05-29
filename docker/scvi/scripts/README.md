@@ -2,7 +2,7 @@
 
 
 ### _PREPROCESS_
-- _pre-preprocessing_: [`cellbender`](../../cellbender/scripts/cellbender.py)
+- _pre-preprocessing_: [`cellbender :: remove_technical_artifacts`](../../../workflows/preprocess/preprocess.wdl)
 - _preprocessing_: [`scrublet`]('preprocess.py') 
 
 ### _QC: metrics_
