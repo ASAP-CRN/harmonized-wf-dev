@@ -105,4 +105,9 @@ predictions.to_csv(args.cell_type_output, index=False) # # pred_file = "cellassi
 adata.write_h5ad(filename=args.adata_output, compression='gzip')
 
 # 10. save metadata
-adata.obs.to_csv(args.output_metadata_file, index=True) # metadata_file = "metadata.csv"
+metatable = adata.obs 
+metatable['UMAP_1'] = adata.obsm['X_umap'][:,0]
+metatable['UMAP_2'] = adata.obsm['X_umap'][:,1]
+
+metatable.to_csv(args.output_metadata_file, index=True) # metadata_file = "metadata.csv"
+# adata.obs.to_csv(args.output_metadata_file, index=True) # metadata_file = "metadata.csv"
