@@ -26,22 +26,179 @@
         "write_cohort_sample_list": {
           "key": "write_cohort_sample_list",
           "digest": "",
-          "tests": []
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "project_sample_ids": "${project_sample_ids}",
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "cohort_sample_list": {
+                  "value": "${input_resources_file_path}/asap-cohort.sample_list.tsv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_tab_delimited",
+                    "count_columns"
+                  ]
+                }
+              }
+            }
+          ]
         },
         "merge_and_plot_qc_metrics": {
           "key": "merge_and_plot_qc_metrics",
           "digest": "",
-          "tests": []
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "preprocessed_adata_objects": [
+                  "${input_resources_file_path}/ASAP_PMBDS_000105_s001_1.adata_object.h5ad",
+                  "${input_resources_file_path}/ASAP_PMBDS_000108_s001_1.adata_object.h5ad",
+                  "${input_resources_file_path}/ASAP_PMBDS_000026_s001_Rep1.adata_object.h5ad",
+                  "${input_resources_file_path}/ASAP_PMBDS_000027_s001_Rep1.adata_object.h5ad",
+                  "${input_resources_file_path}/ASAP_PMBDS_000001_s002_rep1.adata_object.h5ad",
+                  "${input_resources_file_path}/ASAP_PMBDS_000001_s001_rep1.adata_object.h5ad",
+                  "${input_resources_file_path}/ASAP_PMBDS_000003_s004_rep1.adata_object.h5ad",
+                  "${input_resources_file_path}/ASAP_PMBDS_000128_s001_rep1.adata_object.h5ad"
+                ],
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "merged_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_id}.merged_adata_object.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5" #TODO
+                  ]
+                },
+                "qc_plots_png": {
+                  "value": [
+                    "${input_resources_file_path}/${cohort_id}.n_genes_by_counts.violin.png",
+                    "${input_resources_file_path}/${cohort_id}.total_counts.violin.png",
+                    "${input_resources_file_path}/${cohort_id}.pct_counts_mt.violin.png",
+                    "${input_resources_file_path}/${cohort_id}.pct_counts_rb.violin.png",
+                    "${input_resources_file_path}/${cohort_id}.doublet_score.violin.png"
+                  ],
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "png_validator"
+                  ]
+                }
+              }
+            }
+          ]
         },
         "filter_and_normalize": {
           "key": "filter_and_normalize",
           "digest": "",
-          "tests": []
+          "tests": [
+            {
+              "inputs": {
+                "merged_adata_object": "${input_resources_file_path}/${cohort_id}.merged_adata_object.h5ad",
+                "n_top_genes": 8000,
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "filtered_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_id}.merged_adata_object_filtered.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5"
+                  ]
+                },
+                "normalized_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_id}.merged_adata_object_filtered_normalized.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5"
+                  ]
+                }
+              }
+            }
+          ]
         },
         "plot_groups_and_features": {
           "key": "plot_groups_and_features",
           "digest": "",
-          "tests": []
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "cell_annotated_adata_object": "${input_resources_file_path}/${cohort_id}.adata_object.scvi_integrated.umap_cluster.annotate_cells.h5ad",
+                "groups": [
+                  "sample",
+                  "batch",
+                  "cell_type"
+                ],
+                "features": [
+                  "n_genes_by_counts",
+                  "total_counts",
+                  "pct_counts_mt",
+                  "pct_counts_rb",
+                  "doublet_score",
+                  "S_score",
+                  "G2M_score"
+                ],
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "groups_umap_plot_png": {
+                  "value": "${input_resources_file_path}/${cohort_id}.groups.umap.png",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "png_validator"
+                  ]
+                },
+                "features_umap_plot_png": {
+                  "value": "${input_resources_file_path}/${cohort_id}.features.umap.png",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "png_validator"
+                  ]
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -53,17 +210,121 @@
         "integrate_sample_data": {
           "key": "integrate_sample_data",
           "digest": "",
-          "tests": []
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "normalized_adata_object": "${input_resources_file_path}/${cohort_id}.merged_adata_object_filtered_normalized.h5ad",
+                "scvi_latent_key": "${scvi_latent_key}",
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "integrated_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_id}.adata_object.scvi_integrated.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5"
+                  ]
+                },
+                "scvi_model_tar_gz": {
+                  "value": "${input_resources_file_path}/${cohort_id}_scvi_model.tar.gz",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_gzip.wdl"
+                  ]
+                }
+              }
+            }
+          ]
         },
         "cluster_cells": {
           "key": "cluster_cells",
           "digest": "",
-          "tests": []
+          "tests": [
+            {
+              "inputs": {
+                "integrated_adata_object": "${input_resources_file_path}/${cohort_id}.adata_object.scvi_integrated.h5ad",
+                "scvi_latent_key": "${scvi_latent_key}",
+                "cell_type_markers_list": "${input_file_path}/celltype_marker_table.csv",
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "umap_cluster_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_id}.adata_object.scvi_integrated.umap_cluster.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5"
+                  ]
+                }
+              }
+            }
+          ]
         },
         "annotate_cells": {
           "key": "annotate_cells",
           "digest": "",
-          "tests": []
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "cluster_adata_object": "${input_resources_file_path}/${cohort_id}.adata_object.scvi_integrated.umap_cluster.h5ad",
+                "cell_type_markers_list": "${input_file_path}/celltype_marker_table.csv",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "cell_types_csv": {
+                  "value": "${input_resources_file_path}/${cohort_id}.cell_types.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
+                },
+                "cell_annotated_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_id}.adata_object.scvi_integrated.umap_cluster.annotate_cells.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5"
+                  ]
+                },
+                "cell_annotated_metadata": {
+                  "value": "${input_resources_file_path}/${cohort_id}.annotate_cells.metadata.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -80,17 +341,196 @@
         "cellranger_count": {
           "key": "cellranger_count",
           "digest": "",
-          "tests": []
+          "tests": [
+            {
+              "inputs": {
+                "sample_id": "${sample_id}",
+                "fastq_R1s": [
+                  "gs://asap-raw-data-team-jakobsson/fastqs/ASAP1_PD_NP16-162_SN_R1.fastq.gz"
+                ],
+                "fastq_R2s": [
+                  "gs://asap-raw-data-team-jakobsson/fastqs/ASAP1_PD_NP16-162_SN_R2.fastq.gz"
+                ],
+                "fastq_I1s": [
+                  "gs://asap-raw-data-team-jakobsson/fastqs/ASAP1_PD_NP16-162_SN_I1.fastq.gz"
+                ],
+                "fastq_I2s": [],
+                "cellranger_reference_data": "${input_resources_file_path}/refdata-gex-GRCh38-2020-A.tar.gz",
+                "raw_data_path": "${cellranger_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${preprocess_workflow_name}",
+                    "${preprocess_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "raw_counts": {
+                  "value": "${input_resources_file_path}/${sample_id}.raw_feature_bc_matrix.h5",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5"
+                  ]
+                },
+                "filtered_counts": {
+                  "value": "${input_resources_file_path}/${sample_id}.filtered_feature_bc_matrix.h5",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5"
+                  ]
+                },
+                "molecule_info": {
+                  "value": "${input_resources_file_path}/${sample_id}.molecule_info.h5",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5"
+                  ]
+                },
+                "metrics_summary_csv": {
+                  "value": "${input_resources_file_path}/${sample_id}.metrics_summary.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
+                }
+              }
+            }
+          ]
         },
         "remove_technical_artifacts": {
           "key": "remove_technical_artifacts",
           "digest": "",
-          "tests": []
+          "tests": [
+            {
+              "inputs": {
+                "sample_id": "${sample_id}",
+                "raw_counts": "${input_resources_file_path}/${sample_id}.raw_feature_bc_matrix.h5",
+                "cellbender_fpr": 0.0,
+                "raw_data_path": "${cellbender_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${preprocess_workflow_name}",
+                    "${preprocess_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "report_html": {
+                  "value": "${input_resources_file_path}/${sample_id}.cellbender_report.html",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "html_validator",
+                    "check_html"
+                  ]
+                },
+                "removed_background_counts": {
+                  "value": "${input_resources_file_path}/${sample_id}.cellbender.h5",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5"
+                  ]
+                },
+                "filtered_removed_background_counts": {
+                  "value": "${input_resources_file_path}/${sample_id}.cellbender_filtered.h5",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5"
+                  ]
+                },
+                "cell_barcodes_csv": {
+                  "value": "${input_resources_file_path}/${sample_id}.cellbender_cell_barcodes.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
+                },
+                "graph_pdf": {
+                  "value": "${input_resources_file_path}/${sample_id}.cellbender.pdf",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "pdf_validator"
+                  ]
+                },
+                "log": {
+                  "value": "${input_resources_file_path}/${sample_id}.cellbender.log",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines"
+                  ]
+                },
+                "metrics_csv": {
+                  "value": "${input_resources_file_path}/${sample_id}.cellbender_metrics.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
+                },
+                "posterior_probability": {
+                  "value": "${input_resources_file_path}/${sample_id}.cellbend_posterior.h5",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5"
+                  ]
+                }
+              }
+            }
+          ]
         },
         "counts_to_adata": {
           "key": "counts_to_adata",
           "digest": "",
-          "tests": []
+          "tests": [
+            {
+              "inputs": {
+                "sample_id": "${sample_id}",
+                "batch": "1",
+                "project_id": "team-jakobsson",
+                "cellbender_counts": "${input_resources_file_path}/${sample_id}.cellbender.h5",
+                "raw_data_path": "${adata_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${preprocess_workflow_name}",
+                    "${preprocess_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "adata_object": {
+                  "value": "${input_resources_file_path}/${sample_id}.adata_object.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_hdf5"
+                  ]
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -109,7 +549,62 @@
   },
   "engines": {},
   "test_params": {
-    "global_params": {},
-    "engine_params": {}
+    "global_params": {
+      "sample_id": "ASAP_PMBDS_000105_s001_1",
+      "cohort_id": "asap-cohort",
+      "project_sample_ids": [
+        [
+          "team-jakobsson",
+          "ASAP_PMBDS_000105_s001_1"
+        ],
+        [
+          "team-jakobsson",
+          "ASAP_PMBDS_000108_s001_1"
+        ],
+        [
+          "team-hafler",
+          "ASAP_PMBDS_000026_s001_Rep1"
+        ],
+        [
+          "team-hafler",
+          "ASAP_PMBDS_000027_s001_Rep1"
+        ],
+        [
+          "team-lee",
+          "ASAP_PMBDS_000001_s002_rep1"
+        ],
+        [
+          "team-lee",
+          "ASAP_PMBDS_000001_s001_rep1"
+        ],
+        [
+          "team-scherzer",
+          "ASAP_PMBDS_000003_s004_rep1"
+        ],
+        [
+          "team-scherzer",
+          "ASAP_PMBDS_000128_s001_rep1"
+        ]
+      ],
+      "cellranger_raw_data_path": "gs://asap-wdl-ci/workflow_execution/preprocess/cellranger/1.0.0",
+      "cellbender_raw_data_path": "gs://asap-wdl-ci/workflow_execution/preprocess/remove_technical_artifacts/1.0.0",
+      "adata_raw_data_path": "gs://asap-wdl-ci/workflow_execution/preprocess/counts_to_adata/1.0.0",
+      "preprocess_workflow_name": "preprocess",
+      "preprocess_workflow_version": "1.0.0",
+      "cohort_raw_data_path": "gs://asap-wdl-ci/workflow_execution/${cohort_workflow_name}/${cohort_workflow_version}/${run_timestamp}",
+      "run_timestamp": "2024-05-29T00-00-00Z",
+      "cohort_workflow_name": "cohort_analysis",
+      "cohort_workflow_version": "2.0.0",
+      "scvi_latent_key": "X_scvi",
+      "billing_project": "dnastack-asap-parkinsons",
+      "container_registry": "us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images",
+      "zones": "us-central1-c us-central1-f"
+    },
+    "engine_params": {
+      "asap-cromwell": {
+        "input_file_path": "gs://asap-workflow-dev/workflow-resources",
+        "input_resources_file_path": "gs://asap-wdl-ci/pmdbs"
+      }
+    }
   }
 }
