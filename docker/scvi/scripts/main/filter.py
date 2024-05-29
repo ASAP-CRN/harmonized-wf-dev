@@ -3,7 +3,6 @@ import muon
 import scanpy
 import argparse
 import pandas as pd
-import pandas as pd
 import sys
 
 sys.path.append("/opt/scripts/utility")
@@ -39,15 +38,15 @@ adata = scanpy.read_h5ad(args.adata_input)  # type: ignore
 # muon api is better than the scanpyt api for this...
 muon.pp.filter_obs(adata, "pct_counts_mt", lambda x: x <= 10)
 muon.pp.filter_obs(adata, "doublet_score", lambda x: x < 0.2)
-muon.pp.filter_obs(adata, "total_counts", lambda x: (x >= 500) & (x <= 100000))
-muon.pp.filter_obs(adata, "n_genes_by_counts", lambda x: (x >= 300) & (x <= 10000))
+muon.pp.filter_obs(adata, "total_counts", lambda x: (x >= 100) & (x <= 100000))
+muon.pp.filter_obs(adata, "n_genes_by_counts", lambda x: (x >= 100) & (x <= 10000))
 
 # save the filtered adata
 adata.write_h5ad(filename=args.adata_output, compression="gzip")
 
 
 #######  validation metrics
-val_metrics = pd.read_csv(args.output_validation_file)
+val_metrics = pd.read_csv(args.output_validation_file, index_col=0)
 
 output_metrics = update_validation_metrics(adata, "filter", val_metrics)
 
