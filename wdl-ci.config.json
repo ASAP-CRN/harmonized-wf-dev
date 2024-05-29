@@ -1,0 +1,115 @@
+{
+  "workflows": {
+    "workflows/structs.wdl": {
+      "key": "workflows/structs.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {}
+    },
+    "workflows/main.wdl": {
+      "key": "workflows/main.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "get_workflow_metadata": {
+          "key": "get_workflow_metadata",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "workflows/cohort_analysis/cohort_analysis.wdl": {
+      "key": "workflows/cohort_analysis/cohort_analysis.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "write_cohort_sample_list": {
+          "key": "write_cohort_sample_list",
+          "digest": "",
+          "tests": []
+        },
+        "merge_and_plot_qc_metrics": {
+          "key": "merge_and_plot_qc_metrics",
+          "digest": "",
+          "tests": []
+        },
+        "filter_and_normalize": {
+          "key": "filter_and_normalize",
+          "digest": "",
+          "tests": []
+        },
+        "plot_groups_and_features": {
+          "key": "plot_groups_and_features",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "workflows/cohort_analysis/cluster_data/cluster_data.wdl": {
+      "key": "workflows/cohort_analysis/cluster_data/cluster_data.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "integrate_sample_data": {
+          "key": "integrate_sample_data",
+          "digest": "",
+          "tests": []
+        },
+        "cluster_cells": {
+          "key": "cluster_cells",
+          "digest": "",
+          "tests": []
+        },
+        "annotate_cells": {
+          "key": "annotate_cells",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "workflows/preprocess/preprocess.wdl": {
+      "key": "workflows/preprocess/preprocess.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "check_output_files_exist": {
+          "key": "check_output_files_exist",
+          "digest": "",
+          "tests": []
+        },
+        "cellranger_count": {
+          "key": "cellranger_count",
+          "digest": "",
+          "tests": []
+        },
+        "remove_technical_artifacts": {
+          "key": "remove_technical_artifacts",
+          "digest": "",
+          "tests": []
+        },
+        "counts_to_adata": {
+          "key": "counts_to_adata",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "workflows/common/upload_final_outputs.wdl": {
+      "key": "workflows/common/upload_final_outputs.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "upload_final_outputs": {
+          "key": "upload_final_outputs",
+          "digest": "",
+          "tests": []
+        }
+      }
+    }
+  },
+  "engines": {},
+  "test_params": {
+    "global_params": {},
+    "engine_params": {}
+  }
+}
