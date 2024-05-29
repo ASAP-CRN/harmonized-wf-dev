@@ -16,7 +16,6 @@ parser.add_argument(
     "--marker-genes",
     dest="marker_genes",
     type=str,
-    default="resources/celltype_marker_table.csv",
     help="Path to marker_genes .csv file",
 )
 parser.add_argument(
