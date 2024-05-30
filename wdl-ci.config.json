@@ -92,7 +92,7 @@
                   "test_tasks": [
                     "compare_file_basename",
                     "check_empty_lines",
-                    "check_hdf5" #TODO
+                    "check_hdf5"
                   ]
                 },
                 "qc_plots_png": {
