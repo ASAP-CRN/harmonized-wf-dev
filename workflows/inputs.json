@@ -8,6 +8,7 @@
   "harmonized_pmdbs_analysis.cohort_staging_data_buckets": "String",
   "harmonized_pmdbs_analysis.n_top_genes": "Int (optional, default = 8000)",
   "harmonized_pmdbs_analysis.scvi_latent_key": "String (optional, default = \"X_scvi\")",
+  "harmonized_pmdbs_analysis.batch_key": "String (optional, default = \"batch_id\")",
   "harmonized_pmdbs_analysis.cell_type_markers_list": "File",
   "harmonized_pmdbs_analysis.groups": "Array[String] (optional, default = [\"sample\", \"batch\", \"cell_type\"])",
   "harmonized_pmdbs_analysis.features": "Array[String] (optional, default = [\"n_genes_by_counts\", \"total_counts\", \"pct_counts_mt\", \"pct_counts_rb\", \"doublet_score\", \"S_score\", \"G2M_score\"])",

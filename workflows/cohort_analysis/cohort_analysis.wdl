@@ -17,6 +17,7 @@ workflow cohort_analysis {
 		Int n_top_genes
 
 		String scvi_latent_key
+		String batch_key
 
 		File cell_type_markers_list
 
@@ -64,6 +65,7 @@ workflow cohort_analysis {
 		input:
 			merged_adata_object = merge_and_plot_qc_metrics.merged_adata_object, #!FileCoercion
 			n_top_genes = n_top_genes,
+			batch_key = batch_key,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
@@ -77,6 +79,7 @@ workflow cohort_analysis {
 			cohort_id = cohort_id,
 			normalized_adata_object = select_first([filter_and_normalize.normalized_adata_object]), #!FileCoercion
 			scvi_latent_key = scvi_latent_key,
+			batch_key = batch_key,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
@@ -103,6 +106,7 @@ workflow cohort_analysis {
 			cohort_id = cohort_id,
 			cell_annotated_adata_object = cluster_data.cell_annotated_adata_object,
 			scvi_latent_key = scvi_latent_key,
+			batch_key = batch_key,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
@@ -309,6 +313,7 @@ task filter_and_normalize {
 		File merged_adata_object
 
 		Int n_top_genes
+		String batch_key
 		File cell_type_markers_list
 
 		String raw_data_path
@@ -344,7 +349,7 @@ task filter_and_normalize {
 		if [[ -s "~{merged_adata_object_basename}_filtered.h5ad" ]]; then
 			python3 /opt/scripts/main/process.py \
 				--adata-input ~{merged_adata_object_basename}_filtered.h5ad \
-				--batch-key "batch_id" \
+				--batch-key ~{batch_key} \
 				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad \
 				--n-top-genes ~{n_top_genes} \
 				--marker-genes ~{cell_type_markers_list} \
@@ -441,6 +446,7 @@ task integrate_harmony_and_artifact_metrics {
 		File cell_annotated_adata_object
 
 		String scvi_latent_key
+		String batch_key
 
 		String raw_data_path
 		Array[Array[String]] workflow_info
@@ -456,13 +462,13 @@ task integrate_harmony_and_artifact_metrics {
 		set -euo pipefail
 
 		python3 /opt/scripts/main/add_harmony.py \
-			--batch-key "batch_id" \
+			--batch-key ~{batch_key} \
 			--adata-input ~{cell_annotated_adata_object} \
 			--adata-output ~{cohort_id}.harmony_integrated.h5ad
 
 		python3 /opt/scripts/main/artifact_metrics.py \
 			--latent-key ~{scvi_latent_key} \
-			--batch-key "batch_id" \
+			--batch-key ~{batch_key} \
 			--adata-input ~{cohort_id}.harmony_integrated.h5ad \
 			--output-report-dir scib_report_dir
 

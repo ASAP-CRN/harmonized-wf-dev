@@ -8,6 +8,7 @@ workflow cluster_data {
 		File normalized_adata_object
 
 		String scvi_latent_key
+		String batch_key
 
 		File cell_type_markers_list
 
@@ -23,6 +24,7 @@ workflow cluster_data {
 			cohort_id = cohort_id,
 			normalized_adata_object = normalized_adata_object,
 			scvi_latent_key = scvi_latent_key,
+			batch_key = batch_key,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
@@ -43,6 +45,7 @@ workflow cluster_data {
 		input:
 			cohort_id = cohort_id,
 			cluster_adata_object = cluster_cells.umap_cluster_adata_object, #!FileCoercion
+			batch_key = batch_key,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
@@ -67,6 +70,7 @@ task integrate_sample_data {
 		File normalized_adata_object
 
 		String scvi_latent_key
+		String batch_key
 
 		String raw_data_path
 		Array[Array[String]] workflow_info
@@ -85,7 +89,7 @@ task integrate_sample_data {
 
 		python3 /opt/scripts/main/integrate_scvi.py \
 			--latent-key ~{scvi_latent_key} \
-			--batch-key "batch_id" \
+			--batch-key ~{batch_key} \
 			--adata-input ~{normalized_adata_object} \
 			--adata-output ~{cohort_id}.adata_object.scvi_integrated.h5ad \
 			--output-scvi-dir ~{cohort_id}_scvi_model
@@ -163,6 +167,7 @@ task annotate_cells {
 		String cohort_id
 		File cluster_adata_object
 
+		String batch_key
 		File cell_type_markers_list
 
 		String raw_data_path
@@ -185,7 +190,7 @@ task annotate_cells {
 		python3 /opt/scripts/main/annotate_cells.py \
 			--adata-input ~{cluster_adata_object} \
 			--marker-genes ~{cell_type_markers_list} \
-			--batch-key "batch_id" \
+			--batch-key ~{batch_key} \
 			--output-cell-types-file ~{cohort_id}.cell_types.csv \
 			--adata-output ~{cluster_adata_object_basename}.annotate_cells.h5ad \
 			--output-metadata-file ~{cohort_id}.annotate_cells.metadata.csv

@@ -23,6 +23,7 @@ workflow harmonized_pmdbs_analysis {
 
 		Int n_top_genes = 8000
 		String scvi_latent_key = "X_scvi"
+		String batch_key = "batch_id"
 		File cell_type_markers_list
 
 		Array[String] groups = ["sample", "batch", "cell_type"]
@@ -80,6 +81,7 @@ workflow harmonized_pmdbs_analysis {
 					preprocessing_output_file_paths = preprocessing_output_file_paths,
 					n_top_genes = n_top_genes,
 					scvi_latent_key =scvi_latent_key,
+					batch_key = batch_key,
 					cell_type_markers_list = cell_type_markers_list,
 					groups = groups,
 					features = features,
@@ -104,6 +106,7 @@ workflow harmonized_pmdbs_analysis {
 				preprocessing_output_file_paths = flatten(preprocessing_output_file_paths),
 				n_top_genes = n_top_genes,
 				scvi_latent_key =scvi_latent_key,
+				batch_key = batch_key,
 				cell_type_markers_list = cell_type_markers_list,
 				groups = groups,
 				features = features,
@@ -216,6 +219,7 @@ workflow harmonized_pmdbs_analysis {
 		cohort_staging_data_buckets: {help: "Set of buckets to stage cross-team cohort analysis outputs in."}
 		n_top_genes: {help: "Number of HVG genes to keep. [8000]"}
 		scvi_latent_key: {help: "Latent key to save the scVI latent to. ['X_scvi']"}
+		batch_key: {help: "Key in AnnData object for batch information. ['batch_id']"}
 		cell_type_markers_list: {help: "CSV file containing a list of major cell type markers; used to annotate clusters."}
 		groups: {help: "Groups to produce umap plots for. ['sample', 'batch', 'cell_type']"}
 		features: {help: "Features to produce umap plots for. ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score', 'S_score', 'G2M_score']"}
