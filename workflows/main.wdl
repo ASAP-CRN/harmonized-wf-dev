@@ -155,13 +155,17 @@ workflow harmonized_pmdbs_analysis {
 		Array[File?] project_integrated_adata_object = project_cohort_analysis.integrated_adata_object
 		Array[File?] project_scvi_model_tar_gz = project_cohort_analysis.scvi_model_tar_gz
 		Array[File?] project_umap_cluster_adata_object = project_cohort_analysis.umap_cluster_adata_object
-		Array[File?] project_cell_types_csv = project_cohort_analysis.cell_types_csv
 		Array[File?] project_cell_annotated_adata_object = project_cohort_analysis.cell_annotated_adata_object
+		Array[File?] project_cell_types_csv = project_cohort_analysis.cell_types_csv
 		Array[File?] project_cell_annotated_metadata = project_cohort_analysis.cell_annotated_metadata
 
 		# Groups and features plots
 		Array[File?] project_groups_umap_plot_png = project_cohort_analysis.groups_umap_plot_png
 		Array[File?] project_features_umap_plot_png = project_cohort_analysis.features_umap_plot_png
+
+		# PCA and Harmony integrated adata objects and artifact metrics
+		Array[File?] project_harmony_integrated_adata_object = project_cohort_analysis.harmony_integrated_adata_object
+		Array[File?] project_scib_report_results_csv = project_cohort_analysis.scib_report_results_csv
 
 		Array[Array[File]?] preprocess_manifests = project_cohort_analysis.preprocess_manifest_tsvs
 		Array[Array[File]?] project_manifests = project_cohort_analysis.cohort_analysis_manifest_tsvs
@@ -183,13 +187,17 @@ workflow harmonized_pmdbs_analysis {
 		File? cohort_integrated_adata_object = cross_team_cohort_analysis.integrated_adata_object
 		File? cohort_scvi_model_tar_gz = cross_team_cohort_analysis.scvi_model_tar_gz
 		File? cohort_umap_cluster_adata_object = cross_team_cohort_analysis.umap_cluster_adata_object
-		File? cohort_cell_types_csv = cross_team_cohort_analysis.cell_types_csv
 		File? cohort_cell_annotated_adata_object = cross_team_cohort_analysis.cell_annotated_adata_object
+		File? cohort_cell_types_csv = cross_team_cohort_analysis.cell_types_csv
 		File? cohort_cell_annotated_metadata = cross_team_cohort_analysis.cell_annotated_metadata
 
 		# Groups and features plots
 		File? cohort_groups_umap_plot_png = cross_team_cohort_analysis.groups_umap_plot_png
 		File? cohort_features_umap_plot_png = cross_team_cohort_analysis.features_umap_plot_png
+
+		# PCA and Harmony integrated adata objects and artifact metrics
+		File? cohort_harmony_integrated_adata_object = cross_team_cohort_analysis.harmony_integrated_adata_object
+		File? cohort_scib_report_results_csv = cross_team_cohort_analysis.scib_report_results_csv
 
 		Array[File]? cohort_manifests = cross_team_cohort_analysis.cohort_analysis_manifest_tsvs
 	}

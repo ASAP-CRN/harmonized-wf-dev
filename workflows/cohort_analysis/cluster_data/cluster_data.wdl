@@ -55,8 +55,8 @@ workflow cluster_data {
 		File integrated_adata_object = integrate_sample_data.integrated_adata_object
 		File scvi_model_tar_gz = integrate_sample_data.scvi_model_tar_gz #!FileCoercion
 		File umap_cluster_adata_object = cluster_cells.umap_cluster_adata_object
+		File cell_annotated_adata_object = annotate_cells.cell_annotated_adata_object
 		File cell_types_csv = annotate_cells.cell_types_csv #!FileCoercion
-		File cell_annotated_adata_object = annotate_cells.cell_annotated_adata_object #!FileCoercion
 		File cell_annotated_metadata = annotate_cells.cell_annotated_metadata #!FileCoercion
 	}
 }
@@ -195,13 +195,12 @@ task annotate_cells {
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.cell_types.csv" \
-			-o "~{cluster_adata_object_basename}.annotate_cells.h5ad" \
 			-o "~{cohort_id}.annotate_cells.metadata.csv"
 	>>>
 
 	output {
+		File cell_annotated_adata_object = "~{cluster_adata_object_basename}.annotate_cells.h5ad"
 		String cell_types_csv = "~{raw_data_path}/~{cohort_id}.cell_types.csv"
-		String cell_annotated_adata_object = "~{raw_data_path}/~{cluster_adata_object_basename}.annotate_cells.h5ad"
 		String cell_annotated_metadata = "~{raw_data_path}/~{cohort_id}.annotate_cells.metadata.csv"
 	}
 
