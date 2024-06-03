@@ -33,7 +33,7 @@ workflow cohort_analysis {
 	}
 
 	String workflow_name = "cohort_analysis"
-	String workflow_version = "2.0.0"
+	String workflow_version = "2.1.0"
 
 	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version]]
 
