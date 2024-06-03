@@ -51,6 +51,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | String | cohort_staging_data_bucket | Bucket to upload cross-team cohort analysis outputs to. |
 | Int? | n_top_genes | Number of HVG genes to keep. [8000] |
 | String? | scvi_latent_key | Latent key to save the scVI latent to. ['X_scvi'] |
+| String? | batch_key | Key in AnnData object for batch information. ['batch_id'] |
 | File | cell_type_markers_list | CSV file containing a list of major cell type markers; used to annotate cells. |
 | Array[String]? | groups | Groups to produce umap plots for. ['sample', 'batch', 'cell_type'] |
 | Array[String]? | features | Features to produce umap plots for. ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score', 'S_score', 'G2M_score'] |
@@ -138,31 +139,28 @@ asap-raw-data-{cohort,team-xxyy}
 
 ### Staging data (intermediate workflow objects and final workflow outputs for the latest run of the workflow)
 
-Following QC by researchers, the objects in the staging bucket are synced into the curated data buckets, maintaining the same file structure. Curated data buckets are named `asap-curated-data-{cohort,team-xxyy}`.
+Following QC by researchers, the objects in the dev or uat bucket are synced into the curated data buckets, maintaining the same file structure. Curated data buckets are named `asap-curated-data-{cohort,team-xxyy}`.
 
 Data may be synced using [the `promote_staging_data` script](#promoting-staging-data).
 
 ```bash
-asap-staging-data-{cohort,team-xxyy}
+asap-dev-data-{cohort,team-xxyy}
 ├── cohort_analysis
-│   ├── ${cohort_id}.adata_object.scvi_integrated.umap_cluster.annotate_cells.h5ad
-│   ├── ${cohort_id}.annotate_cells.metadata.csv
-│   ├── ${cohort_id}.cell_types.csv
 │   ├── ${cohort_id}.sample_list.tsv
-│   ├── ${cohort_id}.features.umap.png
-│   ├── ${cohort_id}.groups.umap.png
 │   ├── ${cohort_id}.doublet_score.violin.png
 │   ├── ${cohort_id}.n_genes_by_counts.violin.png
 │   ├── ${cohort_id}.pct_counts_mt.violin.png
 │   ├── ${cohort_id}.pct_counts_rb.violin.png
 │   ├── ${cohort_id}.total_counts.violin.png
+│   ├── ${cohort_id}.validation_metrics.csv
+│   ├── ${cohort_id}.cell_types.csv
+│   ├── ${cohort_id}.annotate_cells.metadata.csv
+│   ├── ${cohort_id}.harmony_integrated.h5ad
+│   ├── scib_report.csv
+│   ├── ${cohort_id}.features.umap.png
+│   ├── ${cohort_id}.groups.umap.png
 │   └── MANIFEST.tsv
 └── preprocess
-    ├── ${cohort_id}.adata_object.scvi_integrated.h5ad
-    ├── ${cohort_id}.adata_object.scvi_integrated.umap_cluster.h5ad
-    ├── ${cohort_id}.merged_adata_object.h5ad
-    ├── ${cohort_id}.merged_adata_object_filtered.h5ad
-    ├── ${cohort_id}.merged_adata_object_filtered_normalized.h5ad
     ├── ${cohort_id}.scvi_model.tar.gz
     ├── ${sampleA_id}.filtered_feature_bc_matrix.h5
     ├── ${sampleA_id}.metrics_summary.csv
