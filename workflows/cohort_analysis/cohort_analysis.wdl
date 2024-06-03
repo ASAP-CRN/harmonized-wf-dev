@@ -64,6 +64,7 @@ workflow cohort_analysis {
 	call filter_and_normalize {
 		input:
 			merged_adata_object = merge_and_plot_qc_metrics.merged_adata_object, #!FileCoercion
+			qc_validation_metrics = merge_and_plot_qc_metrics.qc_validation_metrics,
 			n_top_genes = n_top_genes,
 			batch_key = batch_key,
 			cell_type_markers_list = cell_type_markers_list,
@@ -114,18 +115,7 @@ workflow cohort_analysis {
 			zones = zones
 	}
 
-	Array[String] cohort_analysis_intermediate_output_paths = flatten([
-		[
-			merge_and_plot_qc_metrics.qc_validation_metrics
-		],
-		select_all([
-			filter_and_normalize.filtered_adata_object_validation_metrics,
-			filter_and_normalize.normalized_adata_object_validation_metrics
-		]),
-		[
-			cluster_data.scvi_model_tar_gz
-		]
-	]) #!StringCoercion
+	Array[String] cohort_analysis_intermediate_output_paths = [cluster_data.scvi_model_tar_gz] #!StringCoercion
 
 	call UploadFinalOutputs.upload_final_outputs as upload_preprocess_files {
 		input:
@@ -141,6 +131,9 @@ workflow cohort_analysis {
 			write_cohort_sample_list.cohort_sample_list
 		],
 		merge_and_plot_qc_metrics.qc_plots_png,
+		select_all([
+			filter_and_normalize.final_validation_metrics
+		]),
 		[
 			cluster_data.cell_types_csv,
 			cluster_data.cell_annotated_metadata
@@ -169,12 +162,10 @@ workflow cohort_analysis {
 
 		# Merged adata objects, filtered and normalized adata objects, QC plots
 		File merged_adata_object = merge_and_plot_qc_metrics.merged_adata_object
-		File qc_validation_metrics = merge_and_plot_qc_metrics.qc_validation_metrics #!FileCoercion
 		Array[File] qc_plots_png = merge_and_plot_qc_metrics.qc_plots_png #!FileCoercion
 		File? filtered_adata_object = filter_and_normalize.filtered_adata_object
-		File? filtered_adata_object_validation_metrics = filter_and_normalize.filtered_adata_object_validation_metrics #!FileCoercion
 		File? normalized_adata_object = filter_and_normalize.normalized_adata_object
-		File? normalized_adata_object_validation_metrics = filter_and_normalize.normalized_adata_object_validation_metrics #!FileCoercion
+		File? final_validation_metrics = filter_and_normalize.final_validation_metrics #!FileCoercion
 
 		# Clustering output
 		File integrated_adata_object = cluster_data.integrated_adata_object
@@ -286,7 +277,7 @@ task merge_and_plot_qc_metrics {
 
 	output {
 		File merged_adata_object = "~{cohort_id}.merged_adata_object.h5ad"
-		String qc_validation_metrics = "~{raw_data_path}/~{cohort_id}.validation_metrics.csv"
+		File qc_validation_metrics = "~{cohort_id}.validation_metrics.csv"
 
 		Array[String] qc_plots_png = [
 			"~{raw_data_path}/~{cohort_id}.n_genes_by_counts.violin.png",
@@ -311,6 +302,7 @@ task merge_and_plot_qc_metrics {
 task filter_and_normalize {
 	input {
 		File merged_adata_object
+		File qc_validation_metrics
 
 		Int n_top_genes
 		String batch_key
@@ -333,10 +325,11 @@ task filter_and_normalize {
 	command <<<
 		set -euo pipefail
 
+		# The validation metrics file is overwritten with updated validation metrics
 		python3 /opt/scripts/main/filter.py \
 			--adata-input ~{merged_adata_object} \
 			--adata-output ~{merged_adata_object_basename}_filtered.h5ad \
-			--output-validation-file ~{merged_adata_object_basename}_filtered.validation_metrics.csv
+			--output-validation-file ~{qc_validation_metrics}
 
 		# TODO see whether this is still required given the change to python
 		# If any cells remain after filtering, the data is normalized and variable genes are identified
@@ -347,14 +340,13 @@ task filter_and_normalize {
 				--adata-output ~{merged_adata_object_basename}_filtered_normalized.h5ad \
 				--n-top-genes ~{n_top_genes} \
 				--marker-genes ~{cell_type_markers_list} \
-				--output-validation-file ~{merged_adata_object_basename}_filtered_normalized.validation_metrics.csv
+				--output-validation-file ~{qc_validation_metrics}
 
 			upload_outputs \
 				-b ~{billing_project} \
 				-d ~{raw_data_path} \
 				-i ~{write_tsv(workflow_info)} \
-				-o "~{merged_adata_object_basename}_filtered.validation_metrics.csv" \
-				-o "~{merged_adata_object_basename}_filtered_normalized.validation_metrics.csv"
+				-o ~{qc_validation_metrics}
 
 			echo true > cells_remaining_post_filter.txt
 		else
@@ -364,9 +356,8 @@ task filter_and_normalize {
 
 	output {
 		File? filtered_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{merged_adata_object_basename}_filtered.h5ad" else my_none
-		String? filtered_adata_object_validation_metrics = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered.validation_metrics.csv" else my_none
 		File? normalized_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{merged_adata_object_basename}_filtered_normalized.h5ad" else my_none
-		String? normalized_adata_object_validation_metrics = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{merged_adata_object_basename}_filtered_normalized.validation_metrics.csv" else my_none
+		String? final_validation_metrics = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{qc_validation_metrics}" else my_none
 	}
 
 	runtime {

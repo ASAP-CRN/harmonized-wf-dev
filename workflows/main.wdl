@@ -147,12 +147,10 @@ workflow harmonized_pmdbs_analysis {
 
 		# Merged adata objects, filtered and normalized adata objects, QC plots
 		Array[File?] project_merged_adata_object = project_cohort_analysis.merged_adata_object
-		Array[File?] project_qc_validation_metrics = project_cohort_analysis.qc_validation_metrics
 		Array[Array[File]?] project_qc_plots_png = project_cohort_analysis.qc_plots_png
 		Array[File?] project_filtered_adata_object = project_cohort_analysis.filtered_adata_object
-		Array[File?] project_filtered_adata_object_validation_metrics = project_cohort_analysis.filtered_adata_object_validation_metrics
 		Array[File?] project_normalized_adata_object = project_cohort_analysis.normalized_adata_object
-		Array[File?] project_normalized_adata_object_validation_metrics = project_cohort_analysis.normalized_adata_object_validation_metrics
+		Array[File?] project_final_validation_metrics = project_cohort_analysis.final_validation_metrics
 
 		# Clustering outputs
 		Array[File?] project_integrated_adata_object = project_cohort_analysis.integrated_adata_object
@@ -179,12 +177,10 @@ workflow harmonized_pmdbs_analysis {
 
 		# Merged adata objects, filtered and normalized adata objects, QC plots
 		File? cohort_merged_adata_object = cross_team_cohort_analysis.merged_adata_object
-		File? cohort_qc_validation_metrics = cross_team_cohort_analysis.qc_validation_metrics
 		Array[File]? cohort_qc_plots_png = cross_team_cohort_analysis.qc_plots_png
 		File? cohort_filtered_adata_object = cross_team_cohort_analysis.filtered_adata_object
-		File? cohort_filtered_adata_object_validation_metrics = cross_team_cohort_analysis.filtered_adata_object_validation_metrics
 		File? cohort_normalized_adata_object = cross_team_cohort_analysis.normalized_adata_object
-		File? cohort_normalized_adata_object_validation_metrics = cross_team_cohort_analysis.normalized_adata_object_validation_metrics
+		File? cohort_final_validation_metrics = cross_team_cohort_analysis.final_validation_metrics
 
 		# Clustering outputs
 		File? cohort_integrated_adata_object = cross_team_cohort_analysis.integrated_adata_object
