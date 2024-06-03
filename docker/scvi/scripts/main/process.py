@@ -121,15 +121,13 @@ hvgs_full = hvgs_full.iloc[: args.n_top_genes].index.to_list()
 #     n_top_genes=args.n_top_genes
 # )
 
-# load the raw test_ad
 adata = adata[:, hvgs_full]
-
 scanpy.pp.pca(adata, n_comps=30)
 
 adata.write_h5ad(filename=args.adata_output, compression="gzip")
 
 #######  validation metrics
-val_metrics = pd.read_csv(args.output_validation_file)
+val_metrics = pd.read_csv(args.output_validation_file, index_col=0)
 
 output_metrics = update_validation_metrics(adata, "feature_selection", val_metrics)
 
