@@ -338,12 +338,6 @@ task filter_and_normalize {
 			--adata-output ~{merged_adata_object_basename}_filtered.h5ad \
 			--output-validation-file ~{merged_adata_object_basename}_filtered.validation_metrics.csv
 
-		upload_outputs \
-			-b ~{billing_project} \
-			-d ~{raw_data_path} \
-			-i ~{write_tsv(workflow_info)} \
-			-o "~{merged_adata_object_basename}_filtered.validation_metrics.csv"
-
 		# TODO see whether this is still required given the change to python
 		# If any cells remain after filtering, the data is normalized and variable genes are identified
 		if [[ -s "~{merged_adata_object_basename}_filtered.h5ad" ]]; then
@@ -359,6 +353,7 @@ task filter_and_normalize {
 				-b ~{billing_project} \
 				-d ~{raw_data_path} \
 				-i ~{write_tsv(workflow_info)} \
+				-o "~{merged_adata_object_basename}_filtered.validation_metrics.csv" \
 				-o "~{merged_adata_object_basename}_filtered_normalized.validation_metrics.csv"
 
 			echo true > cells_remaining_post_filter.txt
