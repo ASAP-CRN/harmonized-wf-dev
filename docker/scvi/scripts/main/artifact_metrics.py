@@ -104,5 +104,5 @@ if not report_dir.exists():
 bm.plot_results_table(min_max_scale=False, save_dir=report_dir)
 
 #
-df = bm.get_results(min_max_scale=False, save_dir=report_dir)
+df = bm.get_results(min_max_scale=False)
 df.to_csv((report_dir / "scib_report.csv"), index=False)
