@@ -477,12 +477,12 @@ task integrate_harmony_and_artifact_metrics {
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.harmony_integrated.h5ad" \
-			-o scib_report_dir/results.csv
+			-o scib_report_dir/scib_report.csv
 	>>>
 
 	output {
 		String harmony_integrated_adata_object = "~{raw_data_path}/~{cohort_id}.harmony_integrated.h5ad"
-		String scib_report_results_csv = "~{raw_data_path}/results.csv"
+		String scib_report_results_csv = "~{raw_data_path}/scib_report.csv"
 	}
 
 	runtime {
