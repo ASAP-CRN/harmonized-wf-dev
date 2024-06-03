@@ -8,3 +8,6 @@ scrublet==0.2.3
 pymde==0.1.18
 scikit-misc==0.3.1
 leidenalg==0.10.2
+harmonypy==0.0.9
+faiss==1.5.3
+scib-metrics==0.5.1
