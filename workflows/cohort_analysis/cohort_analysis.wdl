@@ -88,12 +88,12 @@ workflow cohort_analysis {
 			zones = zones
 	}
 
-	call plot_groups_and_features {
+	call integrate_harmony_and_artifact_metrics {
 		input:
 			cohort_id = cohort_id,
 			cell_annotated_adata_object = cluster_data.cell_annotated_adata_object,
-			groups = groups,
-			features = features,
+			scvi_latent_key = scvi_latent_key,
+			batch_key = batch_key,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
@@ -101,12 +101,12 @@ workflow cohort_analysis {
 			zones = zones
 	}
 
-	call integrate_harmony_and_artifact_metrics {
+	call plot_groups_and_features {
 		input:
 			cohort_id = cohort_id,
-			cell_annotated_adata_object = cluster_data.cell_annotated_adata_object,
-			scvi_latent_key = scvi_latent_key,
-			batch_key = batch_key,
+			harmony_integrated_adata_object = integrate_harmony_and_artifact_metrics.harmony_integrated_adata_object, #!FileCoercion
+			groups = groups,
+			features = features,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
@@ -146,12 +146,12 @@ workflow cohort_analysis {
 			cluster_data.cell_annotated_metadata
 		],
 		[
-			plot_groups_and_features.groups_umap_plot_png,
-			plot_groups_and_features.features_umap_plot_png
-		],
-		[
 			integrate_harmony_and_artifact_metrics.harmony_integrated_adata_object,
 			integrate_harmony_and_artifact_metrics.scib_report_results_csv
+		],
+		[
+			plot_groups_and_features.groups_umap_plot_png,
+			plot_groups_and_features.features_umap_plot_png
 		]
 	]) #!StringCoercion
 
@@ -184,13 +184,13 @@ workflow cohort_analysis {
 		File cell_types_csv = cluster_data.cell_types_csv
 		File cell_annotated_metadata = cluster_data.cell_annotated_metadata
 
-		# Groups and features plots
-		File groups_umap_plot_png = plot_groups_and_features.groups_umap_plot_png #!FileCoercion
-		File features_umap_plot_png = plot_groups_and_features.features_umap_plot_png #!FileCoercion
-
 		# PCA and Harmony integrated adata objects and artifact metrics
 		File harmony_integrated_adata_object = integrate_harmony_and_artifact_metrics.harmony_integrated_adata_object #!FileCoercion
 		File scib_report_results_csv = integrate_harmony_and_artifact_metrics.scib_report_results_csv #!FileCoercion
+
+		# Groups and features plots
+		File groups_umap_plot_png = plot_groups_and_features.groups_umap_plot_png #!FileCoercion
+		File features_umap_plot_png = plot_groups_and_features.features_umap_plot_png #!FileCoercion
 
 		Array[File] preprocess_manifest_tsvs = upload_preprocess_files.manifests #!FileCoercion
 		Array[File] cohort_analysis_manifest_tsvs = upload_cohort_analysis_files.manifests #!FileCoercion
@@ -385,61 +385,6 @@ task filter_and_normalize {
 	}
 }
 
-task plot_groups_and_features {
-	input {
-		String cohort_id
-		File cell_annotated_adata_object
-
-		Array[String] groups
-		Array[String] features
-
-		String raw_data_path
-		Array[Array[String]] workflow_info
-		String billing_project
-		String container_registry
-		String zones
-	}
-
-	Int mem_gb = ceil(size(cell_annotated_adata_object, "GB") * 5 + 20)
-	Int disk_size = ceil(size(cell_annotated_adata_object, "GB") * 4 + 20)
-
-	command <<<
-		set -euo pipefail
-
-		python3 /opt/scripts/main/plot_feats_and_groups.py \
-			--adata-input ~{cell_annotated_adata_object} \
-			--group ~{sep=',' groups} \
-			--output-group-umap-plot-prefix "~{cohort_id}" \
-			--feature ~{sep=',' features} \
-			--output-feature-umap-plot-prefix "~{cohort_id}"
-
-		mv "plots/umap~{cohort_id}_groups_umap.png" "plots/~{cohort_id}.groups.umap.png"
-		mv "plots/umap~{cohort_id}_features_umap.png" "plots/~{cohort_id}.features.umap.png"
-
-		upload_outputs \
-			-b ~{billing_project} \
-			-d ~{raw_data_path} \
-			-i ~{write_tsv(workflow_info)} \
-			-o plots/"~{cohort_id}.groups.umap.png" \
-			-o plots/"~{cohort_id}.features.umap.png"
-	>>>
-
-	output {
-		String groups_umap_plot_png = "~{raw_data_path}/~{cohort_id}.groups.umap.png"
-		String features_umap_plot_png = "~{raw_data_path}/~{cohort_id}.features.umap.png"
-	}
-
-	runtime {
-		docker: "~{container_registry}/scvi:1.1.0_1"
-		cpu: 2
-		memory: "~{mem_gb} GB"
-		disks: "local-disk ~{disk_size} HDD"
-		preemptible: 3
-		bootDiskSizeGb: 40
-		zones: zones
-	}
-}
-
 task integrate_harmony_and_artifact_metrics {
 	input {
 		String cohort_id
@@ -483,6 +428,61 @@ task integrate_harmony_and_artifact_metrics {
 	output {
 		String harmony_integrated_adata_object = "~{raw_data_path}/~{cohort_id}.harmony_integrated.h5ad"
 		String scib_report_results_csv = "~{raw_data_path}/scib_report.csv"
+	}
+
+	runtime {
+		docker: "~{container_registry}/scvi:1.1.0_1"
+		cpu: 2
+		memory: "~{mem_gb} GB"
+		disks: "local-disk ~{disk_size} HDD"
+		preemptible: 3
+		bootDiskSizeGb: 40
+		zones: zones
+	}
+}
+
+task plot_groups_and_features {
+	input {
+		String cohort_id
+		File harmony_integrated_adata_object
+
+		Array[String] groups
+		Array[String] features
+
+		String raw_data_path
+		Array[Array[String]] workflow_info
+		String billing_project
+		String container_registry
+		String zones
+	}
+
+	Int mem_gb = ceil(size(harmony_integrated_adata_object, "GB") * 5 + 20)
+	Int disk_size = ceil(size(harmony_integrated_adata_object, "GB") * 4 + 20)
+
+	command <<<
+		set -euo pipefail
+
+		python3 /opt/scripts/main/plot_feats_and_groups.py \
+			--adata-input ~{harmony_integrated_adata_object} \
+			--group ~{sep=',' groups} \
+			--output-group-umap-plot-prefix "~{cohort_id}" \
+			--feature ~{sep=',' features} \
+			--output-feature-umap-plot-prefix "~{cohort_id}"
+
+		mv "plots/umap~{cohort_id}_groups_umap.png" "plots/~{cohort_id}.groups.umap.png"
+		mv "plots/umap~{cohort_id}_features_umap.png" "plots/~{cohort_id}.features.umap.png"
+
+		upload_outputs \
+			-b ~{billing_project} \
+			-d ~{raw_data_path} \
+			-i ~{write_tsv(workflow_info)} \
+			-o plots/"~{cohort_id}.groups.umap.png" \
+			-o plots/"~{cohort_id}.features.umap.png"
+	>>>
+
+	output {
+		String groups_umap_plot_png = "~{raw_data_path}/~{cohort_id}.groups.umap.png"
+		String features_umap_plot_png = "~{raw_data_path}/~{cohort_id}.features.umap.png"
 	}
 
 	runtime {
