@@ -6,7 +6,9 @@ from scib_metrics.nearest_neighbors import NeighborsResults
 import faiss
 from pathlib import Path
 
-parser = argparse.ArgumentParser(description="Run scVI integration")
+parser = argparse.ArgumentParser(
+    description="Compute `scib` metrics on final artefacts"
+)
 parser.add_argument(
     "--latent-key",
     dest="latent_key",
@@ -100,5 +102,7 @@ if not report_dir.exists():
     report_dir.mkdir(parents=True, exist_ok=True)
 
 bm.plot_results_table(min_max_scale=False, save_dir=report_dir)
-df = bm.get_results(min_max_scale=False)
-df.to_csv((report_dir / "results.csv"), index=False)
+
+#
+df = bm.get_results(min_max_scale=False, save_dir=report_dir)
+df.to_csv((report_dir / "scib_report.csv"), index=False)
