@@ -85,7 +85,7 @@ biocons = BioConservation(isolated_labels=False)
 
 bm = Benchmarker(
     adata,
-    batch_key="sample",
+    batch_key=args.batch_key,
     label_key="cell_type",
     embedding_obsm_keys=["Unintegrated", "X_scvi", "X_pca_harmony"],
     pre_integrated_embedding_obsm_key="X_pca",
