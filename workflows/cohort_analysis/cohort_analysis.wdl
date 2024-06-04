@@ -267,7 +267,6 @@ task merge_and_plot_qc_metrics {
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}.validation_metrics.csv" \
 			-o plots/"~{cohort_id}.n_genes_by_counts.violin.png" \
 			-o plots/"~{cohort_id}.total_counts.violin.png" \
 			-o plots/"~{cohort_id}.pct_counts_mt.violin.png" \
