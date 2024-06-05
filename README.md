@@ -239,7 +239,7 @@ The script defaults to a dry run, printing out the files that would be copied or
 # Promote data for team-hafler, team-hardy, team-jakobsson, team-lee, team-scherzer, team-sulzer, and cohort
 ./util/promote_staging_data -a -p -s dev
 
-# Print out the files that would be copied or deleted from the staging bucket to the curated bucket for unembargoed cohort (team-hafler, team-lee, and team-jakobsson)
+# Print out the files that would be copied or deleted from the staging bucket to the curated bucket for unembargoed cohort (team-hafler, team-lee, team-jakobsson, and team-scherzer)
 ./util/promote_staging_data -t cohort
 ```
 
