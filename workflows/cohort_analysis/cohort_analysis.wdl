@@ -402,17 +402,19 @@ task integrate_harmony_and_artifact_metrics {
 			--adata-input ~{cohort_id}.harmony_integrated.h5ad \
 			--output-report-dir scib_report_dir
 
+		mv "scib_report_dir/scib_report.csv" "scib_report_dir/~{cohort_id}.scib_report.csv"
+
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.harmony_integrated.h5ad" \
-			-o scib_report_dir/scib_report.csv
+			-o "scib_report_dir/~{cohort_id}.scib_report.csv"
 	>>>
 
 	output {
 		String harmony_integrated_adata_object = "~{raw_data_path}/~{cohort_id}.harmony_integrated.h5ad"
-		String scib_report_results_csv = "~{raw_data_path}/scib_report.csv"
+		String scib_report_results_csv = "~{raw_data_path}/~{cohort_id}.scib_report.csv"
 	}
 
 	runtime {
