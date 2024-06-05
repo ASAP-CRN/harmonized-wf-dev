@@ -8,9 +8,9 @@
 
 ### _QC: metrics_
 - [`plot_qc_metrics.py`](./main/plot_qc_metrics.py)
-    - merges adatas
-    - NOTE:  merging here could be inefficient.  stubs of code to create gene_list to pre-filter 
-        - consider filtering cells first... 'processing' filters genes to "highly variable"
+    - Merges adatas.
+    - NOTE:  merging here could be inefficient.  Stubs of code to create gene_list to pre-filter.
+        - Consider filtering cells first... 'processing' filters genes to "highly variable".
 
 
 ### _QC: FILTER_ 
@@ -18,17 +18,18 @@
 
 
 ### _FEATURE SELECTION_ 
-- _processing_: [`process.py`](./main/process.py).  Normalize + feature selection (i.e. identification of highly variable genes.
+- _processing_: [`process.py`](./main/process.py)
+    - Normalize + feature selection (i.e. identification of highly variable genes).
 
 
 ### _INTEGRATION_
 - [`integrate_scvi.py`](./main/integrate_scvi.py)
-    - `scVI` integration
+    - `scVI` integration.
 
 
 ### _CLUSTERING_
 - _clustering_: `umap` ([`clustering_umap.py`](./main/clustering_umap.py))
-    - in the future we may choose `mde` ('clustering_mde.py') over `umap`, as it is super fast and efficient on a GPU, and the embeddings are only useful for visualization so the choice is semi-arbitrary.
+    - In the future we may choose `mde` (`clustering_mde.py`) over `umap`, as it is super fast and efficient on a GPU, and the embeddings are only useful for visualization so the choice is semi-arbitrary.
 
 
 ### _ANNOTATION_
@@ -38,12 +39,12 @@
 
 ### _HARMONY INTEGRATION_
 - [`add_harmony.py`](./main/add_harmony.py)
-    - Add PCA and Harmony integration
+    - Add PCA and Harmony integration.
 
 
 ### _`SCIB` METRICS_
 - [`add_harmony.py`](./main/add_harmony.py)
-    - Compute `scib` metrics on final artifacts and generate a report
+    - Compute `scib` metrics on final artifacts and generate a report.
 
 
 ### _PLOTTING_
