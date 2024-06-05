@@ -8,6 +8,7 @@ workflow cluster_data {
 		File normalized_adata_object
 
 		String scvi_latent_key
+		String batch_key
 
 		File cell_type_markers_list
 
@@ -23,6 +24,7 @@ workflow cluster_data {
 			cohort_id = cohort_id,
 			normalized_adata_object = normalized_adata_object,
 			scvi_latent_key = scvi_latent_key,
+			batch_key = batch_key,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
 			billing_project = billing_project,
@@ -35,9 +37,6 @@ workflow cluster_data {
 			integrated_adata_object = integrate_sample_data.integrated_adata_object, #!FileCoercion
 			scvi_latent_key =scvi_latent_key,
 			cell_type_markers_list = cell_type_markers_list,
-			raw_data_path = raw_data_path,
-			workflow_info = workflow_info,
-			billing_project = billing_project,
 			container_registry = container_registry,
 			zones = zones
 	}
@@ -46,6 +45,7 @@ workflow cluster_data {
 		input:
 			cohort_id = cohort_id,
 			cluster_adata_object = cluster_cells.umap_cluster_adata_object, #!FileCoercion
+			batch_key = batch_key,
 			cell_type_markers_list = cell_type_markers_list,
 			raw_data_path = raw_data_path,
 			workflow_info = workflow_info,
@@ -55,11 +55,11 @@ workflow cluster_data {
 	}
 
 	output {
-		File integrated_adata_object = integrate_sample_data.integrated_adata_object #!FileCoercion
+		File integrated_adata_object = integrate_sample_data.integrated_adata_object
 		File scvi_model_tar_gz = integrate_sample_data.scvi_model_tar_gz #!FileCoercion
-		File umap_cluster_adata_object = cluster_cells.umap_cluster_adata_object #!FileCoercion
+		File umap_cluster_adata_object = cluster_cells.umap_cluster_adata_object
+		File cell_annotated_adata_object = annotate_cells.cell_annotated_adata_object
 		File cell_types_csv = annotate_cells.cell_types_csv #!FileCoercion
-		File cell_annotated_adata_object = annotate_cells.cell_annotated_adata_object #!FileCoercion
 		File cell_annotated_metadata = annotate_cells.cell_annotated_metadata #!FileCoercion
 	}
 }
@@ -70,6 +70,7 @@ task integrate_sample_data {
 		File normalized_adata_object
 
 		String scvi_latent_key
+		String batch_key
 
 		String raw_data_path
 		Array[Array[String]] workflow_info
@@ -78,7 +79,7 @@ task integrate_sample_data {
 		String zones
 	}
 
-	Int mem_gb = ceil(size(normalized_adata_object, "GB") * 1.4 + 20)
+	Int mem_gb = ceil(size(normalized_adata_object, "GB") * 5 + 20)
 	Int disk_size = ceil(size(normalized_adata_object, "GB") * 3 + 50)
 
 	command <<<
@@ -88,7 +89,7 @@ task integrate_sample_data {
 
 		python3 /opt/scripts/main/integrate_scvi.py \
 			--latent-key ~{scvi_latent_key} \
-			--batch-key "batch_id" \
+			--batch-key ~{batch_key} \
 			--adata-input ~{normalized_adata_object} \
 			--adata-output ~{cohort_id}.adata_object.scvi_integrated.h5ad \
 			--output-scvi-dir ~{cohort_id}_scvi_model
@@ -100,12 +101,11 @@ task integrate_sample_data {
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}.adata_object.scvi_integrated.h5ad" \
 			-o "~{cohort_id}_scvi_model.tar.gz"
 	>>>
 
 	output {
-		String integrated_adata_object = "~{raw_data_path}/~{cohort_id}.adata_object.scvi_integrated.h5ad"
+		File integrated_adata_object = "~{cohort_id}.adata_object.scvi_integrated.h5ad"
 		String scvi_model_tar_gz = "~{raw_data_path}/~{cohort_id}_scvi_model.tar.gz"
 	}
 
@@ -130,15 +130,12 @@ task cluster_cells {
 		String scvi_latent_key
 		File cell_type_markers_list
 
-		String raw_data_path
-		Array[Array[String]] workflow_info
-		String billing_project
 		String container_registry
 		String zones
 	}
 
 	String integrated_adata_object_basename = basename(integrated_adata_object, ".h5ad")
-	Int mem_gb = ceil(size(integrated_adata_object, "GB") * 2.3 + 20)
+	Int mem_gb = ceil(size(integrated_adata_object, "GB") * 8.7 + 20)
 	Int disk_size = ceil(size([integrated_adata_object, cell_type_markers_list], "GB") * 6 + 50)
 
 	command <<<
@@ -148,16 +145,10 @@ task cluster_cells {
 			--adata-input ~{integrated_adata_object} \
 			--adata-output ~{integrated_adata_object_basename}.umap_cluster.h5ad \
 			--latent-key ~{scvi_latent_key}
-
-		upload_outputs \
-			-b ~{billing_project} \
-			-d ~{raw_data_path} \
-			-i ~{write_tsv(workflow_info)} \
-			-o "~{integrated_adata_object_basename}.umap_cluster.h5ad"
 	>>>
 
 	output {
-		String umap_cluster_adata_object = "~{raw_data_path}/~{integrated_adata_object_basename}.umap_cluster.h5ad"
+		File umap_cluster_adata_object = "~{integrated_adata_object_basename}.umap_cluster.h5ad"
 	}
 
 	runtime {
@@ -176,6 +167,7 @@ task annotate_cells {
 		String cohort_id
 		File cluster_adata_object
 
+		String batch_key
 		File cell_type_markers_list
 
 		String raw_data_path
@@ -186,8 +178,8 @@ task annotate_cells {
 	}
 
 	String cluster_adata_object_basename = basename(cluster_adata_object, ".h5ad")
-	Int mem_gb = ceil(size(cluster_adata_object, "GB") * 1.3 + 10)
-	Int disk_size = ceil(size([cluster_adata_object, cell_type_markers_list], "GB") * 2 + 20)
+	Int mem_gb = ceil(size(cluster_adata_object, "GB") * 5 + 20)
+	Int disk_size = ceil(size([cluster_adata_object, cell_type_markers_list], "GB") * 4 + 20)
 
 	command <<<
 		set -euo pipefail
@@ -198,7 +190,7 @@ task annotate_cells {
 		python3 /opt/scripts/main/annotate_cells.py \
 			--adata-input ~{cluster_adata_object} \
 			--marker-genes ~{cell_type_markers_list} \
-			--batch-key "batch_id" \
+			--batch-key ~{batch_key} \
 			--output-cell-types-file ~{cohort_id}.cell_types.csv \
 			--adata-output ~{cluster_adata_object_basename}.annotate_cells.h5ad \
 			--output-metadata-file ~{cohort_id}.annotate_cells.metadata.csv
@@ -208,13 +200,12 @@ task annotate_cells {
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cohort_id}.cell_types.csv" \
-			-o "~{cluster_adata_object_basename}.annotate_cells.h5ad" \
 			-o "~{cohort_id}.annotate_cells.metadata.csv"
 	>>>
 
 	output {
+		File cell_annotated_adata_object = "~{cluster_adata_object_basename}.annotate_cells.h5ad"
 		String cell_types_csv = "~{raw_data_path}/~{cohort_id}.cell_types.csv"
-		String cell_annotated_adata_object = "~{raw_data_path}/~{cluster_adata_object_basename}.annotate_cells.h5ad"
 		String cell_annotated_metadata = "~{raw_data_path}/~{cohort_id}.annotate_cells.metadata.csv"
 	}
 

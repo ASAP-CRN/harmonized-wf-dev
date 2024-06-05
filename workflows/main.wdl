@@ -23,6 +23,7 @@ workflow harmonized_pmdbs_analysis {
 
 		Int n_top_genes = 8000
 		String scvi_latent_key = "X_scvi"
+		String batch_key = "batch_id"
 		File cell_type_markers_list
 
 		Array[String] groups = ["sample", "batch", "cell_type"]
@@ -67,7 +68,6 @@ workflow harmonized_pmdbs_analysis {
 			preprocess.graph_pdf,
 			preprocess.log,
 			preprocess.metrics_csv,
-			preprocess.checkpoint_tar_gz,
 			preprocess.posterior_probability,
 			preprocess.adata_object
 		]) #!StringCoercion
@@ -81,6 +81,7 @@ workflow harmonized_pmdbs_analysis {
 					preprocessing_output_file_paths = preprocessing_output_file_paths,
 					n_top_genes = n_top_genes,
 					scvi_latent_key =scvi_latent_key,
+					batch_key = batch_key,
 					cell_type_markers_list = cell_type_markers_list,
 					groups = groups,
 					features = features,
@@ -105,6 +106,7 @@ workflow harmonized_pmdbs_analysis {
 				preprocessing_output_file_paths = flatten(preprocessing_output_file_paths),
 				n_top_genes = n_top_genes,
 				scvi_latent_key =scvi_latent_key,
+				batch_key = batch_key,
 				cell_type_markers_list = cell_type_markers_list,
 				groups = groups,
 				features = features,
@@ -136,7 +138,6 @@ workflow harmonized_pmdbs_analysis {
 		Array[Array[File]] cellbender_graph_pdf = preprocess.graph_pdf
 		Array[Array[File]] cellbender_log = preprocess.log
 		Array[Array[File]] cellbender_metrics_csv = preprocess.metrics_csv
-		Array[Array[File]] cellbender_checkpoint_tar_gz = preprocess.checkpoint_tar_gz
 		Array[Array[File]] cellbender_posterior_probability = preprocess.posterior_probability
 		Array[Array[File]] adata_object = preprocess.adata_object
 
@@ -144,17 +145,24 @@ workflow harmonized_pmdbs_analysis {
 		## List of samples included in the cohort
 		Array[File?] project_cohort_sample_list = project_cohort_analysis.cohort_sample_list
 
-		## Merged adata objects and QC plots
+		# Merged adata objects, filtered and normalized adata objects, QC plots
 		Array[File?] project_merged_adata_object = project_cohort_analysis.merged_adata_object
 		Array[Array[File]?] project_qc_plots_png = project_cohort_analysis.qc_plots_png
+		Array[File?] project_filtered_adata_object = project_cohort_analysis.filtered_adata_object
+		Array[File?] project_normalized_adata_object = project_cohort_analysis.normalized_adata_object
+		Array[File?] project_final_validation_metrics = project_cohort_analysis.final_validation_metrics
 
 		# Clustering outputs
 		Array[File?] project_integrated_adata_object = project_cohort_analysis.integrated_adata_object
 		Array[File?] project_scvi_model_tar_gz = project_cohort_analysis.scvi_model_tar_gz
 		Array[File?] project_umap_cluster_adata_object = project_cohort_analysis.umap_cluster_adata_object
-		Array[File?] project_cell_types_csv = project_cohort_analysis.cell_types_csv
 		Array[File?] project_cell_annotated_adata_object = project_cohort_analysis.cell_annotated_adata_object
+		Array[File?] project_cell_types_csv = project_cohort_analysis.cell_types_csv
 		Array[File?] project_cell_annotated_metadata = project_cohort_analysis.cell_annotated_metadata
+
+		# PCA and Harmony integrated adata objects and artifact metrics
+		Array[File?] project_harmony_integrated_adata_object = project_cohort_analysis.harmony_integrated_adata_object
+		Array[File?] project_scib_report_results_csv = project_cohort_analysis.scib_report_results_csv
 
 		# Groups and features plots
 		Array[File?] project_groups_umap_plot_png = project_cohort_analysis.groups_umap_plot_png
@@ -167,17 +175,24 @@ workflow harmonized_pmdbs_analysis {
 		## List of samples included in the cohort
 		File? cohort_sample_list = cross_team_cohort_analysis.cohort_sample_list
 
-		## QC plots
+		# Merged adata objects, filtered and normalized adata objects, QC plots
 		File? cohort_merged_adata_object = cross_team_cohort_analysis.merged_adata_object
 		Array[File]? cohort_qc_plots_png = cross_team_cohort_analysis.qc_plots_png
+		File? cohort_filtered_adata_object = cross_team_cohort_analysis.filtered_adata_object
+		File? cohort_normalized_adata_object = cross_team_cohort_analysis.normalized_adata_object
+		File? cohort_final_validation_metrics = cross_team_cohort_analysis.final_validation_metrics
 
 		# Clustering outputs
 		File? cohort_integrated_adata_object = cross_team_cohort_analysis.integrated_adata_object
 		File? cohort_scvi_model_tar_gz = cross_team_cohort_analysis.scvi_model_tar_gz
 		File? cohort_umap_cluster_adata_object = cross_team_cohort_analysis.umap_cluster_adata_object
-		File? cohort_cell_types_csv = cross_team_cohort_analysis.cell_types_csv
 		File? cohort_cell_annotated_adata_object = cross_team_cohort_analysis.cell_annotated_adata_object
+		File? cohort_cell_types_csv = cross_team_cohort_analysis.cell_types_csv
 		File? cohort_cell_annotated_metadata = cross_team_cohort_analysis.cell_annotated_metadata
+
+		# PCA and Harmony integrated adata objects and artifact metrics
+		File? cohort_harmony_integrated_adata_object = cross_team_cohort_analysis.harmony_integrated_adata_object
+		File? cohort_scib_report_results_csv = cross_team_cohort_analysis.scib_report_results_csv
 
 		# Groups and features plots
 		File? cohort_groups_umap_plot_png = cross_team_cohort_analysis.groups_umap_plot_png
@@ -200,6 +215,7 @@ workflow harmonized_pmdbs_analysis {
 		cohort_staging_data_buckets: {help: "Set of buckets to stage cross-team cohort analysis outputs in."}
 		n_top_genes: {help: "Number of HVG genes to keep. [8000]"}
 		scvi_latent_key: {help: "Latent key to save the scVI latent to. ['X_scvi']"}
+		batch_key: {help: "Key in AnnData object for batch information. ['batch_id']"}
 		cell_type_markers_list: {help: "CSV file containing a list of major cell type markers; used to annotate clusters."}
 		groups: {help: "Groups to produce umap plots for. ['sample', 'batch', 'cell_type']"}
 		features: {help: "Features to produce umap plots for. ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score', 'S_score', 'G2M_score']"}

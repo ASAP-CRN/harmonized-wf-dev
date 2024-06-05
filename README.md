@@ -51,6 +51,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | String | cohort_staging_data_bucket | Bucket to upload cross-team cohort analysis outputs to. |
 | Int? | n_top_genes | Number of HVG genes to keep. [8000] |
 | String? | scvi_latent_key | Latent key to save the scVI latent to. ['X_scvi'] |
+| String? | batch_key | Key in AnnData object for batch information. ['batch_id'] |
 | File | cell_type_markers_list | CSV file containing a list of major cell type markers; used to annotate cells. |
 | Array[String]? | groups | Groups to produce umap plots for. ['sample', 'batch', 'cell_type'] |
 | Array[String]? | features | Features to produce umap plots for. ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score', 'S_score', 'G2M_score'] |
@@ -115,7 +116,9 @@ Example usage:
 
 ### Raw data (intermediate files and final outputs for all runs of the workflow)
 
-The raw data bucket will contain all artifacts generated as part of workflow execution. Following successful workflow execution, some artifacts will also be copied into the staging bucket as final outputs.
+The raw data bucket will contain *some* artifacts generated as part of workflow execution. Following successful workflow execution, the artifacts will also be copied into the staging bucket as final outputs.
+
+In the workflow, task outputs are either specified as `String` (final outputs, which will be copied in order to live in raw data buckets and staging buckets) or `File` (intermediate outputs that are periodically cleaned up, which will live in the cromwell-output bucket). This was implemented to reduce storage costs. Preprocess final outputs are defined in the workflow at [main.wdl](workflows/main.wdl#L59-L73) and [cohort_analysis.wdl](workflows/cohort_analysis/cohort_analysis.wdl#L118), and cohort analysis final outputs are defined at [cohort_analysis.wdl](workflows/cohort_analysis/cohort_analysis.wdl#L129-L149).
 
 ```bash
 asap-raw-data-{cohort,team-xxyy}
@@ -138,31 +141,28 @@ asap-raw-data-{cohort,team-xxyy}
 
 ### Staging data (intermediate workflow objects and final workflow outputs for the latest run of the workflow)
 
-Following QC by researchers, the objects in the staging bucket are synced into the curated data buckets, maintaining the same file structure. Curated data buckets are named `asap-curated-data-{cohort,team-xxyy}`.
+Following QC by researchers, the objects in the dev or uat bucket are synced into the curated data buckets, maintaining the same file structure. Curated data buckets are named `asap-curated-data-{cohort,team-xxyy}`.
 
 Data may be synced using [the `promote_staging_data` script](#promoting-staging-data).
 
 ```bash
-asap-staging-data-{cohort,team-xxyy}
+asap-dev-data-{cohort,team-xxyy}
 ├── cohort_analysis
-│   ├── ${cohort_id}.adata_object.scvi_integrated.umap_cluster.annotate_cells.h5ad
-│   ├── ${cohort_id}.annotate_cells.metadata.csv
-│   ├── ${cohort_id}.cell_types.csv
 │   ├── ${cohort_id}.sample_list.tsv
-│   ├── ${cohort_id}.features.umap.png
-│   ├── ${cohort_id}.groups.umap.png
 │   ├── ${cohort_id}.doublet_score.violin.png
 │   ├── ${cohort_id}.n_genes_by_counts.violin.png
 │   ├── ${cohort_id}.pct_counts_mt.violin.png
 │   ├── ${cohort_id}.pct_counts_rb.violin.png
 │   ├── ${cohort_id}.total_counts.violin.png
+│   ├── ${cohort_id}.validation_metrics.csv
+│   ├── ${cohort_id}.cell_types.csv
+│   ├── ${cohort_id}.annotate_cells.metadata.csv
+│   ├── ${cohort_id}.harmony_integrated.h5ad
+│   ├── ${cohort_id}.scib_report.csv
+│   ├── ${cohort_id}.features.umap.png
+│   ├── ${cohort_id}.groups.umap.png
 │   └── MANIFEST.tsv
 └── preprocess
-    ├── ${cohort_id}.adata_object.scvi_integrated.h5ad
-    ├── ${cohort_id}.adata_object.scvi_integrated.umap_cluster.h5ad
-    ├── ${cohort_id}.merged_adata_object.h5ad
-    ├── ${cohort_id}.merged_adata_object_filtered.h5ad
-    ├── ${cohort_id}.merged_adata_object_filtered_normalized.h5ad
     ├── ${cohort_id}.scvi_model.tar.gz
     ├── ${sampleA_id}.filtered_feature_bc_matrix.h5
     ├── ${sampleA_id}.metrics_summary.csv
@@ -226,6 +226,7 @@ The script defaults to a dry run, printing out the files that would be copied or
 -a  Promote all teams' data
 -l  List available teams
 -p  Promote data. If this option is not selected, data that would be copied or deleted is printed out, but files are not actually changed (dry run)
+-s  Staging bucket type; options are 'uat' or 'dev' ['uat']
 ```
 
 ### Usage
@@ -237,8 +238,11 @@ The script defaults to a dry run, printing out the files that would be copied or
 # Print out the files that would be copied or deleted from the staging bucket to the curated bucket for teams team-hafler, team-lee, and cohort
 ./util/promote_staging_data -t team-hafler,team-lee,cohort
 
-# Promote data for team-hafler, team-lee, and cohort
-./util/promote_staging_data -a -p
+# Promote data for team-hafler, team-hardy, team-jakobsson, team-lee, team-scherzer, team-sulzer, and cohort
+./util/promote_staging_data -a -p -s dev
+
+# Print out the files that would be copied or deleted from the staging bucket to the curated bucket for unembargoed cohort (team-hafler, team-lee, team-jakobsson, and team-scherzer)
+./util/promote_staging_data -t cohort
 ```
 
 # Docker images
