@@ -108,6 +108,15 @@
                     "check_empty_lines",
                     "png_validator"
                   ]
+                },
+                "qc_validation_metrics": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/merge_and_plot_qc_metrics_validation_metrics/${cohort_id}.validation_metrics.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
                 }
               }
             }
@@ -140,6 +149,15 @@
                     "compare_file_basename",
                     "check_empty_lines",
                     "check_hdf5"
+                  ]
+                },
+                "final_validation_metrics": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.validation_metrics.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
                   ]
                 }
               }
