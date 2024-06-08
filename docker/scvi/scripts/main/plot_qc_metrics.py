@@ -7,7 +7,7 @@ import sys
 sys.path.append("/opt/scripts/utility")
 from helpers import get_validation_metrics
 
-parser = argparse.ArgumentParser(description="Call doublets")
+parser = argparse.ArgumentParser(description="aggregate samples and calculate QC metrics")
 parser.add_argument(
     "--adata-objects-fofn",
     dest="adata_objects_fofn",
