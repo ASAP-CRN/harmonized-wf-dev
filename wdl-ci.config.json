@@ -171,7 +171,7 @@
             {
               "inputs": {
                 "cohort_id": "${cohort_id}",
-                "harmony_integrated_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.harmony_integrated.h5ad",
+                "harmony_integrated_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.annotate_cells.harmony_integrated.h5ad",
                 "groups": "${groups}",
                 "features": "${features}",
                 "raw_data_path": "${cohort_raw_data_path}",
@@ -214,7 +214,7 @@
             {
               "inputs": {
                 "cohort_id": "${cohort_id}",
-                "cell_annotated_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.adata_object.scvi_integrated.umap_cluster.annotate_cells.h5ad",
+                "cell_annotated_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.annotate_cells.h5ad",
                 "scvi_latent_key": "${scvi_latent_key}",
                 "batch_key": "${batch_key}",
                 "raw_data_path": "${cohort_raw_data_path}",
@@ -231,7 +231,7 @@
               },
               "output_tests": {
                 "harmony_integrated_adata_object": {
-                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.harmony_integrated.h5ad",
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.annotate_cells.harmony_integrated.h5ad",
                   "test_tasks": [
                     "compare_file_basename",
                     "check_empty_lines",
@@ -282,7 +282,7 @@
               },
               "output_tests": {
                 "integrated_adata_object": {
-                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.adata_object.scvi_integrated.h5ad",
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.h5ad",
                   "test_tasks": [
                     "compare_file_basename",
                     "check_empty_lines",
@@ -307,7 +307,7 @@
           "tests": [
             {
               "inputs": {
-                "integrated_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.adata_object.scvi_integrated.h5ad",
+                "integrated_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.h5ad",
                 "scvi_latent_key": "${scvi_latent_key}",
                 "cell_type_markers_list": "${input_file_path}/celltype_marker_table.csv",
                 "raw_data_path": "${cohort_raw_data_path}",
@@ -324,7 +324,7 @@
               },
               "output_tests": {
                 "umap_cluster_adata_object": {
-                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.adata_object.scvi_integrated.umap_cluster.h5ad",
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.h5ad",
                   "test_tasks": [
                     "compare_file_basename",
                     "check_empty_lines",
@@ -342,7 +342,7 @@
             {
               "inputs": {
                 "cohort_id": "${cohort_id}",
-                "cluster_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.adata_object.scvi_integrated.umap_cluster.h5ad",
+                "cluster_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.h5ad",
                 "batch_key": "${batch_key}",
                 "cell_type_markers_list": "${input_file_path}/celltype_marker_table.csv",
                 "container_registry": "${container_registry}",
@@ -359,7 +359,7 @@
                   ]
                 },
                 "cell_annotated_adata_object": {
-                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.adata_object.scvi_integrated.umap_cluster.annotate_cells.h5ad",
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.annotate_cells.h5ad",
                   "test_tasks": [
                     "compare_file_basename",
                     "check_empty_lines",
