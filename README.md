@@ -116,7 +116,9 @@ Example usage:
 
 ### Raw data (intermediate files and final outputs for all runs of the workflow)
 
-The raw data bucket will contain all artifacts generated as part of workflow execution. Following successful workflow execution, some artifacts will also be copied into the staging bucket as final outputs.
+The raw data bucket will contain *some* artifacts generated as part of workflow execution. Following successful workflow execution, the artifacts will also be copied into the staging bucket as final outputs.
+
+In the workflow, task outputs are either specified as `String` (final outputs, which will be copied in order to live in raw data buckets and staging buckets) or `File` (intermediate outputs that are periodically cleaned up, which will live in the cromwell-output bucket). This was implemented to reduce storage costs. Preprocess final outputs are defined in the workflow at [main.wdl](workflows/main.wdl#L59-L73) and [cohort_analysis.wdl](workflows/cohort_analysis/cohort_analysis.wdl#L118), and cohort analysis final outputs are defined at [cohort_analysis.wdl](workflows/cohort_analysis/cohort_analysis.wdl#L129-L149).
 
 ```bash
 asap-raw-data-{cohort,team-xxyy}
@@ -155,8 +157,8 @@ asap-dev-data-{cohort,team-xxyy}
 │   ├── ${cohort_id}.validation_metrics.csv
 │   ├── ${cohort_id}.cell_types.csv
 │   ├── ${cohort_id}.annotate_cells.metadata.csv
-│   ├── ${cohort_id}.harmony_integrated.h5ad
-│   ├── scib_report.csv
+│   ├── ${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.annotate_cells.harmony_integrated.h5ad
+│   ├── ${cohort_id}.scib_report.csv
 │   ├── ${cohort_id}.features.umap.png
 │   ├── ${cohort_id}.groups.umap.png
 │   └── MANIFEST.tsv
@@ -239,7 +241,7 @@ The script defaults to a dry run, printing out the files that would be copied or
 # Promote data for team-hafler, team-hardy, team-jakobsson, team-lee, team-scherzer, team-sulzer, and cohort
 ./util/promote_staging_data -a -p -s dev
 
-# Print out the files that would be copied or deleted from the staging bucket to the curated bucket for unembargoed cohort (team-hafler, team-lee, and team-jakobsson)
+# Print out the files that would be copied or deleted from the staging bucket to the curated bucket for unembargoed cohort (team-hafler, team-lee, team-jakobsson, and team-scherzer)
 ./util/promote_staging_data -t cohort
 ```
 

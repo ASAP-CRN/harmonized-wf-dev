@@ -21,7 +21,7 @@ workflow harmonized_pmdbs_analysis {
 		String cohort_raw_data_bucket
 		Array[String] cohort_staging_data_buckets
 
-		Int n_top_genes = 8000
+		Int n_top_genes = 3000
 		String scvi_latent_key = "X_scvi"
 		String batch_key = "batch_id"
 		File cell_type_markers_list
