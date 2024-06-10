@@ -385,6 +385,7 @@ task integrate_harmony_and_artifact_metrics {
 		String zones
 	}
 
+	String cell_annotated_adata_object_basename = basename(cell_annotated_adata_object, ".h5ad")
 	Int mem_gb = ceil(size(cell_annotated_adata_object, "GB") * 5 + 20)
 	Int disk_size = ceil(size(cell_annotated_adata_object, "GB") * 4 + 20)
 
@@ -394,12 +395,12 @@ task integrate_harmony_and_artifact_metrics {
 		python3 /opt/scripts/main/add_harmony.py \
 			--batch-key ~{batch_key} \
 			--adata-input ~{cell_annotated_adata_object} \
-			--adata-output ~{cohort_id}.harmony_integrated.h5ad
+			--adata-output ~{cell_annotated_adata_object_basename}.harmony_integrated.h5ad
 
 		python3 /opt/scripts/main/artifact_metrics.py \
 			--latent-key ~{scvi_latent_key} \
 			--batch-key ~{batch_key} \
-			--adata-input ~{cohort_id}.harmony_integrated.h5ad \
+			--adata-input ~{cell_annotated_adata_object_basename}.harmony_integrated.h5ad \
 			--output-report-dir scib_report_dir
 
 		mv "scib_report_dir/scib_report.csv" "scib_report_dir/~{cohort_id}.scib_report.csv"
@@ -408,12 +409,12 @@ task integrate_harmony_and_artifact_metrics {
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
-			-o "~{cohort_id}.harmony_integrated.h5ad" \
+			-o "~{cell_annotated_adata_object_basename}.harmony_integrated.h5ad" \
 			-o "scib_report_dir/~{cohort_id}.scib_report.csv"
 	>>>
 
 	output {
-		String harmony_integrated_adata_object = "~{raw_data_path}/~{cohort_id}.harmony_integrated.h5ad"
+		String harmony_integrated_adata_object = "~{raw_data_path}/~{cell_annotated_adata_object_basename}.harmony_integrated.h5ad"
 		String scib_report_results_csv = "~{raw_data_path}/~{cohort_id}.scib_report.csv"
 	}
 

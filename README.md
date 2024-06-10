@@ -157,7 +157,7 @@ asap-dev-data-{cohort,team-xxyy}
 │   ├── ${cohort_id}.validation_metrics.csv
 │   ├── ${cohort_id}.cell_types.csv
 │   ├── ${cohort_id}.annotate_cells.metadata.csv
-│   ├── ${cohort_id}.harmony_integrated.h5ad
+│   ├── ${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.annotate_cells.harmony_integrated.h5ad
 │   ├── ${cohort_id}.scib_report.csv
 │   ├── ${cohort_id}.features.umap.png
 │   ├── ${cohort_id}.groups.umap.png
