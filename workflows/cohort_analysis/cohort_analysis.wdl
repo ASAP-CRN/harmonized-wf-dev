@@ -24,6 +24,9 @@ workflow cohort_analysis {
 		Array[String] groups
 		Array[String] features
 
+		String workflow_name
+		String workflow_version
+		String workflow_release
 		String run_timestamp
 		String raw_data_path_prefix
 		Array[String] staging_data_buckets
@@ -32,12 +35,12 @@ workflow cohort_analysis {
 		String zones
 	}
 
-	String workflow_name = "cohort_analysis"
-	String workflow_version = "2.1.0"
+	String sub_workflow_name = "cohort_analysis"
+	String sub_workflow_version = "2.1.0"
 
-	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version]]
+	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version, workflow_release]]
 
-	String raw_data_path = "~{raw_data_path_prefix}/~{workflow_name}/~{workflow_version}/~{run_timestamp}"
+	String raw_data_path = "~{raw_data_path_prefix}/~{sub_workflow_name}/~{sub_workflow_version}/~{run_timestamp}"
 
 	call write_cohort_sample_list {
 		input:
@@ -152,7 +155,7 @@ workflow cohort_analysis {
 		input:
 			output_file_paths = cohort_analysis_final_output_paths,
 			staging_data_buckets = staging_data_buckets,
-			staging_data_path = workflow_name,
+			staging_data_path = sub_workflow_name,
 			billing_project = billing_project,
 			zones = zones
 	}
