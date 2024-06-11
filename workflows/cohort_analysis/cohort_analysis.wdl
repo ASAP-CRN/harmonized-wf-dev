@@ -219,7 +219,7 @@ task write_cohort_sample_list {
 	}
 
 	runtime {
-		docker: "~{container_registry}/util:1.1.0"
+		docker: "~{container_registry}/util:1.1.1"
 		cpu: 1
 		memory: "1 GB"
 		disks: "local-disk 10 HDD"

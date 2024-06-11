@@ -57,7 +57,7 @@ fi
 
 for output_file in "${OUTPUT_FILES[@]}"; do
 	paste \
-		<(echo "${output_file}") \
+		<(basename "${output_file}") \
 		"${WORKFLOW_INFO}" \
 	> "${output_file}.meta.tsv"
 
