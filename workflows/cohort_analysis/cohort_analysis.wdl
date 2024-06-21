@@ -140,7 +140,8 @@ workflow cohort_analysis {
 		],
 		[
 			integrate_harmony_and_artifact_metrics.harmony_integrated_adata_object,
-			integrate_harmony_and_artifact_metrics.scib_report_results_csv
+			integrate_harmony_and_artifact_metrics.scib_report_results_csv,
+			integrate_harmony_and_artifact_metrics.scib_report_results_svg
 		],
 		[
 			plot_groups_and_features.groups_umap_plot_png,
@@ -178,6 +179,7 @@ workflow cohort_analysis {
 		# PCA and Harmony integrated adata objects and artifact metrics
 		File harmony_integrated_adata_object = integrate_harmony_and_artifact_metrics.harmony_integrated_adata_object #!FileCoercion
 		File scib_report_results_csv = integrate_harmony_and_artifact_metrics.scib_report_results_csv #!FileCoercion
+		File scib_report_results_svg = integrate_harmony_and_artifact_metrics.scib_report_results_svg #!FileCoercion
 
 		# Groups and features plots
 		File groups_umap_plot_png = plot_groups_and_features.groups_umap_plot_png #!FileCoercion
@@ -404,18 +406,21 @@ task integrate_harmony_and_artifact_metrics {
 			--output-report-dir scib_report_dir
 
 		mv "scib_report_dir/scib_report.csv" "scib_report_dir/~{cohort_id}.scib_report.csv"
+		mv "scib_report_dir/scib_results.svg" "scib_report_dir/~{cohort_id}.scib_results.svg"
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cell_annotated_adata_object_basename}.harmony_integrated.h5ad" \
-			-o "scib_report_dir/~{cohort_id}.scib_report.csv"
+			-o "scib_report_dir/~{cohort_id}.scib_report.csv" \
+			-o "scib_report_dir/~{cohort_id}.scib_results.svg"
 	>>>
 
 	output {
 		String harmony_integrated_adata_object = "~{raw_data_path}/~{cell_annotated_adata_object_basename}.harmony_integrated.h5ad"
 		String scib_report_results_csv = "~{raw_data_path}/~{cohort_id}.scib_report.csv"
+		String scib_report_results_svg = "~{raw_data_path}/~{cohort_id}.scib_results.svg"
 	}
 
 	runtime {
