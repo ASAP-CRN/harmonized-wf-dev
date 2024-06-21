@@ -363,6 +363,15 @@
                 "cluster_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.h5ad",
                 "batch_key": "${batch_key}",
                 "cell_type_markers_list": "${input_file_path}/celltype_marker_table.csv",
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
                 "container_registry": "${container_registry}",
                 "zones": "${zones}"
               },
