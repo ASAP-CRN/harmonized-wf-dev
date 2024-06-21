@@ -328,15 +328,6 @@
                 "integrated_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.h5ad",
                 "scvi_latent_key": "${scvi_latent_key}",
                 "cell_type_markers_list": "${input_file_path}/celltype_marker_table.csv",
-                "raw_data_path": "${cohort_raw_data_path}",
-                "workflow_info": [
-                  [
-                    "${run_timestamp}",
-                    "${cohort_workflow_name}",
-                    "${cohort_workflow_version}"
-                  ]
-                ],
-                "billing_project": "${billing_project}",
                 "container_registry": "${container_registry}",
                 "zones": "${zones}"
               },
@@ -681,7 +672,7 @@
       "run_timestamp": "2024-06-06T00-00-00Z",
       "cohort_workflow_name": "cohort_analysis",
       "cohort_workflow_version": "2.1.0",
-      "cellbender_fpr": 0.0,
+      "cellbender_fpr": "0.0",
       "n_top_genes": 8000,
       "scvi_latent_key": "X_scvi",
       "batch_key": "batch_id",
