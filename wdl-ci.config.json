@@ -301,7 +301,7 @@
                   "test_tasks": [
                     "compare_file_basename",
                     "check_empty_lines",
-                    "check_gzip.wdl"
+                    "check_gzip"
                   ]
                 }
               }

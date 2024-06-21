@@ -41,6 +41,7 @@ task check_hdf5 {
 						Expected output: [$validated_output_hdf5]
 						Current run output: [$current_output_hdf5]"
 					exit 1
+				fi
 			fi
 		fi
 	>>>
