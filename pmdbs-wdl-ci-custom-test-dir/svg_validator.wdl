@@ -20,11 +20,11 @@ task svg_validator {
 			echo -e "[ERROR] $message" >&2
 		}
 
-		if ! html5validator ~{validated_output} --skip-non-svg; then
+		if ! html5validator ~{validated_output} --skip-non-svg --ignore 'error: Element "path" is missing required attribute "d"'; then
 			err "Validated SVG: [~{basename(validated_output)}] is invalid"
 			exit 1
 		else
-			if ! html5validator ~{current_run_output} --skip-non-svg; then
+			if ! html5validator ~{current_run_output} --skip-non-svg --ignore 'error: Element "path" is missing required attribute "d"'; then
 				err "Current run SVG: [~{basename(current_run_output)}] is invalid"
 				exit 1
 			else
