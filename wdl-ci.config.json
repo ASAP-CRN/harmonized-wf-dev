@@ -25,7 +25,7 @@
       "tasks": {
         "write_cohort_sample_list": {
           "key": "write_cohort_sample_list",
-          "digest": "",
+          "digest": "zfdftcnrmcevqf7i5s4ald2ohvy5ppc2",
           "tests": [
             {
               "inputs": {
@@ -91,7 +91,6 @@
                   "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.h5ad",
                   "test_tasks": [
                     "compare_file_basename",
-                    "check_empty_lines",
                     "check_hdf5"
                   ]
                 },
@@ -123,7 +122,7 @@
         },
         "filter_and_normalize": {
           "key": "filter_and_normalize",
-          "digest": "",
+          "digest": "wi2mf6t7konbmghfts35mt7uyfsarrrp",
           "tests": [
             {
               "inputs": {
@@ -175,7 +174,7 @@
         },
         "plot_groups_and_features": {
           "key": "plot_groups_and_features",
-          "digest": "",
+          "digest": "2bk6dctm5isau5mz6do43wbx2kutkuww",
           "tests": [
             {
               "inputs": {
@@ -216,7 +215,7 @@
         },
         "integrate_harmony_and_artifact_metrics": {
           "key": "integrate_harmony_and_artifact_metrics",
-          "digest": "",
+          "digest": "ud7o6uxhnx6tdgbywdnt2hz6xergevfb",
           "tests": [
             {
               "inputs": {
@@ -273,7 +272,7 @@
       "tasks": {
         "integrate_sample_data": {
           "key": "integrate_sample_data",
-          "digest": "",
+          "digest": "eysqa4xtjztgsltx53vi7wukncluv2xb",
           "tests": [
             {
               "inputs": {
@@ -314,7 +313,7 @@
         },
         "cluster_cells": {
           "key": "cluster_cells",
-          "digest": "",
+          "digest": "x4qa7nlzlucxd3omxef3psgxgnfsuo3a",
           "tests": [
             {
               "inputs": {
@@ -338,7 +337,7 @@
         },
         "annotate_cells": {
           "key": "annotate_cells",
-          "digest": "",
+          "digest": "asy5gjt2jt4uerphuvkjgk6d65uol66r",
           "tests": [
             {
               "inputs": {
@@ -402,7 +401,7 @@
         },
         "cellranger_count": {
           "key": "cellranger_count",
-          "digest": "",
+          "digest": "u2z3cfjpwjppc22kmrtuljgv44frskp4",
           "tests": [
             {
               "inputs": {
@@ -470,7 +469,7 @@
         },
         "remove_technical_artifacts": {
           "key": "remove_technical_artifacts",
-          "digest": "",
+          "digest": "f2ulwvwgf67cd7hgpjjxtly47tqhppgf",
           "tests": [
             {
               "inputs": {
@@ -554,7 +553,7 @@
         },
         "counts_to_adata": {
           "key": "counts_to_adata",
-          "digest": "",
+          "digest": "z2hbjnseugfb57oxd2e5b33ybrp7gp4m",
           "tests": [
             {
               "inputs": {
@@ -595,6 +594,42 @@
       "tasks": {
         "upload_final_outputs": {
           "key": "upload_final_outputs",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "pmdbs-wdl-ci-custom-test-dir/check_hdf5.wdl": {
+      "key": "pmdbs-wdl-ci-custom-test-dir/check_hdf5.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "check_hdf5": {
+          "key": "check_hdf5",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "pmdbs-wdl-ci-custom-test-dir/pdf_validator.wdl": {
+      "key": "pmdbs-wdl-ci-custom-test-dir/pdf_validator.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "pdf_validator": {
+          "key": "pdf_validator",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "pmdbs-wdl-ci-custom-test-dir/svg_validator.wdl": {
+      "key": "pmdbs-wdl-ci-custom-test-dir/svg_validator.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "svg_validator": {
+          "key": "svg_validator",
           "digest": "",
           "tests": []
         }
