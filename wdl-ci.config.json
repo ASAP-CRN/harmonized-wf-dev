@@ -607,7 +607,13 @@
       }
     }
   },
-  "engines": {},
+  "engines": {
+    "asap-cromwell": {
+      "key": "asap-cromwell",
+      "enabled": true,
+      "name": ""
+    }
+  },
   "test_params": {
     "global_params": {
       "sample_id": "ASAP_PMBDS_000105_s001_1",
