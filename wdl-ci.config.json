@@ -401,7 +401,7 @@
         },
         "cellranger_count": {
           "key": "cellranger_count",
-          "digest": "u2z3cfjpwjppc22kmrtuljgv44frskp4",
+          "digest": "",
           "tests": [
             {
               "inputs": {
@@ -434,7 +434,6 @@
                   "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.raw_feature_bc_matrix.h5",
                   "test_tasks": [
                     "compare_file_basename",
-                    "check_empty_lines",
                     "check_hdf5"
                   ]
                 },
@@ -442,7 +441,6 @@
                   "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.filtered_feature_bc_matrix.h5",
                   "test_tasks": [
                     "compare_file_basename",
-                    "check_empty_lines",
                     "check_hdf5"
                   ]
                 },
@@ -450,7 +448,6 @@
                   "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.molecule_info.h5",
                   "test_tasks": [
                     "compare_file_basename",
-                    "check_empty_lines",
                     "check_hdf5"
                   ]
                 },
