@@ -401,7 +401,7 @@
         },
         "cellranger_count": {
           "key": "cellranger_count",
-          "digest": "",
+          "digest": "u2z3cfjpwjppc22kmrtuljgv44frskp4",
           "tests": [
             {
               "inputs": {
