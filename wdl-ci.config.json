@@ -59,7 +59,7 @@
         },
         "merge_and_plot_qc_metrics": {
           "key": "merge_and_plot_qc_metrics",
-          "digest": "",
+          "digest": "nlsfz2kfxtlr7tx6appdqpqlq53ablwj",
           "tests": [
             {
               "inputs": {
@@ -407,14 +407,12 @@
               "inputs": {
                 "sample_id": "${sample_id}",
                 "fastq_R1s": [
-                  "gs://asap-raw-data-team-jakobsson/fastqs/ASAP1_PD_NP16-162_SN_R1.fastq.gz"
+                  "gs://asap-wdl-ci/subset_fastqs/team-jakobsson/subset_10000_ASAP1_PD_NP16-162_SN_R1.fastq.gz"
                 ],
                 "fastq_R2s": [
-                  "gs://asap-raw-data-team-jakobsson/fastqs/ASAP1_PD_NP16-162_SN_R2.fastq.gz"
+                  "gs://asap-wdl-ci/subset_fastqs/team-jakobsson/subset_10000_ASAP1_PD_NP16-162_SN_R2.fastq.gz"
                 ],
-                "fastq_I1s": [
-                  "gs://asap-raw-data-team-jakobsson/fastqs/ASAP1_PD_NP16-162_SN_I1.fastq.gz"
-                ],
+                "fastq_I1s": [],
                 "fastq_I2s": [],
                 "cellranger_reference_data": "${input_file_path}/refdata-gex-GRCh38-2020-A.tar.gz",
                 "raw_data_path": "${cellranger_raw_data_path}",
