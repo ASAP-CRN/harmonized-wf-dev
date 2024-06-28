@@ -16,7 +16,7 @@ task upload_final_outputs {
 		# Write the file manifest
 		sed 's~$~.meta.tsv~' ~{write_lines(output_file_paths)} > metadata_paths.txt
 
-		echo -e "filename\ttimestamp\tworkflow\tworkflow_version" > MANIFEST.tsv
+		echo -e "filename\ttimestamp\tworkflow\tworkflow_version\tworkflow_release" > MANIFEST.tsv
 		mkdir metadata
 		gsutil -u ~{billing_project} -m cp -I ./metadata/ \
 		< metadata_paths.txt

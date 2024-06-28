@@ -13,6 +13,9 @@ workflow preprocess {
 
 		Float cellbender_fpr
 
+		String workflow_name
+		String workflow_version
+		String workflow_release
 		String run_timestamp
 		String raw_data_path_prefix
 		String billing_project
@@ -21,16 +24,16 @@ workflow preprocess {
 	}
 
 	# Task and subworkflow versions
-	String workflow_name = "preprocess"
+	String sub_workflow_name = "preprocess"
 	String cellranger_task_version = "1.1.0"
-	String workflow_version = "1.0.0"
+	String sub_workflow_version = "1.0.0"
 
-	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version]]
+	Array[Array[String]] workflow_info = [[run_timestamp, workflow_name, workflow_version, workflow_release]]
 
-	String workflow_raw_data_path_prefix = "~{raw_data_path_prefix}/~{workflow_name}"
+	String workflow_raw_data_path_prefix = "~{raw_data_path_prefix}/~{sub_workflow_name}"
 	String cellranger_raw_data_path = "~{workflow_raw_data_path_prefix}/cellranger/~{cellranger_task_version}"
-	String cellbender_raw_data_path = "~{workflow_raw_data_path_prefix}/remove_technical_artifacts/~{workflow_version}"
-	String adata_raw_data_path = "~{workflow_raw_data_path_prefix}/counts_to_adata/~{workflow_version}"
+	String cellbender_raw_data_path = "~{workflow_raw_data_path_prefix}/remove_technical_artifacts/~{sub_workflow_version}"
+	String adata_raw_data_path = "~{workflow_raw_data_path_prefix}/counts_to_adata/~{sub_workflow_version}"
 
 	scatter (sample_object in samples) {
 		String cellranger_count_output = "~{cellranger_raw_data_path}/~{sample_object.sample_id}.raw_feature_bc_matrix.h5"

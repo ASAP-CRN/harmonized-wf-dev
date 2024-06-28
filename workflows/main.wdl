@@ -34,6 +34,9 @@ workflow harmonized_pmdbs_analysis {
 	}
 
 	String workflow_execution_path = "workflow_execution"
+	String workflow_name = "harmonized_pmdbs"
+	String workflow_version = "v2.1.0"
+	String workflow_release = "https://github.com/ASAP-CRN/harmonized-wf-dev/releases/tag/harmonized_pmdbs_analysis-~{workflow_version}"
 
 	call get_workflow_metadata {
 		input:
@@ -49,6 +52,9 @@ workflow harmonized_pmdbs_analysis {
 				samples = project.samples,
 				cellranger_reference_data = cellranger_reference_data,
 				cellbender_fpr = cellbender_fpr,
+				workflow_name = workflow_name,
+				workflow_version = workflow_version,
+				workflow_release = workflow_release,
 				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = project_raw_data_path_prefix,
 				billing_project = get_workflow_metadata.billing_project,
@@ -85,6 +91,9 @@ workflow harmonized_pmdbs_analysis {
 					cell_type_markers_list = cell_type_markers_list,
 					groups = groups,
 					features = features,
+					workflow_name = workflow_name,
+					workflow_version = workflow_version,
+					workflow_release = workflow_release,
 					run_timestamp = get_workflow_metadata.timestamp,
 					raw_data_path_prefix = project_raw_data_path_prefix,
 					staging_data_buckets = project.staging_data_buckets,
@@ -110,6 +119,9 @@ workflow harmonized_pmdbs_analysis {
 				cell_type_markers_list = cell_type_markers_list,
 				groups = groups,
 				features = features,
+				workflow_name = workflow_name,
+				workflow_version = workflow_version,
+				workflow_release = workflow_release,
 				run_timestamp = get_workflow_metadata.timestamp,
 				raw_data_path_prefix = cohort_raw_data_path_prefix,
 				staging_data_buckets = cohort_staging_data_buckets,
