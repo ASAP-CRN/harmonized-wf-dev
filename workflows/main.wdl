@@ -163,6 +163,7 @@ workflow harmonized_pmdbs_analysis {
 		# PCA and Harmony integrated adata objects and artifact metrics
 		Array[File?] project_harmony_integrated_adata_object = project_cohort_analysis.harmony_integrated_adata_object
 		Array[File?] project_scib_report_results_csv = project_cohort_analysis.scib_report_results_csv
+		Array[File?] project_scib_report_results_svg = project_cohort_analysis.scib_report_results_svg
 
 		# Groups and features plots
 		Array[File?] project_groups_umap_plot_png = project_cohort_analysis.groups_umap_plot_png
@@ -193,6 +194,7 @@ workflow harmonized_pmdbs_analysis {
 		# PCA and Harmony integrated adata objects and artifact metrics
 		File? cohort_harmony_integrated_adata_object = cross_team_cohort_analysis.harmony_integrated_adata_object
 		File? cohort_scib_report_results_csv = cross_team_cohort_analysis.scib_report_results_csv
+		File? cohort_scib_report_results_svg = cross_team_cohort_analysis.scib_report_results_svg
 
 		# Groups and features plots
 		File? cohort_groups_umap_plot_png = cross_team_cohort_analysis.groups_umap_plot_png
