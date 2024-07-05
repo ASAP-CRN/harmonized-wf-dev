@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# Promote data in staging buckets to production
+# Run data integrity tests and promote data in staging buckets to production
 
 set -eEuo pipefail
 
 usage() {
 cat << EOF
 
-  Promote data in staging buckets to production.
+  Run data integrity tests and promote data in staging buckets to production.
 
   $(tput bold)[CAUTION] This also deletes data in the production bucket that is not found in the staging bucket.$(tput sgr0)
 
@@ -36,6 +36,20 @@ err() {
 list_teams() {
   echo "$(tput bold)Available teams:$(tput sgr0)"
   echo "${ALL_TEAMS[@]}" | tr ' ' '\n'
+}
+
+non_empty_check() {
+  source_path="${1#/}/**"
+
+  file_list_sorted=$(gsutil ls -l "${source_path}" | sort -n -k 1 | grep -E '^[0-9[:space:]]')
+
+  while read -r file_size timestamp gs_uri; do
+    # Check if the file size is less than or equal to 10 bytes
+    if [[ $file_size -le 10 ]]; then
+      err "Found a file less than or equal to 10 bytes: $gs_uri"
+      exit 1
+    fi
+  done <<< "${file_list_sorted}"
 }
 
 gsync() {
@@ -89,6 +103,14 @@ for team in "${TEAMS[@]}"; do
     list_teams
     exit 1
   fi
+done
+
+# Check that files are not empty and are not less than or equal to 10 bytes (factoring in white space)
+for team in "${TEAMS[@]}"; do
+  staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
+
+  non_empty_check \
+    "${staging_bucket}"
 done
 
 # Try syncing staging data to production
