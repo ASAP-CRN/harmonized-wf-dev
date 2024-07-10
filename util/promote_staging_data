@@ -38,6 +38,10 @@ list_teams() {
   echo "${ALL_TEAMS[@]}" | tr ' ' '\n'
 }
 
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
 non_empty_check() {
   source_path="${1#/}/**"
 
@@ -46,7 +50,12 @@ non_empty_check() {
   while read -r file_size timestamp gs_uri; do
     if [[ $file_size -le 10 ]]; then
       err "Found a file less than or equal to 10 bytes: [$gs_uri]"
-      exit 1
+      non_empty_check_status=1
+      non_empty_check_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
+
+    else
+      non_empty_check_status=0
+      non_empty_check_result=$(printf "${GREEN}\xE2\x9C\x94${NC}\n")
     fi
   done <<< "${file_list_sorted}"
 }
@@ -64,7 +73,11 @@ metadata_check() {
       files_exist=$(echo "$files_in_manifest" | grep "$file" || [[ $? == 1 ]])
       if [[ -z "$files_exist" ]]; then
         err "File does not have associated metadata and is absent from MANIFEST: [${gs_path}${file}]"
-        exit 1
+        metadata_check_status=1
+        metadata_check_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
+      else
+        metadata_check_status=0
+        metadata_check_result=$(printf "${GREEN}\xE2\x9C\x94${NC}\n")
       fi
     done <<< "${files_to_check}"
   done <<< "${subfolder_paths}"
@@ -139,7 +152,9 @@ for team in "${TEAMS[@]}"; do
     "${staging_bucket}"
 done
 
-log "All tests have passed"
+if [[ "$non_empty_check_status" == 0 ]] && [[ "$metadata_check_status" == 0 ]]; then
+  log "All tests have passed"
+fi
 
 # Try syncing staging data to production
 for team in "${TEAMS[@]}"; do
