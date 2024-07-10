@@ -43,6 +43,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 non_empty_check() {
+  not_empty_tests=
   source_path="${1#/}/**"
 
   file_list_sorted=$(gsutil ls -l "${source_path}" | sort -n -k 1 | grep -E '^[0-9[:space:]]')
@@ -50,17 +51,22 @@ non_empty_check() {
   while read -r file_size timestamp gs_uri; do
     if [[ $file_size -le 10 ]]; then
       err "Found a file less than or equal to 10 bytes: [$gs_uri]"
-      non_empty_check_status=1
       non_empty_check_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
-
+      not_empty_tests+=$non_empty_check_result
     else
-      non_empty_check_status=0
       non_empty_check_result=$(printf "${GREEN}\xE2\x9C\x94${NC}\n")
+      not_empty_tests+=$non_empty_check_result
     fi
   done <<< "${file_list_sorted}"
 }
 
 metadata_check() {
+  current_timestamp=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+  timestamps=
+  filenames=
+  previous_timestamps=
+  workflow_versions=
+  metadata_present_tests=
   source_path="${1#/}/**"
 
   file_list=$(gsutil ls -l "${source_path}" | awk '{print $3}' | grep '^gs://')
@@ -69,15 +75,21 @@ metadata_check() {
   while read -r gs_path; do
     files_to_check=$(echo "${file_list}" | grep $gs_path | grep -v "MANIFEST.tsv$" | sed "s;$gs_path;;")
     files_in_manifest=$(gsutil cat "${gs_path}MANIFEST.tsv" | tail -n +2)
+
+    filenames+=$(echo "$files_in_manifest" | awk '{print $1}')
+    previous_timestamps+=$(echo "$files_in_manifest" | awk '{print $2}')
+    workflow_versions+=$(echo "$files_in_manifest" | awk '{print $4}')
+    timestamps+=$current_timestamp
+
     while read -r file; do
       files_exist=$(echo "$files_in_manifest" | grep "$file" || [[ $? == 1 ]])
       if [[ -z "$files_exist" ]]; then
         err "File does not have associated metadata and is absent from MANIFEST: [${gs_path}${file}]"
-        metadata_check_status=1
         metadata_check_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
+        metadata_present_tests+=$metadata_check_result
       else
-        metadata_check_status=0
         metadata_check_result=$(printf "${GREEN}\xE2\x9C\x94${NC}\n")
+        metadata_present_tests+=$metadata_check_result
       fi
     done <<< "${files_to_check}"
   done <<< "${subfolder_paths}"
@@ -136,24 +148,56 @@ for team in "${TEAMS[@]}"; do
   fi
 done
 
-# Check that files are not empty and are not less than or equal to 10 bytes (factoring in white space)
 for team in "${TEAMS[@]}"; do
   staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
 
+  # Check that files are not empty and are not less than or equal to 10 bytes (factoring in white space)
   non_empty_check \
     "${staging_bucket}"
-done
 
-# Check that files have associated metadata and is present in MANIFEST.tsv
-for team in "${TEAMS[@]}"; do
-  staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
-
+  # Check that files have associated metadata and is present in MANIFEST.tsv
   metadata_check \
     "${staging_bucket}"
 done
 
-if [[ "$non_empty_check_status" == 0 ]] && [[ "$metadata_check_status" == 0 ]]; then
+table1_header="| filename | timestamp | workflow_version | all_tests_passed | previous_timestamp |\n|---------|---------|---------|---------|---------|\n"
+unique_not_empty_results=$(echo "$not_empty_tests" | sort | uniq | wc -l | awk '{print $1}')
+unique_metadata_present_results=$(echo "$metadata_present_tests" | sort | uniq | wc -l | awk '{print $1}')
+if [[ "$unique_not_empty_results" == 1 ]] && [[ "$unique_metadata_present_results" == 1 ]]; then
+  all_tests_result_status=0
+  all_tests_result=$(printf "${GREEN}\xE2\x9C\x94${NC}\n")
+else
+  all_tests_result_status=1
+  all_tests_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
+fi
+table1=$(paste -d " | " \
+  <(echo "$filenames") \
+  <(echo "$timestamps") \
+  <(echo "$workflow_versions") \
+  <(echo "$all_tests_result") \
+  <(echo "$previous_timestamps") \
+  | sed 's/^/| /; s/$/ |/'
+)
+table1_content="$table1_header$table1"
+
+table2_header="| filename | timestamp | not_empty_test | metadata_present_test |\n|---------|---------|---------|---------|\n"
+table2=$(paste -d " | " \
+  <(echo "$filenames") \
+  <(echo "$timestamps") \
+  <(echo "$not_empty_tests") \
+  <(echo "$metadata_present_tests") \
+  | sed 's/^/| /; s/$/ |/'
+)
+table2_content="$table2_header$table2"
+
+# Create report
+
+# Exit script if not all tests passed
+if [[ "$all_tests_result_status" == 0 ]]; then
   log "All tests have passed"
+else
+  err "One or more tests on files failed; cannot proceed with data promotion"
+  exit 1
 fi
 
 # Try syncing staging data to production
