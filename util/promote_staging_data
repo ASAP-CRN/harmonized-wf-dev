@@ -179,8 +179,8 @@ for team in "${TEAMS[@]}"; do
   # Get info on target environment (AKA old/previous workflow run)
   list_gs_files \
     "${production_bucket}"
-  prod_sample_list_loc=$(echo "$list_gs_files" | grep "sample_list.tsv$")
-  prod_manifest_loc=$(echo "$list_gs_files" | grep "MANIFEST.tsv$")
+  prod_sample_list_loc=$(echo "$gs_files" | grep "sample_list.tsv$")
+  prod_manifest_loc=$(echo "$gs_files" | grep "MANIFEST.tsv$")
   prod_filenames=
   prod_previous_timestamps=
   prod_workflow_versions=
@@ -202,10 +202,11 @@ for team in "${TEAMS[@]}"; do
   fi
 
   # Compare staging and prod files
-  staging_files=$(echo "$file_list" | sort)
-  prod_files=$(echo "$list_gs_files" | sort)
+  staging_files=$(echo "$file_list" | sort | awk -F/ '{print $NF}')
+  prod_files=$(echo "$gs_files" | sort | awk -F/ '{print $NF}')
   new_files=$(comm -23 <(echo "$staging_files") <(echo "$prod_files"))
   deleted_files=$(comm -13 <(echo "$staging_files") <(echo "$prod_files"))
+  common_files=$(comm -12 <(echo "$staging_files") <(echo "$prod_files"))
   mod_files=
   while read -r staging_file; do
     staging_filename=$(basename "$staging_file")
@@ -261,50 +262,50 @@ for team in "${TEAMS[@]}"; do
   fi
 
   cat << EOF > tmp_report.md
-  # Info
-  ## Initial environment
-  Environment: [${STAGING_BUCKET_TYPE}]
-  Bucket: $staging_bucket
-  Manifest timestamp: $staging_timestamp
-  Harmonized PMDBS workflow version: ($staging_workflow_version)[$staging_workflow_release_github_link]
-  Sample set: $staging_sample_list_loc
-  Tests passed: $all_tests_result_status
+# Info
+## Initial environment
+Environment: [${STAGING_BUCKET_TYPE}]
+Bucket: $staging_bucket
+Manifest timestamp: $staging_timestamp
+Harmonized PMDBS workflow version: ($staging_workflow_version)[$staging_workflow_release_github_link]
+Sample set: $staging_sample_list_loc
+Tests passed: $all_tests_result_status
 
-  ## Target environment
-  Environment: [curated]
-  Bucket: gs://asap-curated-data-${team}
-  Manifest timestamp: $prod_timestamp
-  Harmonized PMDBS workflow version: ($prod_workflow_version)[$prod_workflow_release_github_link]
-  Sample set: $prod_sample_list_loc
-  Tests passed: N/A
-
-
-  # Files changed
-  ## New
-  $new_files
-
-  ## Modified
-  $mod_files
-
-  ## Deleted
-  $deleted_files
+## Target environment
+Environment: [curated]
+Bucket: gs://asap-curated-data-${team}
+Manifest timestamp: $prod_timestamp
+Harmonized PMDBS workflow version: ($prod_workflow_version)[$prod_workflow_release_github_link]
+Sample set: $prod_sample_list_loc
+Tests passed: N/A
 
 
-  # File tests
-  Table 1: Summary
-  $table1_content
+# Files changed
+## New (i.e. only in staging)
+$new_files
 
-  Table 2: Data integrity tests results
-  $table2_content
+## Modified
+$mod_files
 
-  Table 3: Definitions
-  | Term | Definition |
-  |---------|---------|
-  | New files | Set of new files (i.e. they didn’t exist in previous runs/workflow versions). |
-  | Modified files | Set of files that have different checksums. |
-  | Deleted files | Set of files that no longer exist in this version of the pipeline (expected, not an error in the pipeline). |
-  | Not_empty test | A test that checks if all files in buckets are empty or less than or equal to 10 bytes in size. |
-  | Metadata_present test | A test that checks if all files in buckets have an associated metadata. The metadata file (`MANIFEST.tsv`) is generated in the workflow. |
+## Deleted (i.e. only in prod)
+$deleted_files
+
+
+# File tests
+Table 1: Summary
+$table1_content
+
+Table 2: Data integrity tests results
+$table2_content
+
+Table 3: Definitions
+| Term | Definition |
+|---------|---------|
+| New files | Set of new files (i.e. they didn’t exist in previous runs/workflow versions). |
+| Modified files | Set of files that have different checksums. |
+| Deleted files | Set of files that no longer exist in this version of the pipeline (expected, not an error in the pipeline). |
+| Not_empty test | A test that checks if all files in buckets are empty or less than or equal to 10 bytes in size. |
+| Metadata_present test | A test that checks if all files in buckets have an associated metadata. The metadata file (MANIFEST.tsv) is generated in the workflow. |
 EOF
 
   pandoc tmp_report.md -o "$team"_"$staging_workflow"_"$staging_workflow_version"_"$current_timestamp"_data-promotion-report.pdf
