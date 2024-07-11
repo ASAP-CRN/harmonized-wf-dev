@@ -38,6 +38,12 @@ list_teams() {
   echo "${ALL_TEAMS[@]}" | tr ' ' '\n'
 }
 
+list_gs_files() {
+  source_path="${1#/}/**"
+
+  gs_files=$(gsutil ls -l "${source_path}" | awk '{print $3}' | grep '^gs://')
+}
+
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
@@ -52,44 +58,47 @@ non_empty_check() {
     if [[ $file_size -le 10 ]]; then
       err "Found a file less than or equal to 10 bytes: [$gs_uri]"
       non_empty_check_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
-      not_empty_tests+=$non_empty_check_result
+      not_empty_tests+="\n$non_empty_check_result"
     else
       non_empty_check_result=$(printf "${GREEN}\xE2\x9C\x94${NC}\n")
-      not_empty_tests+=$non_empty_check_result
+      not_empty_tests+="\n$non_empty_check_result"
     fi
   done <<< "${file_list_sorted}"
 }
 
 metadata_check() {
   current_timestamp=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
-  timestamps=
-  filenames=
+  current_timestamps=
+  staging_filenames=
   previous_timestamps=
-  workflow_versions=
+  staging_workflow_versions=
   metadata_present_tests=
   source_path="${1#/}/**"
 
   file_list=$(gsutil ls -l "${source_path}" | awk '{print $3}' | grep '^gs://')
   subfolder_paths=$(echo "${file_list}" | grep "MANIFEST.tsv$" | awk -F 'MANIFEST.tsv' '{print $1}')
+  staging_sample_list_loc=$(echo "${file_list}" | grep "sample_list.tsv$")
 
   while read -r gs_path; do
     files_to_check=$(echo "${file_list}" | grep $gs_path | grep -v "MANIFEST.tsv$" | sed "s;$gs_path;;")
     files_in_manifest=$(gsutil cat "${gs_path}MANIFEST.tsv" | tail -n +2)
 
-    filenames+=$(echo "$files_in_manifest" | awk '{print $1}')
-    previous_timestamps+=$(echo "$files_in_manifest" | awk '{print $2}')
-    workflow_versions+=$(echo "$files_in_manifest" | awk '{print $4}')
-    timestamps+=$current_timestamp
+    staging_filenames+=$(echo -e "\n$(echo "$files_in_manifest" | awk '{print $1}')")
+    previous_timestamps+=$(echo -e "\n$(echo "$files_in_manifest" | awk '{print $2}')")
+    staging_workflow_versions+=$(echo -e "\n$(echo "$files_in_manifest" | awk '{print $4}')")
+    current_timestamps+=$current_timestamp
+    staging_workflows=$(echo -e "\n$(echo "$files_in_manifest" | awk '{print $3}' | sort | uniq)")
+    staging_workflow_release_github_link=$(echo -e "\n$(echo "$files_in_manifest" | awk '{print $5}' | sort | uniq)")
 
     while read -r file; do
       files_exist=$(echo "$files_in_manifest" | grep "$file" || [[ $? == 1 ]])
       if [[ -z "$files_exist" ]]; then
         err "File does not have associated metadata and is absent from MANIFEST: [${gs_path}${file}]"
         metadata_check_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
-        metadata_present_tests+=$metadata_check_result
+        metadata_present_tests+="\n$metadata_check_result"
       else
         metadata_check_result=$(printf "${GREEN}\xE2\x9C\x94${NC}\n")
-        metadata_present_tests+=$metadata_check_result
+        metadata_present_tests+="\n$metadata_check_result"
       fi
     done <<< "${files_to_check}"
   done <<< "${subfolder_paths}"
@@ -148,8 +157,16 @@ for team in "${TEAMS[@]}"; do
   fi
 done
 
+# Prepare report
+table1_header="| filename | timestamp | workflow_version | all_tests_passed | previous_timestamp |\n|---------|---------|---------|---------|---------|\n"
+table2_header="| filename | timestamp | not_empty_test | metadata_present_test |\n|---------|---------|---------|---------|\n"
+
+# Run data integrity tests and create report for each time
 for team in "${TEAMS[@]}"; do
+  log "Starting ${team}"
+
   staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
+  production_bucket=gs://asap-curated-data-${team}
 
   # Check that files are not empty and are not less than or equal to 10 bytes (factoring in white space)
   non_empty_check \
@@ -158,47 +175,151 @@ for team in "${TEAMS[@]}"; do
   # Check that files have associated metadata and is present in MANIFEST.tsv
   metadata_check \
     "${staging_bucket}"
+
+  # Get info on target environment (AKA old/previous workflow run)
+  list_gs_files \
+    "${production_bucket}"
+  prod_sample_list_loc=$(echo "$list_gs_files" | grep "sample_list.tsv$")
+  prod_manifest_loc=$(echo "$list_gs_files" | grep "MANIFEST.tsv$")
+  prod_filenames=
+  prod_previous_timestamps=
+  prod_workflow_versions=
+  while read -r manifest_loc; do
+    prod_files_in_manifest=$(gsutil cat "$manifest_loc" | tail -n +2)
+
+    prod_filenames+=$(echo -e "\n$(echo "$prod_files_in_manifest" | awk '{print $1}')")
+    prod_previous_timestamps+=$(echo -e "\n$(echo "$prod_files_in_manifest" | awk '{print $2}')")
+    prod_workflow_versions+=$(echo -e "\n$(echo "$prod_files_in_manifest" | awk '{print $4}')")
+    prod_workflows=$(echo "$prod_files_in_manifest" | awk '{print $3}' | sort | uniq)
+    prod_workflow_release_github_link=$(echo "$prod_files_in_manifest" | awk '{print $5}' | sort | uniq)
+  done <<< "${prod_manifest_loc}"
+  prod_workflow_length=$(echo "$prod_workflows" | wc -l | awk '{print $1}')
+  prod_workflow=$(echo "$prod_workflows" | head -1)
+  prod_workflow_version=$(echo "$prod_workflow_versions" | head -1)
+  prod_timestamp=$(echo "$prod_previous_timestamps" | head -1)
+  if [[ "$prod_workflow_length" != 1 ]]; then
+    log "[WARN] More than one workflow detected in prod/previous manifest"
+  fi
+
+  # Compare staging and prod files
+  staging_files=$(echo "$file_list" | sort)
+  prod_files=$(echo "$list_gs_files" | sort)
+  new_files=$(comm -23 <(echo "$staging_files") <(echo "$prod_files"))
+  deleted_files=$(comm -13 <(echo "$staging_files") <(echo "$prod_files"))
+  mod_files=
+  while read -r staging_file; do
+    staging_filename=$(basename "$staging_file")
+    # Check if the same file exists in prod_files
+    while read -r prod_file; do
+      prod_filename=$(basename "$prod_file")
+      if [ "$staging_filename" == "$prod_filename" ]; then
+        staging_hash=$(gsutil stat "$staging_file" | grep "Hash (md5)" | awk '{print $3}')
+        prod_hash=$(gsutil stat "$prod_file" | grep "Hash (md5)" | awk '{print $3}')
+        # Compare the hashes
+        if [ "$staging_hash" != "$prod_hash" ]; then
+          mod_files+="\n$staging_filename"
+        fi
+      fi
+    done <<< "${prod_files}"
+  done <<< "${staging_files}"
+
+  # Create report
+  unique_not_empty_results=$(echo "$not_empty_tests" | sort | uniq | wc -l | awk '{print $1}')
+  unique_metadata_present_results=$(echo "$metadata_present_tests" | sort | uniq | wc -l | awk '{print $1}')
+  if [[ "$unique_not_empty_results" == 1 ]] && [[ "$unique_metadata_present_results" == 1 ]]; then
+    all_tests_result_status=True
+    all_tests_result=$(printf "${GREEN}\xE2\x9C\x94${NC}\n")
+  else
+    all_tests_result_status=False
+    all_tests_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
+  fi
+  table1=$(paste -d " | " \
+    <(echo "$staging_filenames") \
+    <(echo "$current_timestamps") \
+    <(echo "$staging_workflow_versions") \
+    <(echo "$all_tests_result") \
+    <(echo "$previous_timestamps") \
+    | sed 's/^/| /; s/$/ |/'
+  )
+  table1_content="$table1_header$table1"
+
+  table2=$(paste -d " | " \
+    <(echo "$staging_filenames") \
+    <(echo "$current_timestamps") \
+    <(echo "$not_empty_tests") \
+    <(echo "$metadata_present_tests") \
+    | sed 's/^/| /; s/$/ |/'
+  )
+  table2_content="$table2_header$table2"
+
+  staging_workflow_length=$(echo "$staging_workflows" | wc -l | awk '{print $1}')
+  staging_workflow=$(echo "$staging_workflows" | head -1)
+  staging_workflow_version=$(echo "$staging_workflow_versions" | head -1)
+  staging_timestamp=$(echo "$previous_timestamps" | head -1)
+  if [[ "$staging_workflow_length" != 1 ]]; then
+    log "[WARN] More than one workflow detected in staging manifest"
+  fi
+
+  cat << EOF > tmp_report.md
+  # Info
+  ## Initial environment
+  Environment: [${STAGING_BUCKET_TYPE}]
+  Bucket: $staging_bucket
+  Manifest timestamp: $staging_timestamp
+  Harmonized PMDBS workflow version: ($staging_workflow_version)[$staging_workflow_release_github_link]
+  Sample set: $staging_sample_list_loc
+  Tests passed: $all_tests_result_status
+
+  ## Target environment
+  Environment: [curated]
+  Bucket: gs://asap-curated-data-${team}
+  Manifest timestamp: $prod_timestamp
+  Harmonized PMDBS workflow version: ($prod_workflow_version)[$prod_workflow_release_github_link]
+  Sample set: $prod_sample_list_loc
+  Tests passed: N/A
+
+
+  # Files changed
+  ## New
+  $new_files
+
+  ## Modified
+  $mod_files
+
+  ## Deleted
+  $deleted_files
+
+
+  # File tests
+  Table 1: Summary
+  $table1_content
+
+  Table 2: Data integrity tests results
+  $table2_content
+
+  Table 3: Definitions
+  | Term | Definition |
+  |---------|---------|
+  | New files | Set of new files (i.e. they didn’t exist in previous runs/workflow versions). |
+  | Modified files | Set of files that have different checksums. |
+  | Deleted files | Set of files that no longer exist in this version of the pipeline (expected, not an error in the pipeline). |
+  | Not_empty test | A test that checks if all files in buckets are empty or less than or equal to 10 bytes in size. |
+  | Metadata_present test | A test that checks if all files in buckets have an associated metadata. The metadata file (`MANIFEST.tsv`) is generated in the workflow. |
+EOF
+
+  pandoc tmp_report.md -o "$team"_"$staging_workflow"_"$staging_workflow_version"_"$current_timestamp"_data-promotion-report.pdf
+  rm tmp_report.md
+  log "Local report located at:"
+  readlink -f "$team"_"$staging_workflow"_"$staging_workflow_version"_"$current_timestamp"_data-promotion-report.pdf
+
+  # Exit script if not all tests passed
+  if [[ "$all_tests_result_status" == True ]]; then
+    log "All tests have passed for ${team}"
+  else
+    err "One or more tests on files failed for ${team}"
+    exit 1
+  fi
 done
-
-table1_header="| filename | timestamp | workflow_version | all_tests_passed | previous_timestamp |\n|---------|---------|---------|---------|---------|\n"
-unique_not_empty_results=$(echo "$not_empty_tests" | sort | uniq | wc -l | awk '{print $1}')
-unique_metadata_present_results=$(echo "$metadata_present_tests" | sort | uniq | wc -l | awk '{print $1}')
-if [[ "$unique_not_empty_results" == 1 ]] && [[ "$unique_metadata_present_results" == 1 ]]; then
-  all_tests_result_status=0
-  all_tests_result=$(printf "${GREEN}\xE2\x9C\x94${NC}\n")
-else
-  all_tests_result_status=1
-  all_tests_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
-fi
-table1=$(paste -d " | " \
-  <(echo "$filenames") \
-  <(echo "$timestamps") \
-  <(echo "$workflow_versions") \
-  <(echo "$all_tests_result") \
-  <(echo "$previous_timestamps") \
-  | sed 's/^/| /; s/$/ |/'
-)
-table1_content="$table1_header$table1"
-
-table2_header="| filename | timestamp | not_empty_test | metadata_present_test |\n|---------|---------|---------|---------|\n"
-table2=$(paste -d " | " \
-  <(echo "$filenames") \
-  <(echo "$timestamps") \
-  <(echo "$not_empty_tests") \
-  <(echo "$metadata_present_tests") \
-  | sed 's/^/| /; s/$/ |/'
-)
-table2_content="$table2_header$table2"
-
-# Create report
-
-# Exit script if not all tests passed
-if [[ "$all_tests_result_status" == 0 ]]; then
-  log "All tests have passed"
-else
-  err "One or more tests on files failed; cannot proceed with data promotion"
-  exit 1
-fi
 
 # Try syncing staging data to production
 for team in "${TEAMS[@]}"; do
@@ -212,4 +333,11 @@ for team in "${TEAMS[@]}"; do
   gsync \
     "${staging_bucket}" \
     "${production_bucket}"
+
+  # Move report to target bucket
+  gsutil mv \
+    "$team"_"$staging_workflow"_"$staging_workflow_version"_"$current_timestamp"_data-promotion-report.pdf \
+    "${production_bucket}"
+
+  log "Report located at: ["${production_bucket}"/"$team"_"$staging_workflow"_"$staging_workflow_version"_"$current_timestamp"_data-promotion-report.pdf]"
 done
