@@ -39,9 +39,10 @@ list_teams() {
 }
 
 list_gs_files() {
-  source_path="${1#/}/**"
+  bucket_type="${1}"
+  source_path="${2#/}/**"
 
-  gs_files=$(gsutil ls -l "${source_path}" | awk '{print $3}' | grep '^gs://')
+  eval "${bucket_type}_gs_files=\$(gsutil ls -l \"${source_path}\" | awk '{print \$3}' | grep '^gs://')"
 }
 
 GREEN='\033[0;32m'
@@ -67,31 +68,18 @@ non_empty_check() {
 }
 
 metadata_check() {
-  current_timestamp=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
-  current_timestamps=
-  staging_filenames=
-  previous_timestamps=
-  staging_workflow_versions=
   metadata_present_tests=
   source_path="${1#/}/**"
 
   file_list=$(gsutil ls -l "${source_path}" | awk '{print $3}' | grep '^gs://')
   subfolder_paths=$(echo "${file_list}" | grep "MANIFEST.tsv$" | awk -F 'MANIFEST.tsv' '{print $1}')
-  staging_sample_list_loc=$(echo "${file_list}" | grep "sample_list.tsv$")
 
+  # Loops through preprocess and cohort_analysis MANIFEST
   while read -r gs_path; do
     files_to_check=$(echo "${file_list}" | grep $gs_path | grep -v "MANIFEST.tsv$" | sed "s;$gs_path;;")
-    files_in_manifest=$(gsutil cat "${gs_path}MANIFEST.tsv" | tail -n +2)
-
-    staging_filenames+=$(echo -e "\n$(echo "$files_in_manifest" | awk '{print $1}')")
-    previous_timestamps+=$(echo -e "\n$(echo "$files_in_manifest" | awk '{print $2}')")
-    staging_workflow_versions+=$(echo -e "\n$(echo "$files_in_manifest" | awk '{print $4}')")
-    current_timestamps+=$current_timestamp
-    staging_workflows=$(echo -e "\n$(echo "$files_in_manifest" | awk '{print $3}' | sort | uniq)")
-    staging_workflow_release_github_link=$(echo -e "\n$(echo "$files_in_manifest" | awk '{print $5}' | sort | uniq)")
-
+    staging_manifest=$(gsutil cat "${gs_path}MANIFEST.tsv")
     while read -r file; do
-      files_exist=$(echo "$files_in_manifest" | grep "$file" || [[ $? == 1 ]])
+      files_exist=$(echo "$staging_manifest" | grep "$file" || [[ $? == 1 ]])
       if [[ -z "$files_exist" ]]; then
         err "File does not have associated metadata and is absent from MANIFEST: [${gs_path}${file}]"
         metadata_check_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
@@ -158,6 +146,7 @@ for team in "${TEAMS[@]}"; do
 done
 
 # Prepare report
+current_timestamp=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
 table1_header="| filename | timestamp | workflow_version | all_tests_passed | previous_timestamp |\n|---------|---------|---------|---------|---------|\n"
 table2_header="| filename | timestamp | not_empty_test | metadata_present_test |\n|---------|---------|---------|---------|\n"
 
@@ -176,55 +165,97 @@ for team in "${TEAMS[@]}"; do
   metadata_check \
     "${staging_bucket}"
 
-  # Get info on target environment (AKA old/previous workflow run)
+  # Get info on target (prod) environment (AKA old/previous workflow run)
   list_gs_files \
+    prod \
     "${production_bucket}"
-  prod_sample_list_loc=$(echo "$gs_files" | grep "sample_list.tsv$")
-  prod_manifest_loc=$(echo "$gs_files" | grep "MANIFEST.tsv$")
-  prod_filenames=
-  prod_previous_timestamps=
+  prod_sample_list_loc=$(echo "$prod_gs_files" | grep "sample_list.tsv$")
+  prod_manifest_loc=$(echo "$prod_gs_files" | grep "MANIFEST.tsv$")
+  prod_timestamps=
   prod_workflow_versions=
+  # Loops through preprocess and cohort_analysis MANIFEST in prod
   while read -r manifest_loc; do
-    prod_files_in_manifest=$(gsutil cat "$manifest_loc" | tail -n +2)
+    prod_manifest=$(gsutil cat "$manifest_loc")
+    timestamp_column_no=$(tr '\t' '\n' < <(echo "$prod_manifest" | head -1) | grep -n "^timestamp$" | cut -d : -f 1)
+    workflow_version_column_no=$(tr '\t' '\n' < <(echo "$prod_manifest" | head -1) | grep -n "^workflow_version$" | cut -d : -f 1)
+    workflow_column_no=$(tr '\t' '\n' < <(echo "$prod_manifest" | head -1) | grep -n "^workflow$" | cut -d : -f 1)
+    #workflow_release_column_no=$(tr '\t' '\n' < <(echo "$prod_manifest" | head -1) | grep -n "^workflow_release$" | cut -d : -f 1)
 
-    prod_filenames+=$(echo -e "\n$(echo "$prod_files_in_manifest" | awk '{print $1}')")
-    prod_previous_timestamps+=$(echo -e "\n$(echo "$prod_files_in_manifest" | awk '{print $2}')")
-    prod_workflow_versions+=$(echo -e "\n$(echo "$prod_files_in_manifest" | awk '{print $4}')")
-    prod_workflows=$(echo "$prod_files_in_manifest" | awk '{print $3}' | sort | uniq)
-    prod_workflow_release_github_link=$(echo "$prod_files_in_manifest" | awk '{print $5}' | sort | uniq)
+    prod_timestamps+=$(echo "$prod_manifest" | cut -f "$timestamp_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
+    prod_workflow_versions+=$(echo "$prod_manifest" | cut -f "$workflow_version_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
+    prod_workflows=$(echo "$prod_manifest" | cut -f "$workflow_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
+    #prod_workflow_releases=$(echo "$prod_manifest" | cut -f "$workflow_release_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
   done <<< "${prod_manifest_loc}"
-  prod_workflow_length=$(echo "$prod_workflows" | wc -l | awk '{print $1}')
-  prod_workflow=$(echo "$prod_workflows" | head -1)
+  prod_timestamp=$(echo "$prod_timestamps" | head -1)
   prod_workflow_version=$(echo "$prod_workflow_versions" | head -1)
-  prod_timestamp=$(echo "$prod_previous_timestamps" | head -1)
-  if [[ "$prod_workflow_length" != 1 ]]; then
+  prod_workflows_length=$(echo "$prod_workflows" | wc -l | awk '{print $1}')
+  prod_workflow=$(echo "$prod_workflows" | head -1)
+  #prod_workflow_release=$(echo "$prod_workflow_releases" | head -1)
+  if [[ "$prod_workflows_length" != 1 ]]; then
     log "[WARN] More than one workflow detected in prod/previous manifest"
+  fi
+
+  # Get info on initial (staging) environment (AKA new/current workflow run)
+  list_gs_files \
+    staging \
+    "${staging_bucket}"
+  staging_sample_list_loc=$(echo "$staging_gs_files" | grep "sample_list.tsv$")
+  staging_manifest_loc=$(echo "$staging_gs_files" | grep "MANIFEST.tsv$")
+  staging_timestamps=
+  staging_workflow_versions=
+  # Loops through preprocess and cohort_analysis MANIFEST in staging
+  while read -r manifest_loc; do
+    staging_manifest=$(gsutil cat "$manifest_loc")
+    timestamp_column_no=$(tr '\t' '\n' < <(echo "$staging_manifest" | head -1) | grep -n "^timestamp$" | cut -d : -f 1)
+    workflow_version_column_no=$(tr '\t' '\n' < <(echo "$staging_manifest" | head -1) | grep -n "^workflow_version$" | cut -d : -f 1)
+    workflow_column_no=$(tr '\t' '\n' < <(echo "$staging_manifest" | head -1) | grep -n "^workflow$" | cut -d : -f 1)
+    #workflow_release_column_no=$(tr '\t' '\n' < <(echo "$staging_manifest" | head -1) | grep -n "^workflow_release$" | cut -d : -f 1)
+
+    staging_timestamps+=$(echo "$staging_manifest" | cut -f "$timestamp_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
+    staging_workflow_versions+=$(echo "$staging_manifest" | cut -f "$workflow_version_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
+    staging_workflows=$(echo "$staging_manifest" | cut -f "$workflow_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
+    #staging_workflow_releases=$(echo "$staging_manifest" | cut -f "$workflow_release_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
+  done <<< "${staging_manifest_loc}"
+  staging_timestamp=$(echo "$staging_timestamps" | head -1)
+  staging_workflow_version=$(echo "$staging_workflow_versions" | head -1)
+  staging_workflows_length=$(echo "$staging_workflows" | wc -l | awk '{print $1}')
+  staging_workflow=$(echo "$staging_workflows" | head -1)
+  #staging_workflow_release=$(echo "$staging_workflow_releases" | head -1)
+  if [[ "$staging_workflows_length" != 1 ]]; then
+    log "[WARN] More than one workflow detected in staging/current manifest"
   fi
 
   # Compare staging and prod files
   staging_files=$(echo "$file_list" | sort | awk -F/ '{print $NF}')
-  prod_files=$(echo "$gs_files" | sort | awk -F/ '{print $NF}')
+  prod_files=$(echo "$prod_gs_files" | sort | awk -F/ '{print $NF}')
   new_files=$(comm -23 <(echo "$staging_files") <(echo "$prod_files"))
   deleted_files=$(comm -13 <(echo "$staging_files") <(echo "$prod_files"))
   common_files=$(comm -12 <(echo "$staging_files") <(echo "$prod_files"))
+  # Get the full paths of the common files in both staging and prod
+  common_files_patterns=$(echo "$common_files" | tr '\n' '|')
+  common_files_patterns=${common_files_patterns%|}
+  staging_matches=$(echo "$file_list" | grep -E "$common_files_patterns")
+  prod_matches=$(echo "$prod_gs_files" | grep -E "$common_files_patterns")
   mod_files=
   while read -r staging_file; do
     staging_filename=$(basename "$staging_file")
     # Check if the same file exists in prod_files
     while read -r prod_file; do
       prod_filename=$(basename "$prod_file")
-      if [ "$staging_filename" == "$prod_filename" ]; then
+      if [[ "$staging_filename" == "$prod_filename" ]]; then
         staging_hash=$(gsutil stat "$staging_file" | grep "Hash (md5)" | awk '{print $3}')
         prod_hash=$(gsutil stat "$prod_file" | grep "Hash (md5)" | awk '{print $3}')
         # Compare the hashes
-        if [ "$staging_hash" != "$prod_hash" ]; then
+        if [[ "$staging_hash" != "$prod_hash" ]]; then
           mod_files+="\n$staging_filename"
         fi
       fi
-    done <<< "${prod_files}"
-  done <<< "${staging_files}"
+    done <<< "${prod_matches}"
+  done <<< "${staging_matches}"
 
   # Create report
+  staging_files_length=$(echo "$staging_files" | wc -l | awk '{print $1}')
+  current_timestamps=$(printf "%s\n" $(printf "%0.s$current_timestamp " $(seq 1 $staging_files_length)))
   unique_not_empty_results=$(echo "$not_empty_tests" | sort | uniq | wc -l | awk '{print $1}')
   unique_metadata_present_results=$(echo "$metadata_present_tests" | sort | uniq | wc -l | awk '{print $1}')
   if [[ "$unique_not_empty_results" == 1 ]] && [[ "$unique_metadata_present_results" == 1 ]]; then
@@ -235,17 +266,17 @@ for team in "${TEAMS[@]}"; do
     all_tests_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
   fi
   table1=$(paste -d " | " \
-    <(echo "$staging_filenames") \
+    <(echo "$staging_files") \
     <(echo "$current_timestamps") \
     <(echo "$staging_workflow_versions") \
     <(echo "$all_tests_result") \
-    <(echo "$previous_timestamps") \
+    <(echo "$staging_timestamps") \
     | sed 's/^/| /; s/$/ |/'
   )
   table1_content="$table1_header$table1"
 
   table2=$(paste -d " | " \
-    <(echo "$staging_filenames") \
+    <(echo "$staging_files") \
     <(echo "$current_timestamps") \
     <(echo "$not_empty_tests") \
     <(echo "$metadata_present_tests") \
@@ -253,21 +284,13 @@ for team in "${TEAMS[@]}"; do
   )
   table2_content="$table2_header$table2"
 
-  staging_workflow_length=$(echo "$staging_workflows" | wc -l | awk '{print $1}')
-  staging_workflow=$(echo "$staging_workflows" | head -1)
-  staging_workflow_version=$(echo "$staging_workflow_versions" | head -1)
-  staging_timestamp=$(echo "$previous_timestamps" | head -1)
-  if [[ "$staging_workflow_length" != 1 ]]; then
-    log "[WARN] More than one workflow detected in staging manifest"
-  fi
-
   cat << EOF > tmp_report.md
 # Info
 ## Initial environment
 Environment: [${STAGING_BUCKET_TYPE}]
 Bucket: $staging_bucket
 Manifest timestamp: $staging_timestamp
-Harmonized PMDBS workflow version: ($staging_workflow_version)[$staging_workflow_release_github_link]
+Harmonized PMDBS workflow version: ($staging_workflow_version)
 Sample set: $staging_sample_list_loc
 Tests passed: $all_tests_result_status
 
@@ -275,7 +298,7 @@ Tests passed: $all_tests_result_status
 Environment: [curated]
 Bucket: gs://asap-curated-data-${team}
 Manifest timestamp: $prod_timestamp
-Harmonized PMDBS workflow version: ($prod_workflow_version)[$prod_workflow_release_github_link]
+Harmonized PMDBS workflow version: ($prod_workflow_version)
 Sample set: $prod_sample_list_loc
 Tests passed: N/A
 
