@@ -176,16 +176,16 @@ for team in "${TEAMS[@]}"; do
     workflow_column_no=$(tr '\t' '\n' < <(echo "$prod_manifest" | head -1) | grep -n "^workflow$" | cut -d : -f 1)
     #workflow_release_column_no=$(tr '\t' '\n' < <(echo "$prod_manifest" | head -1) | grep -n "^workflow_release$" | cut -d : -f 1)
 
-    prod_timestamps+=$(echo "$prod_manifest" | cut -f "$timestamp_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
-    prod_workflow_versions+=$(echo "$prod_manifest" | cut -f "$workflow_version_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
+    prod_timestamps+=$(echo "\n$prod_manifest" | cut -f "$timestamp_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
+    prod_workflow_versions+=$(echo "\n$prod_manifest" | cut -f "$workflow_version_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
     prod_workflows=$(echo "$prod_manifest" | cut -f "$workflow_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
     #prod_workflow_releases=$(echo "$prod_manifest" | cut -f "$workflow_release_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
   done <<< "${prod_manifest_loc}"
-  prod_timestamp=$(echo "$prod_timestamps" | head -1)
-  prod_workflow_version=$(echo "$prod_workflow_versions" | head -1)
-  prod_workflows_length=$(echo "$prod_workflows" | wc -l | awk '{print $1}')
-  prod_workflow=$(echo "$prod_workflows" | head -1)
-  #prod_workflow_release=$(echo "$prod_workflow_releases" | head -1)
+  prod_timestamp=$(echo "$prod_timestamps" | sed '/^$/d' | head -1)
+  prod_workflow_version=$(echo "$prod_workflow_versions" | sed '/^$/d' | head -1)
+  prod_workflows_length=$(echo "$prod_workflows" | sed '/^$/d' | wc -l | awk '{print $1}')
+  prod_workflow=$(echo "$prod_workflows" | sed '/^$/d' | head -1)
+  #prod_workflow_release=$(echo "$prod_workflow_releases" | sed '/^$/d' | head -1)
   if [[ "$prod_workflows_length" != 1 ]]; then
     log "[WARN] More than one workflow detected in prod/previous manifest"
   fi
@@ -206,16 +206,16 @@ for team in "${TEAMS[@]}"; do
     workflow_column_no=$(tr '\t' '\n' < <(echo "$staging_manifest" | head -1) | grep -n "^workflow$" | cut -d : -f 1)
     #workflow_release_column_no=$(tr '\t' '\n' < <(echo "$staging_manifest" | head -1) | grep -n "^workflow_release$" | cut -d : -f 1)
 
-    staging_timestamps+=$(echo "$staging_manifest" | cut -f "$timestamp_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
-    staging_workflow_versions+=$(echo "$staging_manifest" | cut -f "$workflow_version_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
+    staging_timestamps+=$(echo "\n$staging_manifest" | cut -f "$timestamp_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
+    staging_workflow_versions+=$(echo "\n$staging_manifest" | cut -f "$workflow_version_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
     staging_workflows=$(echo "$staging_manifest" | cut -f "$workflow_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
     #staging_workflow_releases=$(echo "$staging_manifest" | cut -f "$workflow_release_column_no" | tail -n+2 | sed -r '/^\s*$/d' | sort | uniq)
   done <<< "${staging_manifest_loc}"
-  staging_timestamp=$(echo "$staging_timestamps" | head -1)
-  staging_workflow_version=$(echo "$staging_workflow_versions" | head -1)
-  staging_workflows_length=$(echo "$staging_workflows" | wc -l | awk '{print $1}')
-  staging_workflow=$(echo "$staging_workflows" | head -1)
-  #staging_workflow_release=$(echo "$staging_workflow_releases" | head -1)
+  staging_timestamp=$(echo "$staging_timestamps" | sed '/^$/d' | head -1)
+  staging_workflow_version=$(echo "$staging_workflow_versions" | sed '/^$/d' | head -1)
+  staging_workflows_length=$(echo "$staging_workflows" | sed '/^$/d' | wc -l | awk '{print $1}')
+  staging_workflow=$(echo "$staging_workflows" | sed '/^$/d' | head -1)
+  #staging_workflow_release=$(echo "$staging_workflow_releases" | sed '/^$/d' | head -1)
   if [[ "$staging_workflows_length" != 1 ]]; then
     log "[WARN] More than one workflow detected in staging/current manifest"
   fi
@@ -232,27 +232,27 @@ for team in "${TEAMS[@]}"; do
   staging_matches=$(echo "$file_list" | grep -E "$common_files_patterns")
   prod_matches=$(echo "$prod_gs_files" | grep -E "$common_files_patterns")
   mod_files=
-  while read -r staging_file; do
-    staging_filename=$(basename "$staging_file")
+  while read -r common_file; do
+    staging_match=$(echo "$staging_matches" | grep -E "$common_file")
+    prod_match=$(echo "$prod_matches" | grep -E "$common_file")
     # Check if the same file exists in prod_files
-    while read -r prod_file; do
-      prod_filename=$(basename "$prod_file")
-      if [[ "$staging_filename" == "$prod_filename" ]]; then
-        staging_hash=$(gsutil stat "$staging_file" | grep "Hash (md5)" | awk '{print $3}')
-        prod_hash=$(gsutil stat "$prod_file" | grep "Hash (md5)" | awk '{print $3}')
-        # Compare the hashes
-        if [[ "$staging_hash" != "$prod_hash" ]]; then
-          mod_files+="\n$staging_filename"
-        fi
+    staging_filename=$(basename "$staging_match")
+    prod_filename=$(basename "$prod_match")
+    if [[ "$staging_filename" == "$prod_filename" ]]; then
+      staging_hash=$(gsutil stat "$staging_match" | grep "Hash (md5)" | awk '{print $3}')
+      prod_hash=$(gsutil stat "$prod_match" | grep "Hash (md5)" | awk '{print $3}')
+      # Compare the hashes
+      if [[ "$staging_hash" != "$prod_hash" ]]; then
+        mod_files+="\n$staging_match"
       fi
-    done <<< "${prod_matches}"
-  done <<< "${staging_matches}"
+    fi
+  done <<< "${common_files_patterns}"
 
   # Create report
   staging_files_length=$(echo "$staging_files" | wc -l | awk '{print $1}')
   current_timestamps=$(printf "%s\n" $(printf "%0.s$current_timestamp " $(seq 1 $staging_files_length)))
-  unique_not_empty_results=$(echo "$not_empty_tests" | sort | uniq | wc -l | awk '{print $1}')
-  unique_metadata_present_results=$(echo "$metadata_present_tests" | sort | uniq | wc -l | awk '{print $1}')
+  unique_not_empty_results=$(echo "$not_empty_tests" | sort | uniq | sed '/^$/d' | wc -l | awk '{print $1}')
+  unique_metadata_present_results=$(echo "$metadata_present_tests" | sort | uniq | sed '/^$/d' | wc -l | awk '{print $1}')
   if [[ "$unique_not_empty_results" == 1 ]] && [[ "$unique_metadata_present_results" == 1 ]]; then
     all_tests_result_status=True
     all_tests_result="$GREEN_CHECKMARK"
@@ -260,21 +260,22 @@ for team in "${TEAMS[@]}"; do
     all_tests_result_status=False
     all_tests_result="$RED_X"
   fi
+  all_tests_results=$(printf "%s\n" $(printf "%0.s$all_tests_result " $(seq 1 $staging_files_length)))
   table1=$(paste -d " | " \
-    <(echo "$staging_files") \
-    <(echo "$current_timestamps") \
-    <(echo "$staging_workflow_versions") \
-    <(echo "$all_tests_result") \
-    <(echo "$staging_timestamps") \
+    <(echo -e "$staging_files") \
+    <(echo -e "$current_timestamps") \
+    <(echo -e "$staging_workflow_versions") \
+    <(echo -e "$all_tests_results") \
+    <(echo -e "$staging_timestamps") \
     | sed 's/^/| /; s/$/ |/'
   )
   table1_content="$table1_header$table1"
 
   table2=$(paste -d " | " \
-    <(echo "$staging_files") \
-    <(echo "$current_timestamps") \
-    <(echo "$not_empty_tests") \
-    <(echo "$metadata_present_tests") \
+    <(echo -e "$staging_files") \
+    <(echo -e "$current_timestamps") \
+    <(echo -e "$not_empty_tests") \
+    <(echo -e "$metadata_present_tests") \
     | sed 's/^/| /; s/$/ |/'
   )
   table2_content="$table2_header$table2"
@@ -300,21 +301,21 @@ Tests passed: N/A
 
 # Files changed
 ## New (i.e. only in staging)
-$new_files
+$(echo -e "$new_files")
 
 ## Modified
-$mod_files
+$(echo -e "$mod_files")
 
 ## Deleted (i.e. only in prod)
-$deleted_files
+$(echo -e "$deleted_files")
 
 
 # File tests
 Table 1: Summary
-$table1_content
+$(echo -e "$table1_content")
 
 Table 2: Data integrity tests results
-$table2_content
+$(echo -e "$table2_content")
 
 Table 3: Definitions
 | Term | Definition |
@@ -326,7 +327,11 @@ Table 3: Definitions
 | Metadata_present test | A test that checks if all files in buckets have an associated metadata. The metadata file (MANIFEST.tsv) is generated in the workflow. |
 EOF
 
-  pandoc tmp_report.md -o "$team"_"$staging_workflow"_"$staging_workflow_version"_"$current_timestamp"_data-promotion-report.pdf
+  exit 1
+
+  pandoc \
+    tmp_report.md \
+    -o "$team"_"$staging_workflow"_"$staging_workflow_version"_"$current_timestamp"_data-promotion-report.pdf
   rm tmp_report.md
   log "Local report located at:"
   readlink -f "$team"_"$staging_workflow"_"$staging_workflow_version"_"$current_timestamp"_data-promotion-report.pdf
