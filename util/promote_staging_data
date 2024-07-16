@@ -45,9 +45,8 @@ list_gs_files() {
   eval "${bucket_type}_gs_files=\$(gsutil ls -l \"${source_path}\" | awk '{print \$3}' | grep '^gs://')"
 }
 
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m'
+GREEN_CHECKMARK="✅"
+RED_X="❌"
 
 non_empty_check() {
   not_empty_tests=
@@ -58,11 +57,9 @@ non_empty_check() {
   while read -r file_size timestamp gs_uri; do
     if [[ $file_size -le 10 ]]; then
       err "Found a file less than or equal to 10 bytes: [$gs_uri]"
-      non_empty_check_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
-      not_empty_tests+="\n$non_empty_check_result"
+      not_empty_tests+="\n$RED_X"
     else
-      non_empty_check_result=$(printf "${GREEN}\xE2\x9C\x94${NC}\n")
-      not_empty_tests+="\n$non_empty_check_result"
+      not_empty_tests+="\n$GREEN_CHECKMARK"
     fi
   done <<< "${file_list_sorted}"
 }
@@ -82,11 +79,9 @@ metadata_check() {
       files_exist=$(echo "$staging_manifest" | grep "$file" || [[ $? == 1 ]])
       if [[ -z "$files_exist" ]]; then
         err "File does not have associated metadata and is absent from MANIFEST: [${gs_path}${file}]"
-        metadata_check_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
-        metadata_present_tests+="\n$metadata_check_result"
+        metadata_present_tests+="\n$RED_X"
       else
-        metadata_check_result=$(printf "${GREEN}\xE2\x9C\x94${NC}\n")
-        metadata_present_tests+="\n$metadata_check_result"
+        metadata_present_tests+="\n$GREEN_CHECKMARK"
       fi
     done <<< "${files_to_check}"
   done <<< "${subfolder_paths}"
@@ -260,10 +255,10 @@ for team in "${TEAMS[@]}"; do
   unique_metadata_present_results=$(echo "$metadata_present_tests" | sort | uniq | wc -l | awk '{print $1}')
   if [[ "$unique_not_empty_results" == 1 ]] && [[ "$unique_metadata_present_results" == 1 ]]; then
     all_tests_result_status=True
-    all_tests_result=$(printf "${GREEN}\xE2\x9C\x94${NC}\n")
+    all_tests_result="$GREEN_CHECKMARK"
   else
     all_tests_result_status=False
-    all_tests_result=$(printf "${RED}\xE2\x9D\x8C${NC}\n")
+    all_tests_result="$RED_X"
   fi
   table1=$(paste -d " | " \
     <(echo "$staging_files") \
@@ -284,7 +279,7 @@ for team in "${TEAMS[@]}"; do
   )
   table2_content="$table2_header$table2"
 
-  cat << EOF > tmp_report.md
+  cat <<EOF > tmp_report.md
 # Info
 ## Initial environment
 Environment: [${STAGING_BUCKET_TYPE}]
