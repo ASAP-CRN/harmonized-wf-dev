@@ -140,6 +140,8 @@ for team in "${TEAMS[@]}"; do
   fi
 done
 
+exec > >(tee -a output.log) 2>&1
+
 # Prepare report
 current_timestamp=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
 table1_header="| timestamp | all_tests_passed |\n|---------|---------|\n"
