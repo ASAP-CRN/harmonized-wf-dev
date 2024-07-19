@@ -392,10 +392,10 @@ EOF
 
   pandoc \
     tmp_report.md \
-    -o "$team"_"$staging_workflow"_"$staging_workflow_version"_"$current_timestamp"_data-promotion-report.pdf
+    -o "$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.pdf
   rm tmp_report.md
   log "Local report located at:"
-  readlink -f "$team"_"$staging_workflow"_"$staging_workflow_version"_"$current_timestamp"_data-promotion-report.pdf
+  readlink -f "$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.pdf
 
   # Exit script if not all tests passed
   if [[ "$all_tests_result_status" == True ]]; then
@@ -421,8 +421,8 @@ for team in "${TEAMS[@]}"; do
 
   # Move report to target bucket
   gsutil mv \
-    "$team"_"$staging_workflow"_"$staging_workflow_version"_"$current_timestamp"_data-promotion-report.pdf \
+    "$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.pdf \
     "${production_bucket}"
 
-  log "Report located at: ["${production_bucket}"/"$team"_"$staging_workflow"_"$staging_workflow_version"_"$current_timestamp"_data-promotion-report.pdf]"
+  log "Report located at: ["${production_bucket}"/"$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.pdf]"
 done
