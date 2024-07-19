@@ -292,7 +292,7 @@ for team in "${TEAMS[@]}"; do
         mod_files+="\n$staging_match"
       fi
     fi
-  done <<< "${common_files_patterns}"
+  done <<< "${common_files}"
   if [[ -z "$mod_files" ]]; then
     log "No modified files"
     mod_files="N/A"
