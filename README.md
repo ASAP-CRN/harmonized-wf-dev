@@ -215,6 +215,8 @@ asap-dev-data-{cohort,team-xxyy}
 
 The [`promote_staging_data` script](util/promote_staging_data) can be used to promote staging data that has been approved to the curated data bucket for a team or set of teams.
 
+This script runs data integrity tests to ensure staging data can be promoted and generates a Markdown report. It (1) checks that files are not empty and are not less than or equal to 10 bytes (factoring in white space) and (2) checks that files have associated metadata and is present in MANIFEST.tsv. Staging data cannot be promoted if data integrity tests fail on any file.
+
 This script rsync all files in the staging bucket to the curated bucket's preprocess and cohort_analysis directories. **Exercise caution when using this script**; files that are not present in the source (staging) bucket will be deleted at the destination (curated) bucket.
 
 The script defaults to a dry run, printing out the files that would be copied or deleted for each selected team.
