@@ -92,17 +92,11 @@ get_manifest_info() {
   manifest_locs="${2}"
 
   eval "${bucket_type}_manifest_combined="
-  first_file=true
 
   # Loops through preprocess and cohort_analysis MANIFEST
   while read -r manifest; do
     eval "${bucket_type}_manifest=\$(gsutil cat \"${manifest}\")"
-    if [[ "$first_file" = true ]]; then
-      eval "${bucket_type}_manifest_contents=\${${bucket_type}_manifest}"
-      first_file=false
-    else
-      eval "${bucket_type}_manifest_contents=\$(echo -e \"\${${bucket_type}_manifest}\" | tail -n +2)"
-    fi
+    eval "${bucket_type}_manifest_contents=\$(echo -e \"\${${bucket_type}_manifest}\" | tail -n +2)"
     eval "${bucket_type}_manifest_combined+=\"\${${bucket_type}_manifest_contents}\n\""
 
     eval "timestamp_column_no=\$(tr '\t' '\n' < <(echo \"\${${bucket_type}_manifest}\" | head -1) | grep -n \"^timestamp\$\" | cut -d : -f 1)"
@@ -128,6 +122,8 @@ get_manifest_info() {
       log "[WARN] Workflow name other than 'preprocess' and 'cohort_analysis' detected in ${bucket_type} MANIFEST"
     fi
   done <<< "${manifest_locs}"
+
+  eval "manifest_header=$(head -1 <<< "\${${bucket_type}_manifest}")"
 }
 
 gsync() {
@@ -309,28 +305,60 @@ for team in "${TEAMS[@]}"; do
   )
   table2_content="$table2_header$table2"
 
+  echo "printing"
+  echo "$manifest_header"
+  table4_content=$(echo -e "$manifest_header\n$staging_manifest_combined" \
+    | sed '/^$/d' | tr '\t' '|' | sed 's/|/ | /g' | sed 's/^/| /; s/$/ |/' \
+    | sed '1a\
+| --------- | --------- | --------- | --------- |\
+'
+)
+  echo "$table4_content"
+  table5_content=$(echo -e "$manifest_header\n$prod_manifest_combined" \
+    | sed '/^$/d' | tr '\t' '|' | sed 's/|/ | /g' | sed 's/^/| /; s/$/ |/' \
+    | sed '1a\
+| --------- | --------- | --------- | --------- |\
+'
+)
+
   cat <<EOF > tmp_report.md
 # Info
 ## Initial environment
 Environment: [${STAGING_BUCKET_TYPE}]
+
 Bucket: $staging_bucket
+
 Preprocessing timestamp(s): $staging_preprocess_timestamps
+
 Preprocessing version(s): $staging_preprocess_workflow_versions
+
 Cohort analysis timestamp: $staging_cohort_analysis_timestamps
+
 Cohort analysis version: $staging_cohort_analysis_workflow_versions
+
 Harmonized PMDBS workflow version: ($staging_cohort_analysis_workflow_versions)
+
 Sample set: $staging_sample_list_loc
+
 Tests passed: $all_tests_result_status
 
 ## Target environment
 Environment: [curated]
+
 Bucket: gs://asap-curated-data-${team}
+
 Preprocessing timestamp(s): $prod_preprocess_timestamps
+
 Preprocessing version(s): $prod_preprocess_workflow_versions
+
 Cohort analysis timestamp: $prod_cohort_analysis_timestamps
+
 Cohort analysis version: $prod_cohort_analysis_workflow_versions
+
 Harmonized PMDBS workflow version: ($prod_cohort_analysis_workflow_versions)
+
 Sample set: $prod_sample_list_loc
+
 Tests passed: N/A
 
 
@@ -346,13 +374,13 @@ $(echo -e "$deleted_files")
 
 
 # File tests
-Table 1: Summary
+### Table 1: Summary
 $(echo -e "$table1_content")
 
-Table 2: Data integrity tests results
+### Table 2: Data integrity tests results
 $(echo -e "$table2_content")
 
-Table 3: Definitions
+### Table 3: Definitions
 | Term | Definition |
 |---------|---------|
 | New files | Set of new files (i.e. they didn’t exist in previous runs/workflow versions). |
@@ -363,11 +391,13 @@ Table 3: Definitions
 
 
 # Manifest files
-Table 4: Staging manifest info (current run)
-$(echo -e "$staging_manifest_combined" | sed '/^$/d' | tr '\t' '|' | sed 's/|/ | /g' | sed 's/^/| /; s/$/ |/')
+### Table 4: Staging manifest info (current run)
 
-Table 5: Prod manifest info (previous run)
-$(echo -e "$prod_manifest_combined" | sed '/^$/d' | tr '\t' '|' | sed 's/|/ | /g' | sed 's/^/| /; s/$/ |/')
+$(echo -e "$table4_content")
+
+### Table 5: Prod manifest info (previous run)
+
+$(echo -e "$table5_content")
 EOF
 
   pandoc \
