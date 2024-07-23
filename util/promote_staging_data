@@ -183,8 +183,8 @@ exec > >(tee -a output.log) 2>&1
 
 # Prepare report
 current_timestamp=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
-table1_header="| timestamp | all_tests_passed |\n|---------|---------|\n"
-table2_header="| filename | timestamp | not_empty_test | metadata_present_test |\n|---------|---------|---------|---------|\n"
+table1_header="| timestamp | all tests passed |\n|---------|---------|\n"
+table2_header="| filename | timestamp | not empty test | metadata present test |\n|---------|---------|---------|-------------|\n"
 
 # Run data integrity tests and create report for each team
 for team in "${TEAMS[@]}"; do
@@ -310,56 +310,60 @@ for team in "${TEAMS[@]}"; do
   table4_content=$(echo -e "$manifest_header\n$staging_manifest_combined" \
     | sed '/^$/d' | tr '\t' '|' | sed 's/|/ | /g' | sed 's/^/| /; s/$/ |/' \
     | sed '1a\
-| --------- | --------- | --------- | --------- |\
+|---------|---------|---------|---------|\
 '
 )
   echo "$table4_content"
   table5_content=$(echo -e "$manifest_header\n$prod_manifest_combined" \
     | sed '/^$/d' | tr '\t' '|' | sed 's/|/ | /g' | sed 's/^/| /; s/$/ |/' \
     | sed '1a\
-| --------- | --------- | --------- | --------- |\
+|---------|---------|---------|---------|\
 '
 )
 
   cat <<EOF > tmp_report.md
 # Info
 ## Initial environment
-Environment: [${STAGING_BUCKET_TYPE}]
+**Environment:** [${STAGING_BUCKET_TYPE}]
 
-Bucket: $staging_bucket
+**Bucket:** $staging_bucket
 
-Preprocessing timestamp(s): $staging_preprocess_timestamps
+**Preprocessing timestamp(s):**
+$(echo -e "$staging_preprocess_timestamps" | sed 's/^/* /')
 
-Preprocessing version(s): $staging_preprocess_workflow_versions
+**Preprocessing version(s):**
+$(echo -e "$staging_preprocess_workflow_versions" | sed 's/^/* /')
 
-Cohort analysis timestamp: $staging_cohort_analysis_timestamps
+**Cohort analysis timestamp:** $staging_cohort_analysis_timestamps
 
-Cohort analysis version: $staging_cohort_analysis_workflow_versions
+**Cohort analysis version:** $staging_cohort_analysis_workflow_versions
 
-Harmonized PMDBS workflow version: ($staging_cohort_analysis_workflow_versions)
+**Harmonized PMDBS workflow version:** ($staging_cohort_analysis_workflow_versions)
 
-Sample set: $staging_sample_list_loc
+**Sample set:** $staging_sample_list_loc
 
-Tests passed: $all_tests_result_status
+**Tests passed:** $all_tests_result_status
 
 ## Target environment
-Environment: [curated]
+**Environment:** [curated]
 
-Bucket: gs://asap-curated-data-${team}
+**Bucket:** gs://asap-curated-data-${team}
 
-Preprocessing timestamp(s): $prod_preprocess_timestamps
+**Preprocessing timestamp(s):**
+$(echo -e "$prod_preprocess_timestamps" | sed 's/^/* /')
 
-Preprocessing version(s): $prod_preprocess_workflow_versions
+**Preprocessing version(s):**
+$(echo -e "$prod_preprocess_workflow_versions" | sed 's/^/* /')
 
-Cohort analysis timestamp: $prod_cohort_analysis_timestamps
+**Cohort analysis timestamp:** $prod_cohort_analysis_timestamps
 
-Cohort analysis version: $prod_cohort_analysis_workflow_versions
+**Cohort analysis version:** $prod_cohort_analysis_workflow_versions
 
-Harmonized PMDBS workflow version: ($prod_cohort_analysis_workflow_versions)
+**Harmonized PMDBS workflow version:** ($prod_cohort_analysis_workflow_versions)
 
-Sample set: $prod_sample_list_loc
+**Sample set:** $prod_sample_list_loc
 
-Tests passed: N/A
+**Tests passed:** N/A
 
 
 # Files changed
