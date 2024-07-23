@@ -87,6 +87,49 @@ metadata_check() {
   done <<< "${subfolder_paths}"
 }
 
+get_manifest_info() {
+  bucket_type="${1}"
+  manifest_locs="${2}"
+
+  eval "${bucket_type}_manifest_combined="
+  first_file=true
+
+  # Loops through preprocess and cohort_analysis MANIFEST
+  while read -r manifest; do
+    eval "${bucket_type}_manifest=\$(gsutil cat \"${manifest}\")"
+    if [[ "$first_file" = true ]]; then
+      eval "${bucket_type}_manifest_contents=\${${bucket_type}_manifest}"
+      first_file=false
+    else
+      eval "${bucket_type}_manifest_contents=\$(echo -e \"\${${bucket_type}_manifest}\" | tail -n +2)"
+    fi
+    eval "${bucket_type}_manifest_combined+=\"\${${bucket_type}_manifest_contents}\n\""
+
+    eval "timestamp_column_no=\$(tr '\t' '\n' < <(echo \"\${${bucket_type}_manifest}\" | head -1) | grep -n \"^timestamp\$\" | cut -d : -f 1)"
+    eval "workflow_version_column_no=\$(tr '\t' '\n' < <(echo \"\${${bucket_type}_manifest}\" | head -1) | grep -n \"^workflow_version\$\" | cut -d : -f 1)"
+    eval "workflow_column_no=\$(tr '\t' '\n' < <(echo \"\${${bucket_type}_manifest}\" | head -1) | grep -n \"^workflow\$\" | cut -d : -f 1)"
+
+    # Preprocess and cohort analysis - TBD if MANIFEST will only contain "Harmonized PMDBS workflow"
+    ## One output from cohort_analysis is in the preprocess MANIFEST, must grab the workflow name that has the most occurrences
+    eval "${bucket_type}_workflow=\$(echo \"\${${bucket_type}_manifest}\" | cut -f \"${workflow_column_no}\" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq -c | sort -nr | head -1 | awk '{print \$2}')"
+    eval "${bucket_type}_workflows_length=\$(echo \"\${${bucket_type}_workflow}\" | sed '/^$/d' | wc -l | awk '{print \$1}')"
+    if [[ "\${${bucket_type}_workflows_length}" != 1 ]]; then
+      log "[WARN] More than one workflow detected in ${bucket_type} manifest"
+    fi
+
+    # Variables declared are hard-coded in the report generation below
+    eval "current_workflow=\${${bucket_type}_workflow}"
+    if [[ "$current_workflow" == "preprocess" ]] || [[ "$current_workflow" == "cohort_analysis" ]]; then
+      timestamps=$(eval "echo \"\${${bucket_type}_manifest}\"" | cut -f "$timestamp_column_no" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq)
+      eval "${bucket_type}_${current_workflow}_timestamps=\"${timestamps}\""
+      workflow_versions=$(eval "echo \"\${${bucket_type}_manifest}\"" | cut -f "$workflow_version_column_no" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq)
+      eval "${bucket_type}_${current_workflow}_workflow_versions=\"${workflow_versions}\""
+    else
+      log "[WARN] Workflow name other than 'preprocess' and 'cohort_analysis' detected in ${bucket_type} MANIFEST"
+    fi
+  done <<< "${manifest_locs}"
+}
+
 gsync() {
   source_path="${1#/}/"
   destination_path="${2#/}/"
@@ -147,7 +190,7 @@ current_timestamp=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
 table1_header="| timestamp | all_tests_passed |\n|---------|---------|\n"
 table2_header="| filename | timestamp | not_empty_test | metadata_present_test |\n|---------|---------|---------|---------|\n"
 
-# Run data integrity tests and create report for each time
+# Run data integrity tests and create report for each team
 for team in "${TEAMS[@]}"; do
   log "Starting ${team}"
 
@@ -168,85 +211,25 @@ for team in "${TEAMS[@]}"; do
   list_gs_files \
     prod \
     "${production_bucket}"
+
   prod_sample_list_loc=$(echo "$prod_gs_files" | grep "sample_list.tsv$")
   prod_manifest_loc=$(echo "$prod_gs_files" | grep "MANIFEST.tsv$")
-  prod_manifest_combined=
-  first_file=true
-  # Loops through preprocess and cohort_analysis MANIFEST in prod
-  while read -r manifest_loc; do
-    prod_manifest=$(gsutil cat "$manifest_loc")
-    if "$first_file"; then
-      prod_manifest_contents="$prod_manifest"
-      first_file=false
-    else
-      prod_manifest_contents=$(echo -e "$prod_manifest" | tail -n +2)
-    fi
-    prod_manifest_combined+="$prod_manifest_contents"$'\n'
-    timestamp_column_no=$(tr '\t' '\n' < <(echo "$prod_manifest" | head -1) | grep -n "^timestamp$" | cut -d : -f 1)
-    workflow_version_column_no=$(tr '\t' '\n' < <(echo "$prod_manifest" | head -1) | grep -n "^workflow_version$" | cut -d : -f 1)
-    workflow_column_no=$(tr '\t' '\n' < <(echo "$prod_manifest" | head -1) | grep -n "^workflow$" | cut -d : -f 1)
-    #workflow_release_column_no=$(tr '\t' '\n' < <(echo "$prod_manifest" | head -1) | grep -n "^workflow_release$" | cut -d : -f 1)
 
-    # Preprocess and cohort analysis - TBD if MANIFEST will only contain "Harmonized PMDBS workflow"
-    ## One output from cohort_analysis is in the preprocess MANIFEST, must grab the workflow name that has the most occurrences
-    prod_workflow=$(echo "$prod_manifest" | cut -f "$workflow_column_no" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq -c | sort -nr | head -1 | awk '{print $2}')
-    prod_workflows_length=$(echo "$prod_workflow" | sed '/^$/d' | wc -l | awk '{print $1}')
-    if [[ "$prod_workflows_length" != 1 ]]; then
-      log "[WARN] More than one workflow detected in prod/previous manifest"
-    fi
-
-    # Variables declared are hard-coded in the report generation below
-    if [[ "$prod_workflow" == "preprocess" ]] || [[ "$prod_workflow" == "cohort_analysis" ]]; then
-      timestamps=$(echo "$prod_manifest" | cut -f "$timestamp_column_no" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq)
-      eval "prod_${prod_workflow}_timestamps=\"${timestamps}\""
-      workflow_versions=$(echo "$prod_manifest" | cut -f "$workflow_version_column_no" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq)
-      eval "prod_${prod_workflow}_workflow_versions=\"${workflow_versions}\""
-      #eval "prod_${prod_workflow}_workflow_releases=$(echo "$prod_manifest" | cut -f "$workflow_release_column_no" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq)
-    else
-      log "[WARN] Workflow name other than 'preprocess' and 'cohort_analysis' detected in prod MANIFEST"
-    fi
-  done <<< "${prod_manifest_loc}"
+  get_manifest_info \
+    prod \
+    "${prod_manifest_loc}"
 
   # Get info on initial (staging) environment (AKA new/current workflow run)
   list_gs_files \
     staging \
     "${staging_bucket}"
+
   staging_sample_list_loc=$(echo "$staging_gs_files" | grep "sample_list.tsv$")
   staging_manifest_loc=$(echo "$staging_gs_files" | grep "MANIFEST.tsv$")
-  staging_manifest_combined=
-  first_file=true
-  # Loops through preprocess and cohort_analysis MANIFEST in staging
-  while read -r manifest_loc; do
-    staging_manifest=$(gsutil cat "$manifest_loc")
-    if "$first_file"; then
-      staging_manifest_contents="$staging_manifest"
-      first_file=false
-    else
-      staging_manifest_contents=$(echo -e "$staging_manifest" | tail -n +2)
-    fi
-    staging_manifest_combined+="$staging_manifest_contents"$'\n'
-    timestamp_column_no=$(tr '\t' '\n' < <(echo "$staging_manifest" | head -1) | grep -n "^timestamp$" | cut -d : -f 1)
-    workflow_version_column_no=$(tr '\t' '\n' < <(echo "$staging_manifest" | head -1) | grep -n "^workflow_version$" | cut -d : -f 1)
-    workflow_column_no=$(tr '\t' '\n' < <(echo "$staging_manifest" | head -1) | grep -n "^workflow$" | cut -d : -f 1)
-    #workflow_release_column_no=$(tr '\t' '\n' < <(echo "$staging_manifest" | head -1) | grep -n "^workflow_release$" | cut -d : -f 1)
 
-    staging_workflow=$(echo "$staging_manifest" | cut -f "$workflow_column_no" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq -c | sort -nr | head -1 | awk '{print $2}')
-    staging_workflows_length=$(echo "$staging_workflow" | sed '/^$/d' | wc -l | awk '{print $1}')
-    if [[ "$staging_workflows_length" != 1 ]]; then
-      log "[WARN] More than one workflow detected in staging/new manifest"
-    fi
-
-    # Variables declared are hard-coded in the report generation below
-    if [[ "$staging_workflow" == "preprocess" ]] || [[ "$staging_workflow" == "cohort_analysis" ]]; then
-      timestamps=$(echo "$staging_manifest" | cut -f "$timestamp_column_no" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq)
-      eval "staging_${staging_workflow}_timestamps=\"${timestamps}\""
-      workflow_versions=$(echo "$staging_manifest" | cut -f "$workflow_version_column_no" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq)
-      eval "staging_${staging_workflow}_workflow_versions=\"${workflow_versions}\""
-      #eval "staging_${staging_workflow}_workflow_releases=$(echo "$staging_manifest" | cut -f "$workflow_release_column_no" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq)
-    else
-      log "[WARN] Workflow name other than 'preprocess' and 'cohort_analysis' detected in staging MANIFEST"
-    fi
-  done <<< "${staging_manifest_loc}"
+  get_manifest_info \
+    staging \
+    "${staging_manifest_loc}"
 
   # Compare staging and prod files
   staging_files=$(echo "$staging_gs_files" | sort | sed 's|^[^/]*//[^/]*/||')
@@ -386,9 +369,6 @@ $(echo -e "$staging_manifest_combined" | sed '/^$/d' | tr '\t' '|' | sed 's/|/ |
 Table 5: Prod manifest info (previous run)
 $(echo -e "$prod_manifest_combined" | sed '/^$/d' | tr '\t' '|' | sed 's/|/ | /g' | sed 's/^/| /; s/$/ |/')
 EOF
-  
-  # TODO - dry run arg is not working
-  exit 1
 
   pandoc \
     tmp_report.md \
@@ -419,10 +399,11 @@ for team in "${TEAMS[@]}"; do
     "${staging_bucket}" \
     "${production_bucket}"
 
-  # Move report to target bucket
-  gsutil mv \
-    "$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.pdf \
-    "${production_bucket}"
-
-  log "Report located at: ["${production_bucket}"/"$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.pdf]"
+  # Move report to target bucket only if promoting data
+  if [[ "${DRY_RUN_ARG}"=="" ]]; then
+    gsutil mv \
+      "$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.pdf \
+      "${production_bucket}"
+    log "Report located at: ["${production_bucket}"/"$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.pdf]"
+  fi
 done
