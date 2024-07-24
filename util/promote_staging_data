@@ -9,6 +9,8 @@ cat << EOF
 
   Run data integrity tests and promote data in staging buckets to production.
 
+  Generates a Markdown report for data integrity. Data cannot be promoted if tests fail.
+
   $(tput bold)[CAUTION] This also deletes data in the production bucket that is not found in the staging bucket.$(tput sgr0)
 
   Usage: $0 [OPTIONS]
@@ -311,7 +313,7 @@ for team in "${TEAMS[@]}"; do
 |---------|---------|---------|---------|\
 '
 )
-  
+
   table5_content=$(echo -e "$manifest_header\n$prod_manifest_combined" \
     | sed '/^$/d' | tr '\t' '|' | sed 's/|/ | /g' | sed 's/^/| /; s/$/ |/' \
     | sed '1a\
