@@ -108,9 +108,9 @@ non_empty_check() {
   while read -r file_size timestamp gs_uri; do
     if [[ $file_size -le 10 ]]; then
       err "Found a file less than or equal to 10 bytes: [$gs_uri]"
-      not_empty_tests+="\n$RED_X"
+      not_empty_tests+="$RED_X\n"
     else
-      not_empty_tests+="\n$GREEN_CHECKMARK"
+      not_empty_tests+="$GREEN_CHECKMARK\n"
     fi
   done <<< "${file_list_sorted}"
 }
@@ -128,13 +128,13 @@ metadata_check() {
     while read -r file; do
       files_exist=$(echo "$staging_manifest" | grep "$file" || [[ $? == 1 ]])
       if [[ "$file" == "MANIFEST.tsv" ]]; then
-        metadata_present_tests+="\nN/A"
+        metadata_present_tests+="N/A\n"
       else
         if [[ -z "$files_exist" ]]; then
           err "File does not have associated metadata and is absent from MANIFEST: [${gs_subfolder_path}${file}]"
-          metadata_present_tests+="\n$RED_X"
+          metadata_present_tests+="$RED_X\n"
         else
-          metadata_present_tests+="\n$GREEN_CHECKMARK"
+          metadata_present_tests+="$GREEN_CHECKMARK\n"
         fi
       fi
     done <<< "${basename_files_to_check}"
@@ -202,6 +202,7 @@ table1_header="| timestamp | all tests passed |\n|---------|---------|\n"
 table2_header="| filename | timestamp | not empty test | metadata present test |\n|---------|---------|---------|-------------|\n"
 
 # Run data integrity tests and create report for each team
+all_tests_result_status_teams=
 for team in "${TEAMS[@]}"; do
   log "Starting ${team}"
 
@@ -311,11 +312,14 @@ for team in "${TEAMS[@]}"; do
   unique_metadata_present_results=$(echo -e "$metadata_present_tests" | sort | uniq | sed '/^$/d' | wc -l | awk '{print $1}')
   if [[ "$unique_not_empty_results" == 1 ]] && [[ "$unique_metadata_present_results" == 1 ]]; then
     all_tests_result_status=True
+    all_tests_result_status_teams+="True\n"
     all_tests_result="$GREEN_CHECKMARK"
   else
     all_tests_result_status=False
+    all_tests_result_status_teams+="False\n"
     all_tests_result="$RED_X"
   fi
+
   table1=$(printf "| %s | %s |\n" "$current_timestamp" "$all_tests_result")
   table1_content="$table1_header$table1"
 
@@ -434,28 +438,43 @@ EOF
     log "All tests have passed for ${team}"
   else
     err "One or more tests on files failed for ${team}"
-    exit 1
   fi
 done
+
+# Reverse sort so teams that passed all tests ('True') can have data promoted before script exits
+all_teams_results=$(paste \
+  <(echo "${TEAMS[@]}" | tr ' ' '\n' | sed '/^$/d') \
+  <(echo -e "$all_tests_result_status_teams" | sed '/^$/d') \
+  | sort -r -k 2
+)
+
+log "Data integrity test results for all teams:"
+echo -e "team\tall_tests_passed"
+echo -e "${all_teams_results}"
 
 # Try syncing staging data to production
-for team in "${TEAMS[@]}"; do
-  staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
-  production_bucket=gs://asap-curated-data-${team}
+while read -r team result_status; do
+  if [[ "$result_status" == True ]]; then
+    staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
+    production_bucket=gs://asap-curated-data-${team}
 
-  log "Promoting [${team}] data to production"
-  log "\tStaging bucket:\t\t[${staging_bucket}]"
-  log "\tProduction bucket:\t[${production_bucket}]"
+    log "Promoting [${team}] data to production"
+    log "\tStaging bucket:\t\t[${staging_bucket}]"
+    log "\tProduction bucket:\t[${production_bucket}]"
 
-  gsync \
-    "${staging_bucket}" \
-    "${production_bucket}"
-
-  # Move report to target bucket only if promoting data
-  if [[ "${DRY_RUN_ARG}" == "" ]]; then
-    gsutil mv \
-      "$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.md \
+    gsync \
+      "${staging_bucket}" \
       "${production_bucket}"
-    log "Report located at: ["${production_bucket}"/"$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.md]"
+
+    # Move report to target bucket only if promoting data
+    if [[ "${DRY_RUN_ARG}" == "" ]]; then
+      gsutil mv \
+        "$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.md \
+        "${production_bucket}"
+      log "Report located at: ["${production_bucket}"/"$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.md]"
+    fi
+  else
+    err "Data cannot be promoted for ${team}; exiting"
+    exit 1
   fi
-done
+done <<< "${all_teams_results}"
