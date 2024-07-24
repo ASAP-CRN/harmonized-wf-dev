@@ -305,15 +305,13 @@ for team in "${TEAMS[@]}"; do
   )
   table2_content="$table2_header$table2"
 
-  echo "printing"
-  echo "$manifest_header"
   table4_content=$(echo -e "$manifest_header\n$staging_manifest_combined" \
     | sed '/^$/d' | tr '\t' '|' | sed 's/|/ | /g' | sed 's/^/| /; s/$/ |/' \
     | sed '1a\
 |---------|---------|---------|---------|\
 '
 )
-  echo "$table4_content"
+  
   table5_content=$(echo -e "$manifest_header\n$prod_manifest_combined" \
     | sed '/^$/d' | tr '\t' '|' | sed 's/|/ | /g' | sed 's/^/| /; s/$/ |/' \
     | sed '1a\
