@@ -278,7 +278,7 @@ for team in "${TEAMS[@]}"; do
   prod_matches=$(echo "$prod_file_hashes" | grep -E "$common_files_patterns" | sort -k 1)
 
   mod_files=
-  diff_hashes=$(comm -3 <(echo "$staging_matches" | awk '{print $2}') <(echo "$prod_matches" | awk '{print $2}'))
+  diff_hashes=$(comm -3 <(echo "$staging_matches" | awk '{print $2}' | sort) <(echo "$prod_matches" | awk '{print $2}' | sort))
   if [[ -n "$diff_hashes" ]]; then
     while read -r hash; do
       mod_files+="$(echo "$staging_matches" | awk -v hash="$hash" '$2 == hash')\n"
