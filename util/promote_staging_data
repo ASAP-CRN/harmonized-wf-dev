@@ -392,6 +392,17 @@ $(echo -e "$prod_preprocess_workflow_versions" | sed 's/^/* /')
 **Tests passed:** N/A
 
 
+# Definitions
+### Table 1: Definitions
+| Term | Definition |
+|---------|---------|
+| New files | Set of new files (i.e. they didn’t exist in previous runs/workflow versions). |
+| Modified files | Set of files that have different checksums. |
+| Deleted files | Set of files that no longer exist in this version of the pipeline (expected, not an error in the pipeline). |
+| Not_empty test | A test that checks if all files in buckets are empty or less than or equal to 10 bytes in size. |
+| Metadata_present test | A test that checks if all files in buckets have an associated metadata. The metadata file (MANIFEST.tsv) is generated in the workflow. |
+
+
 # Files changed
 ## New (i.e. only in staging)
 $(echo -e "$new_files")
@@ -404,20 +415,11 @@ $(echo -e "$deleted_files")
 
 
 # File tests
-### Table 1: Summary
+### Table 2: Summary
 $(echo -e "$table1_content")
 
-### Table 2: Data integrity tests results
+### Table 3: Data integrity tests results
 $(echo -e "$table2_content")
-
-### Table 3: Definitions
-| Term | Definition |
-|---------|---------|
-| New files | Set of new files (i.e. they didn’t exist in previous runs/workflow versions). |
-| Modified files | Set of files that have different checksums. |
-| Deleted files | Set of files that no longer exist in this version of the pipeline (expected, not an error in the pipeline). |
-| Not_empty test | A test that checks if all files in buckets are empty or less than or equal to 10 bytes in size. |
-| Metadata_present test | A test that checks if all files in buckets have an associated metadata. The metadata file (MANIFEST.tsv) is generated in the workflow. |
 
 
 # Manifest files
