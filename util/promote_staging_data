@@ -244,6 +244,10 @@ for team in "${TEAMS[@]}"; do
   else
     log "New files being prepared to transfer from staging to prod:"
     echo "$new_files"
+
+    new_files_header="| filename |\n|---------|\n"
+    new_files_content=$(echo -e "$new_files" | sed '/^$/d' | sed 's/^/| /; s/$/ |/')
+    new_files_table="$new_files_header$new_files_content"
   fi
 
   deleted_files=$(comm -13 <(echo "$staging_files") <(echo "$prod_files"))
@@ -253,6 +257,10 @@ for team in "${TEAMS[@]}"; do
   else
     log "Deleted files being prepared to remove from prod:"
     echo "$deleted_files"
+
+    deleted_files_header="| filename |\n|---------|\n"
+    deleted_files_content=$(echo -e "$deleted_files" | sed '/^$/d' | sed 's/^/| /; s/$/ |/')
+    deleted_files_table="$deleted_files_header$deleted_files_content"
   fi
 
   md5_check \
@@ -288,6 +296,10 @@ for team in "${TEAMS[@]}"; do
     log "Modified files being prepared to transfer from staging to prod:"
     echo -e "gs_uri\tmd5_hash"
     echo -e "$mod_files"
+
+    mod_files_header="| filename | hash (md5) |\n|---------|---------|\n"
+    mod_files_content=$(echo -e "$mod_files" | sed '/^$/d' | sed 's/\t/ | /g' | sed 's/^/| /; s/$/ |/')
+    mod_files_table="$mod_files_header$mod_files_content"
   else
     log "No modified files for ${team}"
     mod_files="N/A"
@@ -320,10 +332,10 @@ for team in "${TEAMS[@]}"; do
     all_tests_result="$RED_X"
   fi
 
-  table1=$(printf "| %s | %s |\n" "$current_timestamp" "$all_tests_result")
-  table1_content="$table1_header$table1"
+  table1_content=$(printf "| %s | %s |\n" "$current_timestamp" "$all_tests_result")
+  table1="$table1_header$table1_content"
 
-  table2=$(paste -d "|" \
+  table2_content=$(paste -d "|" \
     <(echo -e "$staging_files" | sed '/^$/d') \
     <(echo -e "$current_timestamps" | sed '/^$/d') \
     <(echo -e "$not_empty_tests" | sed '/^$/d') \
@@ -331,7 +343,7 @@ for team in "${TEAMS[@]}"; do
     | sed 's/|/ | /g' \
     | sed 's/^/| /; s/$/ |/'
   )
-  table2_content="$table2_header$table2"
+  table2="$table2_header$table2_content"
 
   # All of the files from preprocessing and cohort analysis
   echo -e "$manifest_header\n$staging_manifest_combined" | sed '/^$/d' > "$team"_MANIFEST.tsv
@@ -398,27 +410,27 @@ $(echo -e "$prod_preprocess_workflow_versions" | sed 's/^/* /')
 
 # Files changed
 ## New (i.e. only in staging)
-$(echo -e "$new_files")
+$(echo -e "$new_files_table")
 
 ## Modified
-$(echo -e "$mod_files")
+$(echo -e "$mod_files_table")
 
 ## Deleted (i.e. only in prod)
-$(echo -e "$deleted_files")
+$(echo -e "$deleted_files_table")
 
 
 # File tests
 ### Table 2: Summary
-$(echo -e "$table1_content")
+$(echo -e "$table1")
 
 ### Table 3: Data integrity tests results
-$(echo -e "$table2_content")
+$(echo -e "$table2")
 
 
 # Manifest file locations
-New manifest: ${staging_bucket}/metadata/$current_timestamp/MANIFEST.tsv
+**New manifest:** ${staging_bucket}/metadata/$current_timestamp/MANIFEST.tsv
 
-Previous manifest: $previous_manifest_combined_loc
+**Previous manifest:** $previous_manifest_combined_loc
 
 EOF
 
