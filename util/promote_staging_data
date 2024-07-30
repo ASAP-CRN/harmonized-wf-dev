@@ -209,7 +209,7 @@ for team in "${TEAMS[@]}"; do
   staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
   production_bucket=gs://asap-curated-data-${team}
 
-  log "Getting info on target (prod) environment (AKA old/previous workflow run) for ${team}"
+  log "Getting info on current data (i.e. prod) for ${team}"
   list_gs_files \
     prod \
     "${production_bucket}"
@@ -221,7 +221,7 @@ for team in "${TEAMS[@]}"; do
     prod \
     "${prod_manifest_loc}"
 
-  log "Getting info on initial (staging) environment (AKA new/current workflow run) for ${team}"
+  log "Getting info on new data (i.e. staging) for ${team}"
   list_gs_files \
     staging \
     "${staging_bucket}"
@@ -242,7 +242,7 @@ for team in "${TEAMS[@]}"; do
     log "No new files for ${team}"
     new_files="N/A"
   else
-    log "New files being prepared to transfer to prod:"
+    log "New files being prepared to transfer from staging to prod:"
     echo "$new_files"
   fi
 
@@ -285,7 +285,7 @@ for team in "${TEAMS[@]}"; do
     done <<< "${diff_hashes}"
 
     mod_files=$(echo -e "$mod_files" | sort | uniq | sed '/^$/d')
-    log "Modified files being prepared to transfer to prod:"
+    log "Modified files being prepared to transfer from staging to prod:"
     echo -e "gs_uri\tmd5_hash"
     echo -e "$mod_files"
   else
