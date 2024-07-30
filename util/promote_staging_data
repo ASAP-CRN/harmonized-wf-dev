@@ -209,7 +209,7 @@ for team in "${TEAMS[@]}"; do
   staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
   production_bucket=gs://asap-curated-data-${team}
 
-  log "Getting info on current data (i.e. prod) for ${team}"
+  log "Getting info on previous data (i.e. prod) for ${team}"
   list_gs_files \
     prod \
     "${production_bucket}"
@@ -221,7 +221,7 @@ for team in "${TEAMS[@]}"; do
     prod \
     "${prod_manifest_loc}"
 
-  log "Getting info on new data (i.e. staging) for ${team}"
+  log "Getting info on current data (i.e. staging) for ${team}"
   list_gs_files \
     staging \
     "${staging_bucket}"
@@ -333,21 +333,14 @@ for team in "${TEAMS[@]}"; do
   )
   table2_content="$table2_header$table2"
 
-  table4_content=$(echo -e "$manifest_header\n$staging_manifest_combined" \
-    | sed '/^$/d' | tr '\t' '|' | sed 's/|/ | /g' | sed 's/^/| /; s/$/ |/' \
-    | sed '1a\
-|---------|---------|---------|---------|\
-'
-)
+  # All of the files from preprocessing and cohort analysis
+  echo -e "$manifest_header\n$staging_manifest_combined" | sed '/^$/d' > "$team"_MANIFEST.tsv
 
-  table5_content=$(echo -e "$manifest_header\n$prod_manifest_combined" \
-    | sed '/^$/d' | tr '\t' '|' | sed 's/|/ | /g' | sed 's/^/| /; s/$/ |/' \
-    | sed '1a\
-|---------|---------|---------|---------|\
-'
-)
+  # Find the previous combined manifest (the manifest that is currently in prod)
+  previous_metadata_loc=$(gsutil ls "${staging_bucket}"/metadata/ | sort | tail -1)
+  previous_manifest_combined_loc=$(gsutil ls "$previous_metadata_loc" | grep "MANIFEST.tsv$")
 
-  cat <<EOF > "$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.md
+  cat <<EOF > "$team"_data_promotion_report.md
 # Info
 ## Initial environment
 **Environment:** [${STAGING_BUCKET_TYPE}]
@@ -422,18 +415,15 @@ $(echo -e "$table1_content")
 $(echo -e "$table2_content")
 
 
-# Manifest files
-### Table 4: Staging manifest info (current run)
+# Manifest file locations
+New manifest: ${staging_bucket}/metadata/$current_timestamp/MANIFEST.tsv
 
-$(echo -e "$table4_content")
+Previous manifest: $previous_manifest_combined_loc
 
-### Table 5: Prod manifest info (previous run)
-
-$(echo -e "$table5_content")
 EOF
 
   log "Local report located at:"
-  readlink -f "$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.md
+  readlink -f "$team"_data_promotion_report.md
 
   # Exit script if not all tests passed
   if [[ "$all_tests_result_status" == True ]]; then
@@ -454,12 +444,26 @@ log "Data integrity test results for all teams:"
 echo -e "team\tall_tests_passed"
 echo -e "${all_teams_results}"
 
-# Try syncing staging data to production
 while read -r team result_status; do
   if [[ "$result_status" == True ]]; then
     staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
     production_bucket=gs://asap-curated-data-${team}
 
+    log "Uploading combined manifest and report for [${team}]"
+    # Move combined manifest and report to target bucket only if promoting data
+    if [[ "${DRY_RUN_ARG}" == "" ]]; then
+      gsutil mv \
+        "$team"_MANIFEST.tsv \
+        "${staging_bucket}"/metadata/"$current_timestamp"/MANIFEST.tsv
+      log "Combined manifest located at: ["${staging_bucket}"/metadata/"$current_timestamp"/MANIFEST.tsv]"
+
+      gsutil mv \
+        "$team"_data_promotion_report.md \
+        "${staging_bucket}"/metadata/"$current_timestamp"/data_promotion_report.md
+      log "Report located at: ["${staging_bucket}"/metadata/"$current_timestamp"/data_promotion_report.md]"
+    fi
+
+    # Try syncing staging data to production
     log "Promoting [${team}] data to production"
     log "\tStaging bucket:\t\t[${staging_bucket}]"
     log "\tProduction bucket:\t[${production_bucket}]"
@@ -467,14 +471,6 @@ while read -r team result_status; do
     gsync \
       "${staging_bucket}" \
       "${production_bucket}"
-
-    # Move report to target bucket only if promoting data
-    if [[ "${DRY_RUN_ARG}" == "" ]]; then
-      gsutil mv \
-        "$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.md \
-        "${production_bucket}"
-      log "Report located at: ["${production_bucket}"/"$team"_"$staging_workflow"_"$staging_cohort_analysis_workflow_versions"_"$current_timestamp"_data-promotion-report.md]"
-    fi
   else
     err "Data cannot be promoted for ${team}; exiting"
     exit 1
