@@ -392,8 +392,8 @@ $(echo -e "$prod_preprocess_workflow_versions" | sed 's/^/* /')
 | New files | Set of new files (i.e. they didn’t exist in previous runs/workflow versions). |
 | Modified files | Set of files that have different checksums. |
 | Deleted files | Set of files that no longer exist in this version of the pipeline (expected, not an error in the pipeline). |
-| Not_empty test | A test that checks if all files in buckets are empty or less than or equal to 10 bytes in size. |
-| Metadata_present test | A test that checks if all files in buckets have an associated metadata. The metadata file (MANIFEST.tsv) is generated in the workflow. |
+| Not empty test | A test that checks if all files in buckets are empty or less than or equal to 10 bytes in size. |
+| Metadata present test | A test that checks if all files in buckets have an associated metadata. The metadata file (MANIFEST.tsv) is generated in the workflow. |
 
 
 # Files changed
