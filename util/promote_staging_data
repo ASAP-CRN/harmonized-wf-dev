@@ -321,7 +321,7 @@ for team in "${TEAMS[@]}"; do
   staging_files_length=$(echo "$staging_files" | wc -l | awk '{print $1}')
   current_timestamps=$(printf "%s\n" $(printf "%0.s$current_timestamp " $(seq 1 $staging_files_length)))
   unique_not_empty_results=$(echo -e "$not_empty_tests" | sort | uniq | sed '/^$/d' | wc -l | awk '{print $1}')
-  unique_metadata_present_results=$(echo -e "$metadata_present_tests" | sort | uniq | sed '/^$/d' | wc -l | awk '{print $1}')
+  unique_metadata_present_results=$(echo -e "$metadata_present_tests" | sort | uniq | sed 's;N/A;;g' | sed '/^$/d' | wc -l | awk '{print $1}')
   if [[ "$unique_not_empty_results" == 1 ]] && [[ "$unique_metadata_present_results" == 1 ]]; then
     all_tests_result_status=True
     all_tests_result_status_teams+="True\n"
