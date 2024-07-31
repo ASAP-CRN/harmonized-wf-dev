@@ -66,6 +66,7 @@ workflow cohort_analysis {
 
 	call filter_and_normalize {
 		input:
+			cohort_id = cohort_id,
 			merged_adata_object = merge_and_plot_qc_metrics.merged_adata_object, #!FileCoercion
 			qc_validation_metrics = merge_and_plot_qc_metrics.qc_validation_metrics,
 			n_top_genes = n_top_genes,
@@ -143,7 +144,8 @@ workflow cohort_analysis {
 		],
 		[
 			integrate_harmony_and_artifact_metrics.harmony_integrated_adata_object,
-			integrate_harmony_and_artifact_metrics.scib_report_results_csv
+			integrate_harmony_and_artifact_metrics.scib_report_results_csv,
+			integrate_harmony_and_artifact_metrics.scib_report_results_svg
 		],
 		[
 			plot_groups_and_features.groups_umap_plot_png,
@@ -181,6 +183,7 @@ workflow cohort_analysis {
 		# PCA and Harmony integrated adata objects and artifact metrics
 		File harmony_integrated_adata_object = integrate_harmony_and_artifact_metrics.harmony_integrated_adata_object #!FileCoercion
 		File scib_report_results_csv = integrate_harmony_and_artifact_metrics.scib_report_results_csv #!FileCoercion
+		File scib_report_results_svg = integrate_harmony_and_artifact_metrics.scib_report_results_svg #!FileCoercion
 
 		# Groups and features plots
 		File groups_umap_plot_png = plot_groups_and_features.groups_umap_plot_png #!FileCoercion
@@ -303,6 +306,7 @@ task merge_and_plot_qc_metrics {
 
 task filter_and_normalize {
 	input {
+		String cohort_id
 		File merged_adata_object
 		File qc_validation_metrics
 
@@ -344,11 +348,13 @@ task filter_and_normalize {
 				--marker-genes ~{cell_type_markers_list} \
 				--output-validation-file ~{qc_validation_metrics}
 
+			mv "~{qc_validation_metrics}" "~{cohort_id}.final_validation_metrics.csv"
+
 			upload_outputs \
 				-b ~{billing_project} \
 				-d ~{raw_data_path} \
 				-i ~{write_tsv(workflow_info)} \
-				-o ~{qc_validation_metrics}
+				-o "~{cohort_id}.final_validation_metrics.csv"
 
 			echo true > cells_remaining_post_filter.txt
 		else
@@ -359,7 +365,7 @@ task filter_and_normalize {
 	output {
 		File? filtered_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{merged_adata_object_basename}_filtered.h5ad" else my_none
 		File? normalized_adata_object = if read_boolean("cells_remaining_post_filter.txt") then "~{merged_adata_object_basename}_filtered_normalized.h5ad" else my_none
-		String? final_validation_metrics = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{qc_validation_metrics}" else my_none
+		String? final_validation_metrics = if read_boolean("cells_remaining_post_filter.txt") then "~{raw_data_path}/~{cohort_id}.final_validation_metrics.csv" else my_none
 	}
 
 	runtime {
@@ -407,18 +413,21 @@ task integrate_harmony_and_artifact_metrics {
 			--output-report-dir scib_report_dir
 
 		mv "scib_report_dir/scib_report.csv" "scib_report_dir/~{cohort_id}.scib_report.csv"
+		mv "scib_report_dir/scib_results.svg" "scib_report_dir/~{cohort_id}.scib_results.svg"
 
 		upload_outputs \
 			-b ~{billing_project} \
 			-d ~{raw_data_path} \
 			-i ~{write_tsv(workflow_info)} \
 			-o "~{cell_annotated_adata_object_basename}.harmony_integrated.h5ad" \
-			-o "scib_report_dir/~{cohort_id}.scib_report.csv"
+			-o "scib_report_dir/~{cohort_id}.scib_report.csv" \
+			-o "scib_report_dir/~{cohort_id}.scib_results.svg"
 	>>>
 
 	output {
 		String harmony_integrated_adata_object = "~{raw_data_path}/~{cell_annotated_adata_object_basename}.harmony_integrated.h5ad"
 		String scib_report_results_csv = "~{raw_data_path}/~{cohort_id}.scib_report.csv"
+		String scib_report_results_svg = "~{raw_data_path}/~{cohort_id}.scib_results.svg"
 	}
 
 	runtime {

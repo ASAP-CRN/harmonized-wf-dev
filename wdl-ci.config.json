@@ -1,0 +1,717 @@
+{
+  "workflows": {
+    "workflows/structs.wdl": {
+      "key": "workflows/structs.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {}
+    },
+    "workflows/main.wdl": {
+      "key": "workflows/main.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "get_workflow_metadata": {
+          "key": "get_workflow_metadata",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "workflows/cohort_analysis/cohort_analysis.wdl": {
+      "key": "workflows/cohort_analysis/cohort_analysis.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "write_cohort_sample_list": {
+          "key": "write_cohort_sample_list",
+          "digest": "zfdftcnrmcevqf7i5s4ald2ohvy5ppc2",
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "project_sample_ids": "${project_sample_ids}",
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "cohort_sample_list": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/asap-cohort.sample_list.tsv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_tab_delimited",
+                    "count_columns"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "merge_and_plot_qc_metrics": {
+          "key": "merge_and_plot_qc_metrics",
+          "digest": "nlsfz2kfxtlr7tx6appdqpqlq53ablwj",
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "preprocessed_adata_objects": [
+                  "${input_resources_file_path}/${preprocess_workflow_name}/ASAP_PMBDS_000105_s001_1.adata_object.h5ad",
+                  "${input_resources_file_path}/${preprocess_workflow_name}/ASAP_PMBDS_000108_s001_1.adata_object.h5ad",
+                  "${input_resources_file_path}/${preprocess_workflow_name}/ASAP_PMBDS_000026_s001_Rep1.adata_object.h5ad",
+                  "${input_resources_file_path}/${preprocess_workflow_name}/ASAP_PMBDS_000027_s001_Rep1.adata_object.h5ad",
+                  "${input_resources_file_path}/${preprocess_workflow_name}/ASAP_PMBDS_000001_s002_rep1.adata_object.h5ad",
+                  "${input_resources_file_path}/${preprocess_workflow_name}/ASAP_PMBDS_000001_s001_rep1.adata_object.h5ad",
+                  "${input_resources_file_path}/${preprocess_workflow_name}/ASAP_PMBDS_000003_s004_rep1.adata_object.h5ad",
+                  "${input_resources_file_path}/${preprocess_workflow_name}/ASAP_PMBDS_000128_s001_rep1.adata_object.h5ad"
+                ],
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "merged_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                },
+                "qc_plots_png": {
+                  "value": [
+                    "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.n_genes_by_counts.violin.png",
+                    "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.total_counts.violin.png",
+                    "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.pct_counts_mt.violin.png",
+                    "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.pct_counts_rb.violin.png",
+                    "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.doublet_score.violin.png"
+                  ],
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "png_validator"
+                  ]
+                },
+                "qc_validation_metrics": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.validation_metrics.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "filter_and_normalize": {
+          "key": "filter_and_normalize",
+          "digest": "wi2mf6t7konbmghfts35mt7uyfsarrrp",
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "merged_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.h5ad",
+                "qc_validation_metrics": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.validation_metrics.csv",
+                "n_top_genes": "${n_top_genes}",
+                "batch_key": "${batch_key}",
+                "cell_type_markers_list": "${input_file_path}/celltype_marker_table.csv",
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "filtered_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object_filtered.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                },
+                "normalized_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object_filtered_normalized.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                },
+                "final_validation_metrics": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.final_validation_metrics.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "plot_groups_and_features": {
+          "key": "plot_groups_and_features",
+          "digest": "2bk6dctm5isau5mz6do43wbx2kutkuww",
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "harmony_integrated_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.annotate_cells.harmony_integrated.h5ad",
+                "groups": "${groups}",
+                "features": "${features}",
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "groups_umap_plot_png": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.groups.umap.png",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "png_validator"
+                  ]
+                },
+                "features_umap_plot_png": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.features.umap.png",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "png_validator"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "integrate_harmony_and_artifact_metrics": {
+          "key": "integrate_harmony_and_artifact_metrics",
+          "digest": "ud7o6uxhnx6tdgbywdnt2hz6xergevfb",
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "cell_annotated_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.annotate_cells.h5ad",
+                "scvi_latent_key": "${scvi_latent_key}",
+                "batch_key": "${batch_key}",
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "harmony_integrated_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.annotate_cells.harmony_integrated.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                },
+                "scib_report_results_csv": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.scib_report.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
+                },
+                "scib_report_results_svg": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.scib_results.svg",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "svg_validator"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "workflows/cohort_analysis/cluster_data/cluster_data.wdl": {
+      "key": "workflows/cohort_analysis/cluster_data/cluster_data.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "integrate_sample_data": {
+          "key": "integrate_sample_data",
+          "digest": "eysqa4xtjztgsltx53vi7wukncluv2xb",
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "normalized_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object_filtered_normalized.h5ad",
+                "scvi_latent_key": "${scvi_latent_key}",
+                "batch_key": "${batch_key}",
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "integrated_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                },
+                "scvi_model_tar_gz": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}_scvi_model.tar.gz",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_gzip"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "cluster_cells": {
+          "key": "cluster_cells",
+          "digest": "x4qa7nlzlucxd3omxef3psgxgnfsuo3a",
+          "tests": [
+            {
+              "inputs": {
+                "integrated_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.h5ad",
+                "scvi_latent_key": "${scvi_latent_key}",
+                "cell_type_markers_list": "${input_file_path}/celltype_marker_table.csv",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "umap_cluster_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "annotate_cells": {
+          "key": "annotate_cells",
+          "digest": "asy5gjt2jt4uerphuvkjgk6d65uol66r",
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "cluster_adata_object": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.h5ad",
+                "batch_key": "${batch_key}",
+                "cell_type_markers_list": "${input_file_path}/celltype_marker_table.csv",
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "cell_types_csv": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.cell_types.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
+                },
+                "cell_annotated_adata_object": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.merged_adata_object.scvi_integrated.umap_cluster.annotate_cells.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                },
+                "cell_annotated_metadata": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/${cohort_id}.annotate_cells.metadata.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "workflows/preprocess/preprocess.wdl": {
+      "key": "workflows/preprocess/preprocess.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "check_output_files_exist": {
+          "key": "check_output_files_exist",
+          "digest": "",
+          "tests": []
+        },
+        "cellranger_count": {
+          "key": "cellranger_count",
+          "digest": "u2z3cfjpwjppc22kmrtuljgv44frskp4",
+          "tests": [
+            {
+              "inputs": {
+                "sample_id": "${sample_id}",
+                "fastq_R1s": [
+                  "gs://asap-wdl-ci/subset_fastqs/team-jakobsson/subset_10000_ASAP1_PD_NP16-162_SN_R1.fastq.gz"
+                ],
+                "fastq_R2s": [
+                  "gs://asap-wdl-ci/subset_fastqs/team-jakobsson/subset_10000_ASAP1_PD_NP16-162_SN_R2.fastq.gz"
+                ],
+                "fastq_I1s": [],
+                "fastq_I2s": [],
+                "cellranger_reference_data": "${input_file_path}/refdata-gex-GRCh38-2020-A.tar.gz",
+                "raw_data_path": "${cellranger_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${preprocess_workflow_name}",
+                    "${preprocess_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "raw_counts": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.raw_feature_bc_matrix.h5",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                },
+                "filtered_counts": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.filtered_feature_bc_matrix.h5",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                },
+                "molecule_info": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.molecule_info.h5",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                },
+                "metrics_summary_csv": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.metrics_summary.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "remove_technical_artifacts": {
+          "key": "remove_technical_artifacts",
+          "digest": "f2ulwvwgf67cd7hgpjjxtly47tqhppgf",
+          "tests": [
+            {
+              "inputs": {
+                "sample_id": "${sample_id}",
+                "raw_counts": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.raw_feature_bc_matrix.h5",
+                "cellbender_fpr": "${cellbender_fpr}",
+                "raw_data_path": "${cellbender_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${preprocess_workflow_name}",
+                    "${preprocess_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "report_html": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.cellbender_report.html",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_html"
+                  ]
+                },
+                "removed_background_counts": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.cellbender.h5",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                },
+                "filtered_removed_background_counts": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.cellbender_filtered.h5",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                },
+                "cell_barcodes_csv": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.cellbender_cell_barcodes.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "count_columns"
+                  ]
+                },
+                "graph_pdf": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.cellbender.pdf",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "pdf_validator"
+                  ]
+                },
+                "log": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.cellbender.log",
+                  "test_tasks": [
+                    "compare_file_basename"
+                  ]
+                },
+                "metrics_csv": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.cellbender_metrics.csv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_comma_separated",
+                    "count_columns"
+                  ]
+                },
+                "posterior_probability": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.cellbend_posterior.h5",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "counts_to_adata": {
+          "key": "counts_to_adata",
+          "digest": "z2hbjnseugfb57oxd2e5b33ybrp7gp4m",
+          "tests": [
+            {
+              "inputs": {
+                "sample_id": "${sample_id}",
+                "batch": "1",
+                "project_id": "team-jakobsson",
+                "cellbender_counts": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.cellbender.h5",
+                "raw_data_path": "${adata_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${preprocess_workflow_name}",
+                    "${preprocess_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "adata_object": {
+                  "value": "${input_resources_file_path}/${preprocess_workflow_name}/${sample_id}.adata_object.h5ad",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_hdf5"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "workflows/common/upload_final_outputs.wdl": {
+      "key": "workflows/common/upload_final_outputs.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "upload_final_outputs": {
+          "key": "upload_final_outputs",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "pmdbs-wdl-ci-custom-test-dir/check_hdf5.wdl": {
+      "key": "pmdbs-wdl-ci-custom-test-dir/check_hdf5.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "check_hdf5": {
+          "key": "check_hdf5",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "pmdbs-wdl-ci-custom-test-dir/pdf_validator.wdl": {
+      "key": "pmdbs-wdl-ci-custom-test-dir/pdf_validator.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "pdf_validator": {
+          "key": "pdf_validator",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "pmdbs-wdl-ci-custom-test-dir/svg_validator.wdl": {
+      "key": "pmdbs-wdl-ci-custom-test-dir/svg_validator.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "svg_validator": {
+          "key": "svg_validator",
+          "digest": "",
+          "tests": []
+        }
+      }
+    }
+  },
+  "engines": {
+    "asap-cromwell": {
+      "key": "asap-cromwell",
+      "enabled": true,
+      "name": ""
+    }
+  },
+  "test_params": {
+    "global_params": {
+      "sample_id": "ASAP_PMBDS_000105_s001_1",
+      "cohort_id": "asap-cohort",
+      "project_sample_ids": [
+        [
+          "team-jakobsson",
+          "ASAP_PMBDS_000105_s001_1"
+        ],
+        [
+          "team-jakobsson",
+          "ASAP_PMBDS_000108_s001_1"
+        ],
+        [
+          "team-hafler",
+          "ASAP_PMBDS_000026_s001_Rep1"
+        ],
+        [
+          "team-hafler",
+          "ASAP_PMBDS_000027_s001_Rep1"
+        ],
+        [
+          "team-lee",
+          "ASAP_PMBDS_000001_s002_rep1"
+        ],
+        [
+          "team-lee",
+          "ASAP_PMBDS_000001_s001_rep1"
+        ],
+        [
+          "team-scherzer",
+          "ASAP_PMBDS_000003_s004_rep1"
+        ],
+        [
+          "team-scherzer",
+          "ASAP_PMBDS_000128_s001_rep1"
+        ]
+      ],
+      "cellranger_raw_data_path": "gs://asap-wdl-ci/workflow_execution/preprocess/cellranger/1.0.0",
+      "cellbender_raw_data_path": "gs://asap-wdl-ci/workflow_execution/preprocess/remove_technical_artifacts/1.0.0",
+      "adata_raw_data_path": "gs://asap-wdl-ci/workflow_execution/preprocess/counts_to_adata/1.0.0",
+      "preprocess_workflow_name": "preprocess",
+      "preprocess_workflow_version": "1.0.0",
+      "cohort_raw_data_path": "gs://asap-wdl-ci/workflow_execution/${cohort_workflow_name}/${cohort_workflow_version}/${run_timestamp}",
+      "run_timestamp": "2024-06-06T00-00-00Z",
+      "cohort_workflow_name": "cohort_analysis",
+      "cohort_workflow_version": "2.1.0",
+      "cellbender_fpr": "0.0",
+      "n_top_genes": 8000,
+      "scvi_latent_key": "X_scvi",
+      "batch_key": "batch_id",
+      "groups": [
+        "sample",
+        "batch",
+        "cell_type"
+      ],
+      "features": [
+        "n_genes_by_counts",
+        "total_counts",
+        "pct_counts_mt",
+        "pct_counts_rb",
+        "doublet_score",
+        "S_score",
+        "G2M_score"
+      ],
+      "billing_project": "dnastack-asap-parkinsons",
+      "container_registry": "us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images",
+      "zones": "us-central1-c us-central1-f"
+    },
+    "engine_params": {
+      "asap-cromwell": {
+        "input_file_path": "gs://asap-workflow-dev/workflow-resources",
+        "input_resources_file_path": "gs://asap-wdl-ci/pmdbs"
+      }
+    }
+  }
+}
