@@ -56,8 +56,11 @@ if [[ -z "${OUTPUT_FILES:-}" ]]; then
 fi
 
 for output_file in "${OUTPUT_FILES[@]}"; do
+	md5_hash=$(md5sum "${output_file}" | awk '{print $1}' | xxd -r -p | base64)
+
 	paste \
 		<(basename "${output_file}") \
+		<(echo "${md5_hash}")
 		"${WORKFLOW_INFO}" \
 	> "${output_file}.meta.tsv"
 
