@@ -240,7 +240,7 @@ for team in "${TEAMS[@]}"; do
   new_files=$(comm -23 <(echo "$staging_files") <(echo "$prod_files"))
   if [[ -z "$new_files" ]]; then
     log "No new files for ${team}"
-    new_files="N/A"
+    new_files_table="N/A"
   else
     log "New files being prepared to transfer from staging to prod:"
     echo "$new_files"
@@ -253,7 +253,7 @@ for team in "${TEAMS[@]}"; do
   deleted_files=$(comm -13 <(echo "$staging_files") <(echo "$prod_files"))
   if [[ -z "$deleted_files" ]]; then
     log "No deleted files for ${team}"
-    deleted_files="N/A"
+    deleted_files_table="N/A"
   else
     log "Deleted files being prepared to remove from prod:"
     echo "$deleted_files"
@@ -302,7 +302,7 @@ for team in "${TEAMS[@]}"; do
     mod_files_table="$mod_files_header$mod_files_content"
   else
     log "No modified files for ${team}"
-    mod_files="N/A"
+    mod_files_table="N/A"
   fi
 
   #### Data integrity checks must be performed with files sorted to preserve order when concatenating tables ####
@@ -437,6 +437,9 @@ EOF
   log "Local report located at:"
   readlink -f "$team"_data_promotion_report.md
 
+  log "Local combined manifest located at:"
+  readlink -f "$team"_MANIFEST.tsv
+
   # Exit script if not all tests passed
   if [[ "$all_tests_result_status" == True ]]; then
     log "All tests have passed for ${team}"
@@ -461,9 +464,9 @@ while read -r team result_status; do
     staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
     production_bucket=gs://asap-curated-data-${team}
 
-    log "Uploading combined manifest and report for [${team}]"
-    # Move combined manifest and report to target bucket only if promoting data
+    # Move combined manifest and report to staging bucket only if promoting data because rsync will also upload to prod bucket
     if [[ "${DRY_RUN_ARG}" == "" ]]; then
+      log "Uploading combined manifest and report for [${team}]"
       gsutil mv \
         "$team"_MANIFEST.tsv \
         "${staging_bucket}"/metadata/"$current_timestamp"/MANIFEST.tsv
@@ -473,6 +476,9 @@ while read -r team result_status; do
         "$team"_data_promotion_report.md \
         "${staging_bucket}"/metadata/"$current_timestamp"/data_promotion_report.md
       log "Report located at: ["${staging_bucket}"/metadata/"$current_timestamp"/data_promotion_report.md]"
+    else
+      echo "Would copy $(readlink -f "$team"_MANIFEST.tsv) to "${staging_bucket}"/metadata/"$current_timestamp"/MANIFEST.tsv"
+      echo "Would copy $(readlink -f "$team"_data_promotion_report.md) to "${staging_bucket}"/metadata/"$current_timestamp"/data_promotion_report.md"
     fi
 
     # Try syncing staging data to production
