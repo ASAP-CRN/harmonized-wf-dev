@@ -349,8 +349,13 @@ for team in "${TEAMS[@]}"; do
   echo -e "$manifest_header\n$staging_manifest_combined" | sed '/^$/d' > "$team"_MANIFEST.tsv
 
   # Find the previous combined manifest (the manifest that is currently in prod)
-  previous_metadata_loc=$(gsutil ls "${staging_bucket}"/metadata/ | sort | tail -1)
-  previous_manifest_combined_loc=$(gsutil ls "$previous_metadata_loc" | grep "MANIFEST.tsv$")
+  previous_metadata_exists=$(gsutil ls "${staging_bucket}" | grep "^metadata$" || [[ $? == 1 ]])
+  if [[ -n "$previous_metadata_exists" ]]; then
+    previous_metadata_loc=$(gsutil ls "${staging_bucket}"/metadata/ | sort | tail -1)
+    previous_manifest_combined_loc=$(gsutil ls "$previous_metadata_loc" | grep "MANIFEST.tsv$")
+  else
+    previous_manifest_combined_loc="N/A"
+  fi
 
   cat <<EOF > "$team"_data_promotion_report.md
 # Info
