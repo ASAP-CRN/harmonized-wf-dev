@@ -25,7 +25,7 @@
       "tasks": {
         "write_cohort_sample_list": {
           "key": "write_cohort_sample_list",
-          "digest": "zfdftcnrmcevqf7i5s4ald2ohvy5ppc2",
+          "digest": "cve3yantcy3stjk7ggvycomu3qo7rizb",
           "tests": [
             {
               "inputs": {
