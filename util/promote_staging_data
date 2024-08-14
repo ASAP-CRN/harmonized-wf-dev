@@ -9,7 +9,7 @@ cat << EOF
 
   Run data integrity tests and promote data in staging buckets to production.
 
-  Generates a Markdown report for data integrity. Data cannot be promoted if tests fail.
+  Generates a Markdown report for data integrity for each team and saves stdout in a log [output.log]. Data cannot be promoted if tests fail.
 
   $(tput bold)[CAUTION] This also deletes data in the production bucket that is not found in the staging bucket.$(tput sgr0)
 
