@@ -425,10 +425,12 @@ $(echo -e "$deleted_files_table")
 
 
 # File tests
-### Table 2: Summary
+### Table 2: Summary of data integrity tests results
+Summarizes the results of all data integrity tests on all files and when the tests were run. If all tests pass for all files, the data will be promoted and the "all tests passed" column will show a ✅. If any test fails for any file, the data will not be promoted and the "all tests passed" column will show a ❌.
 $(echo -e "$table1")
 
-### Table 3: Data integrity tests results
+### Table 3: Data integrity tests results for each file
+Individual data integrity test results for each file (a comprehensive variation of [Table 2](#table-2-summary-of-data-integrity-tests-results)) and when the tests were run. Tests involve checking if files are not empty and have an associated metadata (more details in [Table 1](#table-1-definitions)). All tests for all files must pass in order for data to be promoted.
 $(echo -e "$table2")
 
 
