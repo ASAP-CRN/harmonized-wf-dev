@@ -1,13 +1,15 @@
 #!/bin/bash
 #
-# Promote data in staging buckets to production
+# Run data integrity tests and promote data in staging buckets to production
 
 set -eEuo pipefail
 
 usage() {
 cat << EOF
 
-  Promote data in staging buckets to production.
+  Run data integrity tests and promote data in staging buckets to production.
+
+  Generates a Markdown report for data integrity for each team and saves stdout in a log [output.log]. Data cannot be promoted if tests fail.
 
   $(tput bold)[CAUTION] This also deletes data in the production bucket that is not found in the staging bucket.$(tput sgr0)
 
@@ -36,6 +38,107 @@ err() {
 list_teams() {
   echo "$(tput bold)Available teams:$(tput sgr0)"
   echo "${ALL_TEAMS[@]}" | tr ' ' '\n'
+}
+
+list_gs_files() {
+  bucket_type="${1}"
+  source_path="${2#/}/**"
+
+  eval "${bucket_type}_gs_files=\$(gsutil ls -l \"${source_path}\" | awk '{print \$3}' | grep '^gs://')"
+}
+
+get_manifest_info() {
+  bucket_type="${1}"
+  manifest_locs="${2}"
+
+  eval "${bucket_type}_manifest_combined="
+
+  # Loops through preprocess and cohort_analysis MANIFEST
+  while read -r manifest; do
+    eval "${bucket_type}_manifest=\$(gsutil cat \"${manifest}\")"
+    eval "${bucket_type}_manifest_contents=\$(echo -e \"\${${bucket_type}_manifest}\" | tail -n +2)"
+    eval "${bucket_type}_manifest_combined+=\"\${${bucket_type}_manifest_contents}\n\""
+
+    eval "timestamp_column_no=\$(tr '\t' '\n' < <(echo \"\${${bucket_type}_manifest}\" | head -1) | grep -n \"^timestamp\$\" | cut -d : -f 1)"
+    eval "workflow_version_column_no=\$(tr '\t' '\n' < <(echo \"\${${bucket_type}_manifest}\" | head -1) | grep -n \"^workflow_version\$\" | cut -d : -f 1)"
+    eval "workflow_column_no=\$(tr '\t' '\n' < <(echo \"\${${bucket_type}_manifest}\" | head -1) | grep -n \"^workflow\$\" | cut -d : -f 1)"
+
+    # Preprocess and cohort analysis - TBD if MANIFEST will only contain "Harmonized PMDBS workflow"
+    ## One output from cohort_analysis is in the preprocess MANIFEST, must grab the workflow name that has the most occurrences
+    eval "${bucket_type}_workflow=\$(echo \"\${${bucket_type}_manifest}\" | cut -f \"${workflow_column_no}\" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq -c | sort -nr | head -1 | awk '{print \$2}')"
+    eval "${bucket_type}_workflows_length=\$(echo \"\${${bucket_type}_workflow}\" | sed '/^$/d' | wc -l | awk '{print \$1}')"
+    eval "current_workflow=\${${bucket_type}_workflow}"
+
+    if [[ "\${${bucket_type}_workflows_length}" != 1 ]]; then
+      log "[WARN] More than one workflow detected in ${bucket_type} manifest: [${current_workflow}]"
+    fi
+
+    # Variables declared are hard-coded in the report generation below
+    if [[ "$current_workflow" == "preprocess" ]] || [[ "$current_workflow" == "cohort_analysis" ]]; then
+      timestamps=$(eval "echo \"\${${bucket_type}_manifest}\"" | cut -f "$timestamp_column_no" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq)
+      eval "${bucket_type}_${current_workflow}_timestamps=\"${timestamps}\""
+      workflow_versions=$(eval "echo \"\${${bucket_type}_manifest}\"" | cut -f "$workflow_version_column_no" | tail -n +2 | sed -r '/^\s*$/d' | sort | uniq)
+      eval "${bucket_type}_${current_workflow}_workflow_versions=\"${workflow_versions}\""
+    else
+      log "[WARN] Workflow name other than 'preprocess' and 'cohort_analysis' detected in ${bucket_type} MANIFEST: [${current_workflow}]"
+    fi
+  done <<< "${manifest_locs}"
+
+  eval "manifest_header=$(head -1 <<< "\${${bucket_type}_manifest}")"
+}
+
+md5_check() {
+  bucket_type="${1}"
+  source_path="${2#/}/**"
+
+  # To match staging files order
+  eval "${bucket_type}_hashes=\$(gsutil hash -m \"${source_path}\" | grep \"Hash (md5)\" | awk '{print \$3}')"
+}
+
+GREEN_CHECKMARK="✅"
+RED_X="❌"
+
+non_empty_check() {
+  not_empty_tests=
+  source_path="${1#/}/**"
+
+  # To match staging files order
+  file_list_sorted=$(gsutil ls -l "${source_path}" | sort -k 3 | grep -E '^[0-9[:space:]]')
+
+  while read -r file_size timestamp gs_uri; do
+    if [[ $file_size -le 10 ]]; then
+      err "Found a file less than or equal to 10 bytes: [$gs_uri]"
+      not_empty_tests+="$RED_X\n"
+    else
+      not_empty_tests+="$GREEN_CHECKMARK\n"
+    fi
+  done <<< "${file_list_sorted}"
+}
+
+metadata_check() {
+  metadata_present_tests=
+  source_file_list="${1}"
+
+  subfolder_paths=$(echo "${source_file_list}" | grep "MANIFEST.tsv$" | awk -F 'MANIFEST.tsv' '{print $1}')
+
+  # Loops through preprocess and cohort_analysis MANIFEST
+  while read -r gs_subfolder_path; do
+    basename_files_to_check=$(echo "${source_file_list}" | grep "$gs_subfolder_path" | sed "s;$gs_subfolder_path;;")
+    staging_manifest=$(gsutil cat "${gs_subfolder_path}MANIFEST.tsv")
+    while read -r file; do
+      files_exist=$(echo "$staging_manifest" | grep "$file" || [[ $? == 1 ]])
+      if [[ "$file" == "MANIFEST.tsv" ]]; then
+        metadata_present_tests+="N/A\n"
+      else
+        if [[ -z "$files_exist" ]]; then
+          err "File does not have associated metadata and is absent from MANIFEST: [${gs_subfolder_path}${file}]"
+          metadata_present_tests+="$RED_X\n"
+        else
+          metadata_present_tests+="$GREEN_CHECKMARK\n"
+        fi
+      fi
+    done <<< "${basename_files_to_check}"
+  done <<< "${subfolder_paths}"
 }
 
 gsync() {
@@ -91,16 +194,310 @@ for team in "${TEAMS[@]}"; do
   fi
 done
 
-# Try syncing staging data to production
+exec > >(tee -a output.log) 2>&1
+
+# Prepare report
+current_timestamp=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+table1_header="| timestamp | all tests passed |\n|---------|---------|\n"
+table2_header="| filename | timestamp | not empty test | metadata present test |\n|---------|---------|---------|-------------|\n"
+
+# Run data integrity tests and create report for each team
+all_tests_result_status_teams=
 for team in "${TEAMS[@]}"; do
+  log "Starting ${team}"
+
   staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
   production_bucket=gs://asap-curated-data-${team}
 
-  log "Promoting [${team}] data to production"
-  log "\tStaging bucket:\t\t[${staging_bucket}]"
-  log "\tProduction bucket:\t[${production_bucket}]"
-
-  gsync \
-    "${staging_bucket}" \
+  log "Getting info on previous data (i.e. prod) for ${team}"
+  list_gs_files \
+    prod \
     "${production_bucket}"
+
+  prod_sample_list_loc=$(echo "$prod_gs_files" | grep "sample_list.tsv$")
+  prod_manifest_loc=$(echo "$prod_gs_files" | grep "MANIFEST.tsv$")
+
+  get_manifest_info \
+    prod \
+    "${prod_manifest_loc}"
+
+  log "Getting info on current data (i.e. staging) for ${team}"
+  list_gs_files \
+    staging \
+    "${staging_bucket}"
+
+  staging_sample_list_loc=$(echo "$staging_gs_files" | grep "sample_list.tsv$")
+  staging_manifest_loc=$(echo "$staging_gs_files" | grep "MANIFEST.tsv$")
+
+  get_manifest_info \
+    staging \
+    "${staging_manifest_loc}"
+
+  log "Starting to compare staging and prod files for ${team}"
+  staging_files=$(echo "$staging_gs_files" | sort | sed 's|^[^/]*//[^/]*/||')
+  prod_files=$(echo "$prod_gs_files" | sort | sed 's|^[^/]*//[^/]*/||')
+
+  new_files=$(comm -23 <(echo "$staging_files") <(echo "$prod_files"))
+  if [[ -z "$new_files" ]]; then
+    log "No new files for ${team}"
+    new_files_table="N/A"
+  else
+    log "New files being prepared to transfer from staging to prod:"
+    echo "$new_files"
+
+    new_files_header="| filename |\n|---------|\n"
+    new_files_content=$(echo -e "$new_files" | sed '/^$/d' | sed 's/^/| /; s/$/ |/')
+    new_files_table="$new_files_header$new_files_content"
+  fi
+
+  deleted_files=$(comm -13 <(echo "$staging_files") <(echo "$prod_files"))
+  if [[ -z "$deleted_files" ]]; then
+    log "No deleted files for ${team}"
+    deleted_files_table="N/A"
+  else
+    log "Deleted files being prepared to remove from prod:"
+    echo "$deleted_files"
+
+    deleted_files_header="| filename |\n|---------|\n"
+    deleted_files_content=$(echo -e "$deleted_files" | sed '/^$/d' | sed 's/^/| /; s/$/ |/')
+    deleted_files_table="$deleted_files_header$deleted_files_content"
+  fi
+
+  md5_check \
+    staging \
+    "${staging_bucket}"
+  staging_file_hashes=$(paste \
+    <(echo -e "$staging_gs_files" | sed '/^$/d') \
+    <(echo -e "$staging_hashes" | sed '/^$/d')
+  )
+  md5_check \
+    prod \
+    "${production_bucket}"
+  prod_file_hashes=$(paste \
+    <(echo -e "$prod_gs_files" | sed '/^$/d') \
+    <(echo -e "$prod_hashes" | sed '/^$/d')
+  )
+
+  common_files=$(comm -12 <(echo "$staging_files") <(echo "$prod_files"))
+  # Get the full paths of the common files in both staging and prod
+  common_files_patterns=$(echo "$common_files" | tr '\n' '|')
+  common_files_patterns=${common_files_patterns%|}
+  staging_matches=$(echo "$staging_file_hashes" | grep -E "$common_files_patterns" | sort -k 1)
+  prod_matches=$(echo "$prod_file_hashes" | grep -E "$common_files_patterns" | sort -k 1)
+
+  mod_files=
+  diff_hashes=$(comm -3 <(echo "$staging_matches" | awk '{print $2}' | sort) <(echo "$prod_matches" | awk '{print $2}' | sort))
+  if [[ -n "$diff_hashes" ]]; then
+    while read -r hash; do
+      mod_files+="$(echo "$staging_matches" | awk -v hash="$hash" '$2 == hash')\n"
+    done <<< "${diff_hashes}"
+
+    mod_files=$(echo -e "$mod_files" | sort | uniq | sed '/^$/d')
+    log "Modified files being prepared to transfer from staging to prod:"
+    echo -e "gs_uri\tmd5_hash"
+    echo -e "$mod_files"
+
+    mod_files_header="| filename | hash (md5) |\n|---------|---------|\n"
+    mod_files_content=$(echo -e "$mod_files" | sed '/^$/d' | sed 's/\t/ | /g' | sed 's/^/| /; s/$/ |/')
+    mod_files_table="$mod_files_header$mod_files_content"
+  else
+    log "No modified files for ${team}"
+    mod_files_table="N/A"
+  fi
+
+  #### Data integrity checks must be performed with files sorted to preserve order when concatenating tables ####
+  # Check that files are not empty and are not less than or equal to 10 bytes (factoring in white space)
+  log "Checking files are not empty for ${team}"
+  non_empty_check \
+    "${staging_bucket}"
+
+  # Check that files have associated metadata and is present in MANIFEST.tsv
+  log "Checking files have associated metadata for ${team}"
+  sorted_staging_gs_files=$(echo "$staging_gs_files" | sort)
+  metadata_check \
+    "${sorted_staging_gs_files}"
+
+  # Create report
+  staging_files_length=$(echo "$staging_files" | wc -l | awk '{print $1}')
+  current_timestamps=$(printf "%s\n" $(printf "%0.s$current_timestamp " $(seq 1 $staging_files_length)))
+  unique_not_empty_results=$(echo -e "$not_empty_tests" | sort | uniq | sed '/^$/d' | wc -l | awk '{print $1}')
+  unique_metadata_present_results=$(echo -e "$metadata_present_tests" | sort | uniq | sed 's;N/A;;g' | sed '/^$/d' | wc -l | awk '{print $1}')
+  if [[ "$unique_not_empty_results" == 1 ]] && [[ "$unique_metadata_present_results" == 1 ]]; then
+    all_tests_result_status=True
+    all_tests_result_status_teams+="True\n"
+    all_tests_result="$GREEN_CHECKMARK"
+  else
+    all_tests_result_status=False
+    all_tests_result_status_teams+="False\n"
+    all_tests_result="$RED_X"
+  fi
+
+  table1_content=$(printf "| %s | %s |\n" "$current_timestamp" "$all_tests_result")
+  table1="$table1_header$table1_content"
+
+  table2_content=$(paste -d "|" \
+    <(echo -e "$staging_files" | sed '/^$/d') \
+    <(echo -e "$current_timestamps" | sed '/^$/d') \
+    <(echo -e "$not_empty_tests" | sed '/^$/d') \
+    <(echo -e "$metadata_present_tests" | sed '/^$/d') \
+    | sed 's/|/ | /g' \
+    | sed 's/^/| /; s/$/ |/'
+  )
+  table2="$table2_header$table2_content"
+
+  # All of the files from preprocessing and cohort analysis
+  echo -e "$manifest_header\n$staging_manifest_combined" | sed '/^$/d' > "$team"_MANIFEST.tsv
+
+  # Find the previous combined manifest (the manifest that is currently in prod)
+  previous_metadata_exists=$(gsutil ls "${staging_bucket}" | grep "^metadata$" || [[ $? == 1 ]])
+  if [[ -n "$previous_metadata_exists" ]]; then
+    previous_metadata_loc=$(gsutil ls "${staging_bucket}"/metadata/ | sort | tail -1)
+    previous_manifest_combined_loc=$(gsutil ls "$previous_metadata_loc" | grep "MANIFEST.tsv$")
+  else
+    previous_manifest_combined_loc="N/A"
+  fi
+
+  cat <<EOF > "$team"_data_promotion_report.md
+# Info
+## Initial environment
+**Environment:** [${STAGING_BUCKET_TYPE}]
+
+**Bucket:** $staging_bucket
+
+**Preprocessing timestamp(s):**
+$(echo -e "$staging_preprocess_timestamps" | sed 's/^/* /')
+
+**Preprocessing version(s):**
+$(echo -e "$staging_preprocess_workflow_versions" | sed 's/^/* /')
+
+**Cohort analysis timestamp:** $staging_cohort_analysis_timestamps
+
+**Cohort analysis version:** $staging_cohort_analysis_workflow_versions
+
+**Harmonized PMDBS workflow version:** ($staging_cohort_analysis_workflow_versions)
+
+**Sample set:** $staging_sample_list_loc
+
+**Tests passed:** $all_tests_result_status
+
+## Target environment
+**Environment:** [curated]
+
+**Bucket:** gs://asap-curated-data-${team}
+
+**Preprocessing timestamp(s):**
+$(echo -e "$prod_preprocess_timestamps" | sed 's/^/* /')
+
+**Preprocessing version(s):**
+$(echo -e "$prod_preprocess_workflow_versions" | sed 's/^/* /')
+
+**Cohort analysis timestamp:** $prod_cohort_analysis_timestamps
+
+**Cohort analysis version:** $prod_cohort_analysis_workflow_versions
+
+**Harmonized PMDBS workflow version:** ($prod_cohort_analysis_workflow_versions)
+
+**Sample set:** $prod_sample_list_loc
+
+**Tests passed:** N/A
+
+
+# Definitions
+### Table 1: Definitions
+| Term | Definition |
+|---------|---------|
+| New files | Set of new files (i.e. they didn’t exist in previous runs/workflow versions). |
+| Modified files | Set of files that have different checksums. |
+| Deleted files | Set of files that no longer exist in this version of the pipeline (expected, not an error in the pipeline). |
+| Not empty test | A test that checks if all files in buckets are empty or less than or equal to 10 bytes in size. |
+| Metadata present test | A test that checks if all files in buckets have an associated metadata. The metadata file (MANIFEST.tsv) is generated in the workflow. |
+
+
+# Files changed
+## New (i.e. only in staging)
+$(echo -e "$new_files_table")
+
+## Modified
+$(echo -e "$mod_files_table")
+
+## Deleted (i.e. only in prod)
+$(echo -e "$deleted_files_table")
+
+
+# File tests
+### Table 2: Summary of data integrity tests results
+Summarizes the results of all data integrity tests on all files and when the tests were run. If all tests pass for all files, the data will be promoted and the "all tests passed" column will show a ✅. If any test fails for any file, the data will not be promoted and the "all tests passed" column will show a ❌.
+$(echo -e "$table1")
+
+### Table 3: Data integrity tests results for each file
+Individual data integrity test results for each file (a comprehensive variation of [Table 2](#table-2-summary-of-data-integrity-tests-results)) and when the tests were run. Tests involve checking if files are not empty and have an associated metadata (more details in [Table 1](#table-1-definitions)). All tests for all files must pass in order for data to be promoted.
+$(echo -e "$table2")
+
+
+# Manifest file locations
+**New manifest:** ${staging_bucket}/metadata/$current_timestamp/MANIFEST.tsv
+
+**Previous manifest:** $previous_manifest_combined_loc
+
+EOF
+
+  log "Local report located at:"
+  readlink -f "$team"_data_promotion_report.md
+
+  log "Local combined manifest located at:"
+  readlink -f "$team"_MANIFEST.tsv
+
+  # Exit script if not all tests passed
+  if [[ "$all_tests_result_status" == True ]]; then
+    log "All tests have passed for ${team}"
+  else
+    err "One or more tests on files failed for ${team}"
+  fi
 done
+
+# Reverse sort so teams that passed all tests ('True') can have data promoted before script exits
+all_teams_results=$(paste \
+  <(echo "${TEAMS[@]}" | tr ' ' '\n' | sed '/^$/d') \
+  <(echo -e "$all_tests_result_status_teams" | sed '/^$/d') \
+  | sort -r -k 2
+)
+
+log "Data integrity test results for all teams:"
+echo -e "team\tall_tests_passed"
+echo -e "${all_teams_results}"
+
+while read -r team result_status; do
+  if [[ "$result_status" == True ]]; then
+    staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
+    production_bucket=gs://asap-curated-data-${team}
+
+    # Move combined manifest and report to staging bucket only if promoting data because rsync will also upload to prod bucket
+    if [[ "${DRY_RUN_ARG}" == "" ]]; then
+      log "Uploading combined manifest and report for [${team}]"
+      gsutil mv \
+        "$team"_MANIFEST.tsv \
+        "${staging_bucket}"/metadata/"$current_timestamp"/MANIFEST.tsv
+      log "Combined manifest located at: ["${staging_bucket}"/metadata/"$current_timestamp"/MANIFEST.tsv]"
+
+      gsutil mv \
+        "$team"_data_promotion_report.md \
+        "${staging_bucket}"/metadata/"$current_timestamp"/data_promotion_report.md
+      log "Report located at: ["${staging_bucket}"/metadata/"$current_timestamp"/data_promotion_report.md]"
+    else
+      echo "Would copy $(readlink -f "$team"_MANIFEST.tsv) to "${staging_bucket}"/metadata/"$current_timestamp"/MANIFEST.tsv"
+      echo "Would copy $(readlink -f "$team"_data_promotion_report.md) to "${staging_bucket}"/metadata/"$current_timestamp"/data_promotion_report.md"
+    fi
+
+    # Try syncing staging data to production
+    log "Promoting [${team}] data to production"
+    log "\tStaging bucket:\t\t[${staging_bucket}]"
+    log "\tProduction bucket:\t[${production_bucket}]"
+
+    gsync \
+      "${staging_bucket}" \
+      "${production_bucket}"
+  else
+    err "Data cannot be promoted for ${team}; exiting"
+    exit 1
+  fi
+done <<< "${all_teams_results}"
