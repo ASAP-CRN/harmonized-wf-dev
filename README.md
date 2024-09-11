@@ -56,6 +56,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | Array[String]? | groups | Groups to produce umap plots for. ['sample', 'batch', 'cell_type'] |
 | Array[String]? | features | Features to produce umap plots for. ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score', 'S_score', 'G2M_score'] |
 | String | container_registry | Container registry where workflow Docker images are hosted. |
+| String? | zones | GCP zones where compute will take place. ['us-central1-c us-central1-f'] |
 
 ## Structs
 
