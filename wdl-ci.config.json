@@ -1,62 +1,10 @@
 {
   "workflows": {
-    "workflows/structs.wdl": {
-      "key": "workflows/structs.wdl",
-      "name": "",
-      "description": "",
-      "tasks": {}
-    },
-    "workflows/main.wdl": {
-      "key": "workflows/main.wdl",
-      "name": "",
-      "description": "",
-      "tasks": {
-        "get_workflow_metadata": {
-          "key": "get_workflow_metadata",
-          "digest": "",
-          "tests": []
-        }
-      }
-    },
     "workflows/cohort_analysis/cohort_analysis.wdl": {
       "key": "workflows/cohort_analysis/cohort_analysis.wdl",
       "name": "",
       "description": "",
       "tasks": {
-        "write_cohort_sample_list": {
-          "key": "write_cohort_sample_list",
-          "digest": "cve3yantcy3stjk7ggvycomu3qo7rizb",
-          "tests": [
-            {
-              "inputs": {
-                "cohort_id": "${cohort_id}",
-                "project_sample_ids": "${project_sample_ids}",
-                "raw_data_path": "${cohort_raw_data_path}",
-                "workflow_info": [
-                  [
-                    "${run_timestamp}",
-                    "${cohort_workflow_name}",
-                    "${cohort_workflow_version}"
-                  ]
-                ],
-                "billing_project": "${billing_project}",
-                "container_registry": "${container_registry}",
-                "zones": "${zones}"
-              },
-              "output_tests": {
-                "cohort_sample_list": {
-                  "value": "${input_resources_file_path}/${cohort_workflow_name}/asap-cohort.sample_list.tsv",
-                  "test_tasks": [
-                    "compare_file_basename",
-                    "check_empty_lines",
-                    "check_tab_delimited",
-                    "count_columns"
-                  ]
-                }
-              }
-            }
-          ]
-        },
         "merge_and_plot_qc_metrics": {
           "key": "merge_and_plot_qc_metrics",
           "digest": "nlsfz2kfxtlr7tx6appdqpqlq53ablwj",
@@ -582,18 +530,6 @@
         }
       }
     },
-    "workflows/common/upload_final_outputs.wdl": {
-      "key": "workflows/common/upload_final_outputs.wdl",
-      "name": "",
-      "description": "",
-      "tasks": {
-        "upload_final_outputs": {
-          "key": "upload_final_outputs",
-          "digest": "",
-          "tests": []
-        }
-      }
-    },
     "pmdbs-wdl-ci-custom-test-dir/check_hdf5.wdl": {
       "key": "pmdbs-wdl-ci-custom-test-dir/check_hdf5.wdl",
       "name": "",
@@ -625,6 +561,77 @@
       "tasks": {
         "svg_validator": {
           "key": "svg_validator",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "workflows/wf-common/wdl/structs.wdl": {
+      "key": "workflows/wf-common/wdl/structs.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {}
+    },
+    "workflows/wf-common/wdl/tasks/upload_final_outputs.wdl": {
+      "key": "workflows/wf-common/wdl/tasks/upload_final_outputs.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "upload_final_outputs": {
+          "key": "upload_final_outputs",
+          "digest": "",
+          "tests": []
+        }
+      }
+    },
+    "workflows/wf-common/wdl/tasks/write_cohort_sample_list.wdl": {
+      "key": "workflows/wf-common/wdl/tasks/write_cohort_sample_list.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "write_cohort_sample_list": {
+          "key": "write_cohort_sample_list",
+          "digest": "zfdftcnrmcevqf7i5s4ald2ohvy5ppc2",
+          "tests": [
+            {
+              "inputs": {
+                "cohort_id": "${cohort_id}",
+                "project_sample_ids": "${project_sample_ids}",
+                "raw_data_path": "${cohort_raw_data_path}",
+                "workflow_info": [
+                  [
+                    "${run_timestamp}",
+                    "${cohort_workflow_name}",
+                    "${cohort_workflow_version}"
+                  ]
+                ],
+                "billing_project": "${billing_project}",
+                "container_registry": "${container_registry}",
+                "zones": "${zones}"
+              },
+              "output_tests": {
+                "cohort_sample_list": {
+                  "value": "${input_resources_file_path}/${cohort_workflow_name}/asap-cohort.sample_list.tsv",
+                  "test_tasks": [
+                    "compare_file_basename",
+                    "check_empty_lines",
+                    "check_tab_delimited",
+                    "count_columns"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "workflows/wf-common/wdl/tasks/get_workflow_metadata.wdl": {
+      "key": "workflows/wf-common/wdl/tasks/get_workflow_metadata.wdl",
+      "name": "",
+      "description": "",
+      "tasks": {
+        "get_workflow_metadata": {
+          "key": "get_workflow_metadata",
           "digest": "",
           "tests": []
         }
