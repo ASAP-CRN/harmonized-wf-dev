@@ -3,6 +3,7 @@ version 1.0
 # Harmonized workflow entrypoint
 
 import "structs.wdl"
+import "wf-common/wdl/tasks/get_workflow_metadata.wdl" as GetWorkflowMetadata
 import "preprocess/preprocess.wdl" as Preprocess
 import "cohort_analysis/cohort_analysis.wdl" as CohortAnalysis
 
@@ -38,7 +39,7 @@ workflow harmonized_pmdbs_analysis {
 	String workflow_version = "v2.1.0"
 	String workflow_release = "https://github.com/ASAP-CRN/harmonized-wf-dev/releases/tag/harmonized_pmdbs_analysis-~{workflow_version}"
 
-	call get_workflow_metadata {
+	call GetWorkflowMetadata.get_workflow_metadata {
 		input:
 			zones = zones
 	}
@@ -235,37 +236,5 @@ workflow harmonized_pmdbs_analysis {
 		features: {help: "Features to produce umap plots for. ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score', 'S_score', 'G2M_score']"}
 		container_registry: {help: "Container registry where workflow Docker images are hosted."}
 		zones: {help: "Space-delimited set of GCP zones to spin up compute in."}
-	}
-}
-
-task get_workflow_metadata {
-	input {
-		String zones
-	}
-
-	command <<<
-		set -euo pipefail
-
-		# UTC timestamp for the running workflow
-		date -u +"%FT%H-%M-%SZ" > timestamp.txt
-
-		# Billing project to use for file requests (matches the billing project used for compute)
-		curl "http://metadata.google.internal/computeMetadata/v1/project/project-id" \
-				-H "Metadata-Flavor: Google" \
-		> billing_project.txt
-	>>>
-
-	output {
-		String timestamp = read_string("timestamp.txt")
-		String billing_project = read_string("billing_project.txt")
-	}
-
-	runtime {
-		docker: "gcr.io/google.com/cloudsdktool/google-cloud-cli:444.0.0-slim"
-		cpu: 2
-		memory: "4 GB"
-		disks: "local-disk 10 HDD"
-		preemptible: 3
-		zones: zones
 	}
 }
