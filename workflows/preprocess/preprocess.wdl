@@ -2,7 +2,7 @@ version 1.0
 
 # Generate a preprocessed AnnData object
 
-import "../structs.wdl"
+import "../wf-common/wdl/structs.wdl"
 
 workflow preprocess {
 	input {
