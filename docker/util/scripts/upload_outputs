@@ -60,7 +60,7 @@ for output_file in "${OUTPUT_FILES[@]}"; do
 
 	paste \
 		<(basename "${output_file}") \
-		<(echo "${md5_hash}")
+		<(echo "${md5_hash}") \
 		"${WORKFLOW_INFO}" \
 	> "${output_file}.meta.tsv"
 
