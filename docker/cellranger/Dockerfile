@@ -2,7 +2,7 @@ FROM us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images/util:1.
 
 FROM ubuntu:jammy
 
-MAINTAINER Heather Ward <heather@dnastack.com>
+LABEL MAINTAINER="Heather Ward <heather@dnastack.com>"
 
 ARG IMAGE_NAME
 ENV IMAGE_NAME "${IMAGE_NAME}"

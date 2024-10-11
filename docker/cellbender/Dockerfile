@@ -3,7 +3,7 @@ FROM us-central1-docker.pkg.dev/dnastack-asap-parkinsons/workflow-images/util:1.
 FROM us.gcr.io/broad-dsde-methods/cellbender:${CELLBENDER_VERSION}
 ENV CELLBENDER_VERSION "${CELLBENDER_VERSION}"
 
-MAINTAINER Karen Fang <karen@dnastack.com>
+LABEL MAINTAINER="Karen Fang <karen@dnastack.com>"
 
 ARG IMAGE_NAME
 ENV IMAGE_NAME "${IMAGE_NAME}"
