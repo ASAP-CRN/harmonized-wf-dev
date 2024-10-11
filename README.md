@@ -279,17 +279,17 @@ The `DOCKERFILE` variable may be used to specify the path to a Dockerfile if tha
 
 ## Building Docker images
 
-Docker images can be build using the [`build_docker_images`](util/build_docker_images) utility script.
+Docker images can be build using the [`build_docker_images`](https://github.com/DNAstack/bioinformatics-scripts/blob/main/scripts/build_docker_images) script.
 
 ```bash
 # Build a single image
-./util/build_docker_images -d docker/scvi
+./build_docker_images -d docker/scvi
 
 # Build all images in the `docker` directory
-./util/build_docker_images -d docker
+./build_docker_images -d docker
 
 # Build and push all images in the docker directory, using the `dnastack` container registry
-./util-build_docker_images -d docker -c dnastack -p
+./build_docker_images -d docker -c dnastack -p
 ```
 
 ## Tool and library versions
