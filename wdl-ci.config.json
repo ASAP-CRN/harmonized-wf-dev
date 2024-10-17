@@ -566,14 +566,14 @@
         }
       }
     },
-    "workflows/wf-common/wdl/structs.wdl": {
-      "key": "workflows/wf-common/wdl/structs.wdl",
+    "wf-common/wdl/structs.wdl": {
+      "key": "wf-common/wdl/structs.wdl",
       "name": "",
       "description": "",
       "tasks": {}
     },
-    "workflows/wf-common/wdl/tasks/upload_final_outputs.wdl": {
-      "key": "workflows/wf-common/wdl/tasks/upload_final_outputs.wdl",
+    "wf-common/wdl/tasks/upload_final_outputs.wdl": {
+      "key": "wf-common/wdl/tasks/upload_final_outputs.wdl",
       "name": "",
       "description": "",
       "tasks": {
@@ -584,8 +584,8 @@
         }
       }
     },
-    "workflows/wf-common/wdl/tasks/write_cohort_sample_list.wdl": {
-      "key": "workflows/wf-common/wdl/tasks/write_cohort_sample_list.wdl",
+    "wf-common/wdl/tasks/write_cohort_sample_list.wdl": {
+      "key": "wf-common/wdl/tasks/write_cohort_sample_list.wdl",
       "name": "",
       "description": "",
       "tasks": {
@@ -625,8 +625,8 @@
         }
       }
     },
-    "workflows/wf-common/wdl/tasks/get_workflow_metadata.wdl": {
-      "key": "workflows/wf-common/wdl/tasks/get_workflow_metadata.wdl",
+    "wf-common/wdl/tasks/get_workflow_metadata.wdl": {
+      "key": "wf-common/wdl/tasks/get_workflow_metadata.wdl",
       "name": "",
       "description": "",
       "tasks": {
