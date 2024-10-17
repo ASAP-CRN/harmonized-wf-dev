@@ -49,7 +49,7 @@ def main(args):
 
             if project_id not in projects:
                 staging_data_buckets = [
-                    f"gs://asap-{staging_bucket_type}-data-{project_id}"
+                    f"gs://asap-{staging_bucket_type}-pmdbs-bulk-rnaseq-{project_id}"
                     for staging_bucket_type in staging_bucket_types
                 ]
 
@@ -90,7 +90,7 @@ def main(args):
 
     output_file = f"{args.output_file_prefix}.{cohort_staging_bucket_type}.json"
     with open(output_file, "w") as f:
-        json.dump(inputs_json, f)
+        json.dump(inputs_json, f, indent=4)
     print(f"Wrote input JSON file: {output_file}")
 
 
