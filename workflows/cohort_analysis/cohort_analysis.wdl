@@ -2,9 +2,9 @@ version 1.0
 
 # Run steps in the cohort analysis
 
-import "../wf-common/wdl/tasks/write_cohort_sample_list.wdl" as WriteCohortSampleList
+import "../../wf-common/wdl/tasks/write_cohort_sample_list.wdl" as WriteCohortSampleList
 import "cluster_data/cluster_data.wdl" as ClusterData
-import "../wf-common/wdl/tasks/upload_final_outputs.wdl" as UploadFinalOutputs
+import "../../wf-common/wdl/tasks/upload_final_outputs.wdl" as UploadFinalOutputs
 
 workflow cohort_analysis {
 	input {

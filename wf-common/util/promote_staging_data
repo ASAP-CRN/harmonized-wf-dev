@@ -1,0 +1,106 @@
+#!/bin/bash
+#
+# Promote data in staging buckets to production
+
+set -eEuo pipefail
+
+usage() {
+cat << EOF
+
+  Promote data in staging buckets to production.
+
+  $(tput bold)[CAUTION] This also deletes data in the production bucket that is not found in the staging bucket.$(tput sgr0)
+
+  Usage: $0 [OPTIONS]
+
+  OPTIONS
+  ───────
+    $(tput bold)-h$(tput sgr0)  Display this message and exit
+    $(tput bold)-t$(tput sgr0)  Comma-separated set of teams to promote data for
+    $(tput bold)-a$(tput sgr0)  Promote all teams' data
+    $(tput bold)-l$(tput sgr0)  List available teams
+    $(tput bold)-p$(tput sgr0)  Promote data. If this option is not selected, data that would be copied or deleted is printed out, but files are not actually changed (dry run)
+    $(tput bold)-s$(tput sgr0)  Staging bucket type; options are 'uat' or 'dev' ['uat']
+
+EOF
+}
+
+log() {
+  echo -e "$(tput bold)$(tput setaf 110)[$(date +'%Y-%m-%d %H:%M:%S')] $*$(tput sgr0)" >&1
+}
+
+err() {
+  echo -e "$(tput bold)$(tput setaf 203)[$(date +'%Y-%m-%d %H:%M:%S')]: $*$(tput sgr0)" >&2
+}
+
+list_teams() {
+  echo "$(tput bold)Available teams:$(tput sgr0)"
+  echo "${ALL_TEAMS[@]}" | tr ' ' '\n'
+}
+
+gsync() {
+  source_path="${1#/}/"
+  destination_path="${2#/}/"
+
+  # shellcheck disable=SC2086
+  gsutil -m rsync \
+    -d \
+    -r \
+    ${DRY_RUN_ARG} \
+    "${source_path}" \
+    "${destination_path}"
+}
+
+ALL_TEAMS=(cohort team-hafler team-hardy team-jakobsson team-lee team-scherzer team-sulzer team-voet team-wood)
+
+# Default to dry run if promotion is not selected
+DRY_RUN_ARG="-n"
+# Default to dev staging buckets
+STAGING_BUCKET_TYPE='uat'
+
+while getopts "ht:alps:" OPTION; do
+  case $OPTION in
+    h) usage; exit ;;
+    t) read -ra TEAMS <<< "$(echo "${OPTARG}" | tr ',' ' ')" ;;
+    a) TEAMS=( "${ALL_TEAMS[@]}" ) ;;
+    l) list_teams; exit ;;
+    p) DRY_RUN_ARG="" ;;
+    s) STAGING_BUCKET_TYPE=${OPTARG} ;;
+    \?) usage; exit ;;
+  esac
+done
+
+if [[ -z "${TEAMS:-}" ]]; then
+  usage
+  list_teams
+  exit
+fi
+
+if [[ "${STAGING_BUCKET_TYPE}" != "uat" ]] | [[ "${STAGING_BUCKET_TYPE}" != "dev" ]] ; then
+  usage
+  err "Staging bucket type must be 'uat' or 'dev'"
+  exit 1
+fi
+
+# Confirm that the teams provided are valid
+for team in "${TEAMS[@]}"; do
+  if [[ ! "${ALL_TEAMS[*]}" =~ ${team} ]]; then
+    err "Team [${team}] is not one of the available teams"
+    list_teams
+    exit 1
+  fi
+done
+
+# Try syncing staging data to production
+for team in "${TEAMS[@]}"; do
+  staging_bucket=gs://asap-${STAGING_BUCKET_TYPE}-data-${team}
+  production_bucket=gs://asap-curated-data-${team}
+
+  log "Promoting [${team}] data to production"
+  log "\tStaging bucket:\t\t[${staging_bucket}]"
+  log "\tProduction bucket:\t[${production_bucket}]"
+
+  gsync \
+    "${staging_bucket}" \
+    "${production_bucket}"
+done
