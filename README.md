@@ -69,6 +69,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | :- | :- | :- |
 | String | project_id | Unique identifier for project; used for naming output files |
 | Array[[Sample](#sample)] | samples | The set of samples associated with this project |
+| File? | project_sample_metadata_csv | CSV containing all sample information including batch, condition, etc. |
 | Boolean | run_project_cohort_analysis | Whether or not to run cohort analysis within the project |
 | String | raw_data_bucket | Raw data bucket; intermediate output files that are not final workflow outputs are stored here |
 | String | staging_data_bucket | Staging data bucket; final project-level outputs are stored here |
