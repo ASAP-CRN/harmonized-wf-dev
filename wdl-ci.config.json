@@ -530,8 +530,8 @@
         }
       }
     },
-    "pmdbs-wdl-ci-custom-test-dir/check_hdf5.wdl": {
-      "key": "pmdbs-wdl-ci-custom-test-dir/check_hdf5.wdl",
+    "pmdbs-sc-rnaseq-wdl-ci-custom-test-dir/check_hdf5.wdl": {
+      "key": "pmdbs-sc-rnaseq-wdl-ci-custom-test-dir/check_hdf5.wdl",
       "name": "",
       "description": "",
       "tasks": {
@@ -542,8 +542,8 @@
         }
       }
     },
-    "pmdbs-wdl-ci-custom-test-dir/pdf_validator.wdl": {
-      "key": "pmdbs-wdl-ci-custom-test-dir/pdf_validator.wdl",
+    "pmdbs-sc-rnaseq-wdl-ci-custom-test-dir/pdf_validator.wdl": {
+      "key": "pmdbs-sc-rnaseq-wdl-ci-custom-test-dir/pdf_validator.wdl",
       "name": "",
       "description": "",
       "tasks": {
@@ -554,8 +554,8 @@
         }
       }
     },
-    "pmdbs-wdl-ci-custom-test-dir/svg_validator.wdl": {
-      "key": "pmdbs-wdl-ci-custom-test-dir/svg_validator.wdl",
+    "pmdbs-sc-rnaseq-wdl-ci-custom-test-dir/svg_validator.wdl": {
+      "key": "pmdbs-sc-rnaseq-wdl-ci-custom-test-dir/svg_validator.wdl",
       "name": "",
       "description": "",
       "tasks": {
@@ -717,7 +717,7 @@
     "engine_params": {
       "asap-cromwell": {
         "input_file_path": "gs://asap-workflow-dev/workflow-resources",
-        "input_resources_file_path": "gs://asap-wdl-ci/pmdbs"
+        "input_resources_file_path": "gs://asap-wdl-ci/pmdbs_sc_rnaseq"
       }
     }
   }
