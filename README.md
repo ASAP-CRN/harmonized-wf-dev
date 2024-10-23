@@ -1,6 +1,9 @@
 # harmonized-wf-dev
 
-Repo for testing and developing a common postmortem-derived brain sequencing (PMDBS) workflow harmonized across ASAP.
+Repo for testing and developing a common postmortem-derived brain sequencing (PMDBS) workflow harmonized across ASAP with human sc/sn RNA sequencing data.
+
+Common workflows, tasks, utility scripts, and docker images reused across harmonized ASAP workflows are defined in [the wf-common repository](wf-common).
+
 
 # Table of contents
 
@@ -48,7 +51,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | Float? | cellbender_fpr | Cellbender false positive rate for signal removal. [0.0] |
 | Boolean? | run_cross_team_cohort_analysis | Whether to run downstream harmonization steps on all samples across projects. If set to false, only preprocessing steps (cellranger and generating the initial adata object(s)) will run for samples. [false] |
 | String | cohort_raw_data_bucket | Bucket to upload cross-team cohort intermediate files to. |
-| String | cohort_staging_data_bucket | Bucket to upload cross-team cohort analysis outputs to. |
+| Array[String] | cohort_staging_data_buckets | Buckets to upload cross-team cohort analysis outputs to. |
 | Int? | n_top_genes | Number of HVG genes to keep. [8000] |
 | String? | scvi_latent_key | Latent key to save the scVI latent to. ['X_scvi'] |
 | String? | batch_key | Key in AnnData object for batch information. ['batch_id'] |
@@ -56,6 +59,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | Array[String]? | groups | Groups to produce umap plots for. ['sample', 'batch', 'cell_type'] |
 | Array[String]? | features | Features to produce umap plots for. ['n_genes_by_counts', 'total_counts', 'pct_counts_mt', 'pct_counts_rb', 'doublet_score', 'S_score', 'G2M_score'] |
 | String | container_registry | Container registry where workflow Docker images are hosted. |
+| String? | zones | GCP zones where compute will take place. ['us-central1-c us-central1-f'] |
 
 ## Structs
 
@@ -65,6 +69,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 | :- | :- | :- |
 | String | project_id | Unique identifier for project; used for naming output files |
 | Array[[Sample](#sample)] | samples | The set of samples associated with this project |
+| File? | project_sample_metadata_csv | CSV containing all sample information including batch, condition, etc. |
 | Boolean | run_project_cohort_analysis | Whether or not to run cohort analysis within the project |
 | String | raw_data_bucket | Raw data bucket; intermediate output files that are not final workflow outputs are stored here |
 | String | staging_data_bucket | Staging data bucket; final project-level outputs are stored here |
@@ -82,7 +87,7 @@ An input template file can be found at [workflows/inputs.json](workflows/inputs.
 
 ## Generating the inputs JSON
 
-The inputs JSON may be generated manually, however when running a large number of samples, this can become unwieldly. The `generate_inputs` utility script may be used to automatically generate the inputs JSON. The script requires the libraries outlined in [the requirements.txt file](requirements.txt) and the following inputs:
+The inputs JSON may be generated manually, however when running a large number of samples, this can become unwieldly. The `generate_inputs` utility script may be used to automatically generate the inputs JSON. The script requires the libraries outlined in [the requirements.txt file](wf-common/util/requirements.txt) and the following inputs:
 
 - `project-tsv`: One or more project TSVs with one row per sample and columns project_id, sample_id, batch, fastq_path. All samples from all projects may be included in the same project TSV, or multiple project TSVs may be provided.
     - `project_id`: A unique identifier for the project from which the sample(s) arose
@@ -97,7 +102,7 @@ The inputs JSON may be generated manually, however when running a large number o
 Example usage:
 
 ```bash
-./util/generate_inputs \
+./wf-common/util/generate_inputs \
     --project-tsv sample_info.tsv \
     --fastq-locs-txt fastq_locs.txt \
     --inputs-template workflows/inputs.json \
@@ -112,7 +117,7 @@ Example usage:
 - `cohort_id`: either the `project_id` for project-level cohort analysis, or the `cohort_id` for the full cohort
 - `workflow_run_timestamp`: format: `%Y-%m-%dT%H-%M-%SZ`
 - The list of samples used to generate the cohort analysis will be output alongside other cohort analysis outputs in the staging data bucket (`${cohort_id}.sample_list.tsv`)
-- The MANIFEST.tsv file in the staging data bucket describes the workflow name, version, and timestamp for the run used to generate each file in that directory
+- The MANIFEST.tsv file in the staging data bucket describes the file name, md5 hash, timestamp, workflow version, workflow name, and workflow release for the run used to generate each file in that directory
 
 ### Raw data (intermediate files and final outputs for all runs of the workflow)
 
@@ -213,7 +218,7 @@ asap-dev-data-{cohort,team-xxyy}
 
 ## Promoting staging data
 
-The [`promote_staging_data` script](util/promote_staging_data) can be used to promote staging data that has been approved to the curated data bucket for a team or set of teams.
+The [`promote_staging_data` script](wf-common/util/promote_staging_data) can be used to promote staging data that has been approved to the curated data bucket for a team or set of teams.
 
 This script compiles bucket and file information for both the initial (staging) and target (prod) environment. It also runs data integrity tests to ensure staging data can be promoted and generates a Markdown report. It (1) checks that files are not empty and are not less than or equal to 10 bytes (factoring in white space) and (2) checks that files have associated metadata and is present in MANIFEST.tsv.
 
@@ -238,16 +243,16 @@ The script defaults to a dry run, printing out the files that would be copied or
 
 ```bash
 # List available teams
-./util/promote_staging_data -l
+./wf-common/util/promote_staging_data -l
 
 # Print out the files that would be copied or deleted from the staging bucket to the curated bucket for teams team-hafler, team-lee, and cohort
-./util/promote_staging_data -t team-hafler,team-lee,cohort
+./wf-common/util/promote_staging_data -t team-hafler,team-lee,cohort
 
 # Promote data for team-hafler, team-hardy, team-jakobsson, team-lee, team-scherzer, team-sulzer, and cohort
-./util/promote_staging_data -a -p -s dev
+./wf-common/util/promote_staging_data -a -p -s dev
 
 # Print out the files that would be copied or deleted from the staging bucket to the curated bucket for unembargoed cohort (team-hafler, team-lee, team-jakobsson, and team-scherzer)
-./util/promote_staging_data -t cohort
+./wf-common/util/promote_staging_data -t cohort
 ```
 
 # Docker images
@@ -278,17 +283,17 @@ The `DOCKERFILE` variable may be used to specify the path to a Dockerfile if tha
 
 ## Building Docker images
 
-Docker images can be build using the [`build_docker_images`](util/build_docker_images) utility script.
+Docker images can be build using the [`build_docker_images`](https://github.com/DNAstack/bioinformatics-scripts/blob/main/scripts/build_docker_images) script.
 
 ```bash
 # Build a single image
-./util/build_docker_images -d docker/scvi
+./build_docker_images -d docker/scvi
 
 # Build all images in the `docker` directory
-./util/build_docker_images -d docker
+./build_docker_images -d docker
 
 # Build and push all images in the docker directory, using the `dnastack` container registry
-./util-build_docker_images -d docker -c dnastack -p
+./build_docker_images -d docker -c dnastack -p
 ```
 
 ## Tool and library versions
@@ -298,11 +303,12 @@ Docker images can be build using the [`build_docker_images`](util/build_docker_i
 | cellbender | <ul><li>[cellbender v0.3.0](https://github.com/broadinstitute/CellBender/releases/tag/v0.3.0)</li><li>[google-cloud-cli 397.0.0](https://cloud.google.com/sdk/docs/release-notes#39700_2022-08-09)</li><li>[python 3.7.16](https://www.python.org/downloads/release/python-3716/)</li><li>[miniconda 23.1.0](https://docs.anaconda.com/miniconda/miniconda-release-notes/)</li><li>[cuda 11.4.0](https://developer.nvidia.com/cuda-11-4-0-download-archive)</li></ul> | [Dockerfile](https://github.com/ASAP-CRN/harmonized-wf-dev/tree/main/docker/cellbender) |
 | cellranger | <ul><li>[cellranger v7.1.0](https://www.10xgenomics.com/support/software/cell-ranger/latest/release-notes/cr-release-notes#v7-1-0)</li><li>[google-cloud-cli 444.0.0](https://cloud.google.com/sdk/docs/release-notes#44400_2023-08-22)</li></ul> | [Dockerfile](https://github.com/ASAP-CRN/harmonized-wf-dev/tree/main/docker/cellranger) |
 | scvi | <ul><li>[google-cloud-cli 444.0.0](https://cloud.google.com/sdk/docs/release-notes#44400_2023-08-22)</li><li>[python 3.10.12](https://www.python.org/downloads/release/python-31012/)</li><li>[cuda 12.3.0](https://developer.nvidia.com/cuda-12-3-0-download-archive)</li><li>[cuda 11.4.0](https://developer.nvidia.com/cuda-11-4-0-download-archive)</li></ul> Python libraries: <ul><li>[scvi-tools 1.1.0-post2](https://github.com/scverse/scvi-tools/releases/tag/1.1.0.post2)</li><li>argparse 1.4.0</li><li>[scanpy 1.9.8](https://scanpy.readthedocs.io/en/stable/release-notes/index.html#id5)</li><li>muon 0.1.5</li><li>pathlib 1.0.1</li><li>tables 3.9.2</li><li>scrublet 0.2.3</li><li>pymde 0.1.18</li><li>[scikit-misc 0.3.1](https://github.com/has2k1/scikit-misc/releases/tag/v0.3.1)</li><li>leidenalg 0.10.2</li><li>[harmonypy 0.0.9](https://github.com/slowkow/harmonypy/releases/tag/v0.0.9)</li><li>faiss-gpu 1.7.2</li><li>[scib-metrics 0.5.1](https://github.com/YosefLab/scib-metrics/releases/tag/v0.5.1)</li></ul>| [Dockerfile](https://github.com/ASAP-CRN/harmonized-wf-dev/tree/main/docker/scvi) |
-| util | <ul><li>[google-cloud-cli 444.0.0-slim](https://cloud.google.com/sdk/docs/release-notes#44400_2023-08-22)</li></ul> | [Dockerfile](https://github.com/ASAP-CRN/harmonized-wf-dev/tree/main/docker/util) |
+| multiome | <ul><li>[google-cloud-cli 444.0.0](https://cloud.google.com/sdk/docs/release-notes#44400_2023-08-22)</li><li>[multiome seuratv4 environment](https://github.com/shahrozeabbas/Multiome-SeuratV4/tree/main)</li><li>[R scripts](https://github.com/shahrozeabbas/Harmony-RNA-Workflow/tree/main/scripts)</li></ul> | [Dockerfile](https://github.com/ASAP-CRN/harmonized-wf-dev/tree/main/docker/multiome) |
+| util | <ul><li>[google-cloud-cli 444.0.0-slim](https://cloud.google.com/sdk/docs/release-notes#44400_2023-08-22)</li></ul> | [Dockerfile](https://github.com/ASAP-CRN/wf-common/tree/main/docker/util) |
 
 
 # wdl-ci
 
-[`wdl-ci`](https://github.com/DNAstack/wdl-ci) provides tools to validate and test workflows and tasks written in [Workflow Description Language (WDL)](https://github.com/openwdl/wdl). In addition to the tests packaged in `wdl-ci`, the [pmdbs-wdl-ci-custom-test-dir](./pmdbs-wdl-ci-custom-test-dir) is a directory containing custom WDL-based tests that are used to test workflow tasks. `wdl-ci` in this repository is set up to run on pull request.
+[`wdl-ci`](https://github.com/DNAstack/wdl-ci) provides tools to validate and test workflows and tasks written in [Workflow Description Language (WDL)](https://github.com/openwdl/wdl). In addition to the tests packaged in `wdl-ci`, the [pmdbs-sc-rnaseq-wdl-ci-custom-test-dir](./pmdbs-sc-rnaseq-wdl-ci-custom-test-dir) is a directory containing custom WDL-based tests that are used to test workflow tasks. `wdl-ci` in this repository is set up to run on pull request.
 
 In general, `wdl-ci` will use inputs provided in the [wdl-ci.config.json](./wdl-ci.config.json) and compare current outputs and validated outputs based on changed tasks/workflows to ensure outputs are still valid by meeting the critera in the specified tests. For example, if the Cell Ranger task in our workflow was changed, then this task would be submitted and that output would be considered the "current output". When inspecting the raw counts generated by Cell Ranger, there is a test specified in the [wdl-ci.config.json](./wdl-ci.config.json) called, "check_hdf5". The test will compare the "current output" and "validated output" (provided in the [wdl-ci.config.json](./wdl-ci.config.json)) to make sure that the raw_feature_bc_matrix.h5 file is still a valid HDF5 file.

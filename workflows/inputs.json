@@ -5,7 +5,7 @@
   "harmonized_pmdbs_analysis.cellbender_fpr": "Float (optional, default = 0.0)",
   "harmonized_pmdbs_analysis.run_cross_team_cohort_analysis": "Boolean (optional, default = false)",
   "harmonized_pmdbs_analysis.cohort_raw_data_bucket": "String",
-  "harmonized_pmdbs_analysis.cohort_staging_data_buckets": "String",
+  "harmonized_pmdbs_analysis.cohort_staging_data_buckets": "Array[String]",
   "harmonized_pmdbs_analysis.n_top_genes": "Int (optional, default = 8000)",
   "harmonized_pmdbs_analysis.scvi_latent_key": "String (optional, default = \"X_scvi\")",
   "harmonized_pmdbs_analysis.batch_key": "String (optional, default = \"batch_id\")",

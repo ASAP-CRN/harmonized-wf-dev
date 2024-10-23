@@ -1,0 +1,6 @@
+[submodule "workflows/wf-common"]
+	path = workflows/wf-common
+	url = https://github.com/ASAP-CRN/wf-common.git
+[submodule "wf-common"]
+	path = wf-common
+	url = https://github.com/ASAP-CRN/wf-common.git
